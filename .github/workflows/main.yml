@@ -1,0 +1,36 @@
+name: Auto Update Pedigree Data
+
+on:
+  schedule:
+    # 每天 UTC 時間 00:00 (台灣時間早上 08:00) 自動執行一次
+    - cron: '0 0 * * *'
+  # 支援手動按下按鈕觸發
+  workflow_dispatch:
+
+jobs:
+  build-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 檢查程式碼儲存庫
+      uses: actions/checkout@v3
+
+    - name: 設定 Python 環境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: 安裝必要套件
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas
+
+    - name: 執行 Python 數據解析腳本
+      run: python generate_tree.py
+
+    - name: 檢查並自動 Commit 更新後的 data.json
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add data.json
+        git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 [Auto] 自動更新家族蛛網圖 data.json" && git push)
