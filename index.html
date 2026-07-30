@@ -2,54 +2,68 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>標準血統世系階梯圖系統</title>
+    <title>進階血統查詢與成績評估系統</title>
     <style>
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 15px; background-color: #f8f9fa; }
         
-        /* 上方搜尋欄 */
-        .control-bar { background: #ffffff; padding: 12px 18px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 12px; display: flex; gap: 15px; align-items: center; }
-        input[type="text"] { padding: 6px 12px; font-size: 15px; border: 1px solid #ced4da; border-radius: 4px; width: 240px; }
+        /* 搜尋列與品種切換按鈕 */
+        .control-bar { background: #ffffff; padding: 12px 18px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 12px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        input[type="text"] { padding: 6px 12px; font-size: 15px; border: 1px solid #ced4da; border-radius: 4px; width: 280px; }
+        
         .btn { padding: 6px 16px; font-size: 15px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; }
         .btn:hover { background-color: #0b5ed7; }
+        .btn-breed { background-color: #6c757d; margin-right: 2px; padding: 5px 12px; font-size: 14px; }
+        .btn-breed.active { font-weight: bold; border: 2px solid #000; }
         
-        /* 頂部固定數據卡 */
-        #dataCard { background-color: #ffffff; border: 2px solid #0d6efd; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-        .card-title { font-size: 15px; color: #0d6efd; font-weight: bold; margin-bottom: 6px; border-bottom: 1px dashed #0d6efd; padding-bottom: 4px; }
-        .compact-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .compact-table td { border: 1px solid #dee2e6; padding: 5px 8px; }
+        /* 品種顏色提示圖例 */
+        .legend-bar { display: flex; gap: 15px; font-size: 13px; background: #fff; padding: 8px 12px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 12px; align-items: center; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-weight: bold; }
+        .color-badge { padding: 2px 8px; border-radius: 4px; border: 1px solid #ccc; }
+
+        /* 固定頂部數據摘要與成績評估卡 */
+        #dataCard { background-color: #ffffff; border: 2px solid #0d6efd; border-radius: 6px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .card-title { font-size: 16px; color: #0d6efd; font-weight: bold; margin-bottom: 8px; border-bottom: 1px dashed #0d6efd; padding-bottom: 4px; }
+        .compact-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .compact-table td { border: 1px solid #dee2e6; padding: 6px 10px; }
         .compact-table .lbl { background-color: #f1f3f5; font-weight: bold; width: 14%; text-align: right; }
         .compact-table .val { width: 36%; font-weight: 500; color: #111; }
 
-        /* 🌟 血統世系階梯圖容器 (網格精準定位) */
+        /* 🌟 世系階梯繪圖畫布 */
         #pedigreeTreeContainer {
             position: relative;
             background-color: #ffffff;
             border: 1px solid #dee2e6;
             border-radius: 6px;
             padding: 20px;
-            min-height: 500px;
+            min-height: 480px;
             overflow-x: auto;
         }
 
-        /* 方框通用樣式 */
+        /* 階梯框通用樣式 */
         .p-box {
             position: absolute;
-            border: 2px solid #000000;
-            background-color: #ffffff;
+            border: 2px solid #333333;
+            border-radius: 4px;
             text-align: center;
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 13px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.08);
             z-index: 2;
+            padding: 4px;
+            box-sizing: border-box;
         }
 
-        /* 標籤對應顏色與層級 */
-        .box-ancestor { width: 180px; height: 42px; background-color: #ffffff; }
-        .box-target { width: 180px; height: 50px; background-color: #e7f5ff; border-color: #0d6efd; color: #0d6efd; font-size: 16px; }
-        .box-gen { width: 180px; height: 42px; background-color: #ffffff; }
+        /* 品種專屬背景顏色 */
+        .breed-LY { background-color: #D4EDDA !important; color: #155724; border-color: #28a745; } /* 淡綠 */
+        .breed-Y  { background-color: #FFF3CD !important; color: #856404; border-color: #ffc107; } /* 淡黃 */
+        .breed-L  { background-color: #D1ECF1 !important; color: #0c5460; border-color: #17a2b8; } /* 淡藍 */
+        .breed-D  { background-color: #F8D7DA !important; color: #721c24; border-color: #dc3545; } /* 淡紅 */
+        .breed-DEFAULT { background-color: #FFFFFF; color: #000; }
+
+        .box-target { border-width: 3px !important; font-size: 15px; }
 
         canvas#lineCanvas {
             position: absolute;
@@ -58,127 +72,216 @@
             z-index: 1;
             pointer-events: none;
         }
+
+        .no-result-msg { text-align: center; padding: 50px; font-size: 16px; color: #888; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- 控制列 -->
+    <!-- 1. 超級進階搜尋列 & 品種選項 -->
     <div class="control-bar">
         <div>
-            <label for="earInput"><strong>查詢母豬耳號：</strong></label>
-            <input type="text" id="earInput" placeholder="例如: DD26000" onkeydown="if(event.key==='Enter') searchPedigree()">
-            <button class="btn" onclick="searchPedigree()">🔍 查詢世系表</button>
+            <label for="earInput"><strong>進階查詢：</strong></label>
+            <input type="text" id="earInput" placeholder="支援耳號/純數字/父母名 (如 dd26000 或 anna)" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <button class="btn" onclick="searchPedigree()">🔍 查詢世系</button>
+        </div>
+
+        <div>
+            <strong>品種篩選：</strong>
+            <button class="btn btn-breed active" style="background:#6c757d;" onclick="setBreedFilter('ALL', this)">全部</button>
+            <button class="btn btn-breed" style="background:#28a745;" onclick="setBreedFilter('LY', this)">LY (淡綠)</button>
+            <button class="btn btn-breed" style="background:#ffc107; color:#000;" onclick="setBreedFilter('Y', this)">Y (淡黃)</button>
+            <button class="btn btn-breed" style="background:#17a2b8;" onclick="setBreedFilter('L', this)">L (淡藍)</button>
+            <button class="btn btn-breed" style="background:#dc3545;" onclick="setBreedFilter('D', this)">D (淡紅)</button>
         </div>
     </div>
 
-    <!-- 頂部數據摘要卡 -->
+    <!-- 2. 品種顏色指示圖例 -->
+    <div class="legend-bar">
+        <strong>耳號框品種底色說明：</strong>
+        <span class="color-badge breed-LY">LY：淡綠色</span>
+        <span class="color-badge breed-Y">Y：淡黃色</span>
+        <span class="color-badge breed-L">L：淡藍色</span>
+        <span class="color-badge breed-D">D：淡紅色</span>
+    </div>
+
+    <!-- 3. 固定成績評估與數據摘要卡 -->
     <div id="dataCard">
-        <div class="card-title" id="cardTitle">📌 查詢母豬生產與指數摘要</div>
+        <div class="card-title" id="cardTitle">📌 查詢個體成績與生產指數評估卡</div>
         <div id="cardBody">
             <table class="compact-table">
                 <tr>
-                    <td class="lbl">耳號 / 性別:</td>
+                    <td class="lbl">耳號 / 品種:</td>
                     <td class="val" id="summaryEar">-</td>
-                    <td class="lbl">生產指數:</td>
-                    <td class="val" id="summaryIndex">SPI: - | MLI: - | TSI: -</td>
+                    <td class="lbl">生產指數評估:</td>
+                    <td class="val" id="summaryIndex"><b>SPI:</b> - | <b>MLI:</b> - | <b>TSI:</b> -</td>
                 </tr>
                 <tr>
-                    <td class="lbl">出生日期:</td>
+                    <td class="lbl">出生 / 淘汰:</td>
                     <td class="val" id="summaryDob">-</td>
-                    <td class="lbl">同胎數據:</td>
-                    <td class="val" id="summaryBorn">總產: - | 活胎: - | 離乳: -</td>
+                    <td class="lbl">同胎次成績:</td>
+                    <td class="val" id="summaryBorn">總產: - | 活胎: - | 離乳: - (均重: - kg)</td>
                 </tr>
             </table>
         </div>
     </div>
 
-    <!-- 🌟 世系階梯繪圖畫布 -->
+    <!-- 4. 90度直角世系階梯圖畫布 -->
     <div id="pedigreeTreeContainer">
         <canvas id="lineCanvas"></canvas>
         <div id="boxesContainer"></div>
     </div>
 
     <script>
-        let pedigreeData = {};
+        let pedigreeList = [];
+        let currentBreedFilter = 'ALL';
 
         fetch('data.json')
             .then(res => res.json())
             .then(data => {
-                pedigreeData = data;
-                // 預設填入第一筆耳號
-                const firstEar = Object.keys(pedigreeData)[0];
-                if (firstEar) {
-                    document.getElementById('earInput').value = firstEar;
-                    drawPedigree(firstEar);
+                pedigreeList = data || [];
+                if (pedigreeList.length > 0) {
+                    drawPedigree(pedigreeList[0]);
                 }
             });
 
+        function setBreedFilter(breed, btn) {
+            currentBreedFilter = breed;
+            document.querySelectorAll('.btn-breed').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            searchPedigree();
+        }
+
+        // 自動判斷品種對應 CSS Class
+        function getBreedClass(breedStr) {
+            if (!breedStr) return 'breed-DEFAULT';
+            const b = breedStr.toUpperCase();
+            if (b.includes('LY')) return 'breed-LY';
+            if (b.includes('Y')) return 'breed-Y';
+            if (b.includes('L')) return 'breed-L';
+            if (b.includes('D')) return 'breed-D';
+            return 'breed-DEFAULT';
+        }
+
+        // 超級寬鬆模糊搜尋
         function searchPedigree() {
-            const earInput = document.getElementById('earInput').value.trim().toUpperCase();
-            if (!earInput) return;
+            const rawInput = document.getElementById('earInput').value.trim().toLowerCase();
+            
+            let filteredList = pedigreeList;
 
-            // 模糊搜尋適應
-            const matchedEar = Object.keys(pedigreeData).find(k => k.toUpperCase().includes(earInput));
+            // 1. 按品種過濾
+            if (currentBreedFilter !== 'ALL') {
+                filteredList = filteredList.filter(item => {
+                    const b = (item.breed || '').toUpperCase();
+                    return b.includes(currentBreedFilter);
+                });
+            }
 
-            if (matchedEar) {
-                drawPedigree(matchedEar);
+            // 2. 按輸入字詞模糊匹配 (耳號/純數字/父母名/詳細資料)
+            if (rawInput) {
+                filteredList = filteredList.filter(item => {
+                    const earLower = (item.ear || '').toLowerCase();
+                    const sireSireLower = (item.sire_sire || '').toLowerCase();
+                    const sireDamLower = (item.sire_dam || '').toLowerCase();
+                    const damSireLower = (item.dam_sire || '').toLowerCase();
+                    const damDamLower = (item.dam_dam || '').toLowerCase();
+                    const detailsStr = JSON.stringify(item.details || {}).toLowerCase();
+
+                    return earLower.includes(rawInput) || 
+                           sireSireLower.includes(rawInput) || 
+                           sireDamLower.includes(rawInput) || 
+                           damSireLower.includes(rawInput) || 
+                           damDamLower.includes(rawInput) || 
+                           detailsStr.includes(rawInput);
+                });
+            }
+
+            if (filteredList.length > 0) {
+                drawPedigree(filteredList[0]);
             } else {
-                alert(`查無此母豬耳號: ${earInput}`);
+                showEmptyMsg();
             }
         }
 
-        // 🌟 完全依照圖片座標精準繪製階梯結構
-        function drawPedigree(ear) {
-            const data = pedigreeData[ear];
-            if (!data) return;
+        function showEmptyMsg() {
+            document.getElementById('cardTitle').innerText = "📌 查詢個體成績與生產指數評估卡";
+            document.getElementById('summaryEar').innerText = "-";
+            document.getElementById('summaryIndex').innerText = "SPI: - | MLI: - | TSI: -";
+            document.getElementById('summaryDob').innerText = "-";
+            document.getElementById('summaryBorn').innerText = "總產: - | 活胎: - | 離乳: -";
 
-            // 更新頂部數據
-            document.getElementById('cardTitle').innerText = `📌 查詢母豬：${data.ear} - 生產與指數摘要`;
-            document.getElementById('summaryEar').innerHTML = `<b>${data.ear}</b> (${data.sex || 'FEMALE'})`;
-            
-            const details = data.details || {};
+            const container = document.getElementById('boxesContainer');
+            container.innerHTML = `<div class="no-result-msg">⚠️ 查無相符之個體、品種或親屬血統數據，請嘗試重置搜尋。</div>`;
+
+            const canvas = document.getElementById('lineCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // 🌟 繪製階梯世系圖與對應顏色
+        function drawPedigree(item) {
+            if (!item) return;
+
+            // 1. 安全抓取表格資料 (防止 undefined)
+            const details = item.details || {};
             const getV = (kList) => {
                 for (let k of kList) {
                     const foundKey = Object.keys(details).find(key => key.toLowerCase().includes(k.toLowerCase()));
-                    if (foundKey && details[foundKey]) return details[foundKey];
+                    if (foundKey && details[foundKey] && details[foundKey] !== 'nan') return details[foundKey];
                 }
                 return '-';
             };
 
-            document.getElementById('summaryIndex').innerHTML = `<b>SPI:</b> ${getV(['SPI'])} | <b>MLI:</b> ${getV(['MLI'])} | <b>TSI:</b> ${getV(['TSI'])}`;
-            document.getElementById('summaryDob').innerText = getV(['DOB', '出生']);
-            document.getElementById('summaryBorn').innerHTML = `總產: <b>${getV(['total born', '總生'])}</b> | 活胎: <b>${getV(['born alive', '活胎'])}</b> | 離乳: <b>${getV(['weaning', '離乳'])}</b>`;
+            const breed = item.breed || getV(['Breed', '品']);
+            const parity = item.parity || getV(['Parity', '胎次']);
+            const dob = getV(['DOB', '出生日期']);
+            const dod = getV(['DOD', '淘汰']);
+            const spi = getV(['SPI']);
+            const mli = getV(['MLI']);
+            const tsi = getV(['TSI']);
+            const totalBorn = getV(['total born', '總生', '總生產數']);
+            const bornAlive = getV(['born alive', '活胎']);
+            const weaning = getV(['weaning', '離乳數']);
+            const weaningWt = getV(['weaning weight', '均重']);
 
+            // 2. 填入頂部評估卡
+            document.getElementById('cardTitle').innerText = `📌 耳號：${item.ear} - 育種成績與指數評估報告`;
+            document.getElementById('summaryEar').innerHTML = `<b>${item.ear}</b> | 品種: <b>${breed}</b> (胎次: ${parity})`;
+            document.getElementById('summaryIndex').innerHTML = `<b>SPI:</b> ${spi} | <b>MLI:</b> ${mli} | <b>TSI:</b> ${tsi}`;
+            document.getElementById('summaryDob').innerText = `出生: ${dob} / 淘汰: ${dod}`;
+            document.getElementById('summaryBorn').innerHTML = `總產: <b>${totalBorn}</b> | 活胎: <b>${bornAlive}</b> | 離乳: <b>${weaning}</b> (均重: ${weaningWt} kg)`;
+
+            // 3. 繪製階梯圖框
             const container = document.getElementById('boxesContainer');
             container.innerHTML = '';
 
-            // 定義圖片中的欄位座標 (X, Y)
-            const boxWidth = 180;
-            const boxHeight = 42;
-            const colGap = 80;
-            const rowGap = 20;
+            const boxWidth = 190;
+            const boxHeight = 44;
+            const colGap = 70;
+            const rowGap = 18;
 
-            const col0_X = 40;                     // 左側 祖輩欄
-            const col1_X = col0_X + boxWidth + colGap; // 中間 查詢母豬欄
-            const col2_X = col1_X + boxWidth + colGap; // 右側 第一代欄
-            const col3_X = col2_X + boxWidth + colGap; // 右側 第二代欄
+            const col0_X = 30;
+            const col1_X = col0_X + boxWidth + colGap;
+            const col2_X = col1_X + boxWidth + colGap;
+            const col3_X = col2_X + boxWidth + colGap;
 
-            const row0_Y = 30;
+            const row0_Y = 20;
             const row1_Y = row0_Y + boxHeight + rowGap;
             const row2_Y = row1_Y + boxHeight + rowGap;
             const row3_Y = row2_Y + boxHeight + rowGap;
 
-            // 建立方框 HTML
+            const targetBreedClass = getBreedClass(breed);
+
             const boxes = [
-                { id: 'sire_sire', text: `Sire 美系父親名(祖父)<br><b>${data.sire_sire}</b>`, x: col0_X, y: row0_Y, cls: 'box-ancestor' },
-                { id: 'sire_dam',  text: `Dam Name 美系母親名(祖母)<br><b>${data.sire_dam}</b>`, x: col0_X, y: row1_Y, cls: 'box-ancestor' },
-                { id: 'dam_sire',  text: `Sire 美系父親名(外公)<br><b>${data.dam_sire}</b>`, x: col0_X, y: row2_Y, cls: 'box-ancestor' },
-                { id: 'dam_dam',   text: `Dam Name 美系母親名(外婆)<br><b>${data.dam_dam}</b>`, x: col0_X, y: row3_Y, cls: 'box-ancestor' },
+                { text: `Sire 美系父親名(祖父)<br><b>${item.sire_sire || '-'}</b>`, x: col0_X, y: row0_Y, cls: 'breed-DEFAULT' },
+                { text: `Dam Name 美系母親名(祖母)<br><b>${item.sire_dam || '-'}</b>`, x: col0_X, y: row1_Y, cls: 'breed-DEFAULT' },
+                { text: `Sire 美系父親名(外公)<br><b>${item.dam_sire || '-'}</b>`, x: col0_X, y: row2_Y, cls: 'breed-DEFAULT' },
+                { text: `Dam Name 美系母親名(外婆)<br><b>${item.dam_dam || '-'}</b>`, x: col0_X, y: row3_Y, cls: 'breed-DEFAULT' },
                 
-                { id: 'target_ear', text: `查詢母豬<br><b>${data.ear}</b>`, x: col1_X, y: (row1_Y + row2_Y)/2, cls: 'box-target' },
+                { text: `查詢個體<br><b>${item.ear}</b>`, x: col1_X, y: (row1_Y + row2_Y)/2, cls: `box-target ${targetBreedClass}` },
                 
-                { id: 'gen1_sire', text: `第一代公<br><b>${data.gen1_sire}</b>`, x: col2_X, y: row1_Y + 10, cls: 'box-gen' },
-                { id: 'gen2_sire', text: `第二代公<br><b>${data.gen2_sire}</b>`, x: col3_X, y: row3_Y, cls: 'box-gen' }
+                { text: `第一代公<br><b>${item.gen1_sire || '-'}</b>`, x: col2_X, y: row1_Y + 10, cls: 'breed-DEFAULT' },
+                { text: `第二代公<br><b>${item.gen2_sire || '-'}</b>`, x: col3_X, y: row3_Y, cls: 'breed-DEFAULT' }
             ];
 
             boxes.forEach(b => {
@@ -186,22 +289,23 @@
                 div.className = `p-box ${b.cls}`;
                 div.style.left = b.x + 'px';
                 div.style.top = b.y + 'px';
+                div.style.width = boxWidth + 'px';
+                div.style.height = boxHeight + 'px';
                 div.innerHTML = b.text;
                 container.appendChild(div);
             });
 
-            // 設定 Canvas 繪畫精準 90 度直角階梯連接線
+            // 4. 精準 90 度直角 Canvas 排線
             const treeContainer = document.getElementById('pedigreeTreeContainer');
             const canvas = document.getElementById('lineCanvas');
             canvas.width = treeContainer.clientWidth;
-            canvas.height = Math.max(treeContainer.clientHeight, 420);
+            canvas.height = Math.max(treeContainer.clientHeight, 400);
 
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 2;
 
-            // 畫 90 度直角折線函數
             function drawOrthogonalLine(x1, y1, x2, y2, midX) {
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
@@ -211,7 +315,6 @@
                 ctx.stroke();
             }
 
-            // 1. 左側祖輩連結到中間母豬
             const targetLeftX = col1_X;
             const targetLeftY = ((row1_Y + row2_Y)/2) + (boxHeight/2);
             const midLeftX = col0_X + boxWidth + (colGap / 2);
@@ -221,7 +324,6 @@
             drawOrthogonalLine(col0_X + boxWidth, row2_Y + boxHeight/2, targetLeftX, targetLeftY, midLeftX);
             drawOrthogonalLine(col0_X + boxWidth, row3_Y + boxHeight/2, targetLeftX, targetLeftY, midLeftX);
 
-            // 2. 中間母豬連結到右側第一代與第二代公豬
             const targetRightX = col1_X + boxWidth;
             const targetRightY = targetLeftY;
             const midRightX = col1_X + boxWidth + (colGap / 2);
