@@ -2,343 +2,232 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>直角血統世系圖系統</title>
-    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <title>標準血統世系階梯圖系統</title>
     <style>
-        body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f8f9fa; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 15px; background-color: #f8f9fa; }
         
-        .control-bar { background: #ffffff; padding: 10px 15px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        input[type="text"] { padding: 6px 10px; font-size: 14px; border: 1px solid #ced4da; border-radius: 4px; width: 220px; }
-        
-        .btn { padding: 6px 12px; font-size: 14px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        /* 上方搜尋欄 */
+        .control-bar { background: #ffffff; padding: 12px 18px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 12px; display: flex; gap: 15px; align-items: center; }
+        input[type="text"] { padding: 6px 12px; font-size: 15px; border: 1px solid #ced4da; border-radius: 4px; width: 240px; }
+        .btn { padding: 6px 16px; font-size: 15px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; }
         .btn:hover { background-color: #0b5ed7; }
-        .btn-breed { background-color: #6c757d; margin-right: 2px; padding: 5px 10px; font-size: 13px; }
-        .btn-breed.active { background-color: #198754; font-weight: bold; }
         
-        .legend-bar { display: flex; gap: 10px; font-size: 13px; background: #fff; padding: 8px 12px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
-        .legend-item { display: flex; align-items: center; gap: 4px; }
-        .color-box { width: 14px; height: 14px; border-radius: 2px; border: 1px solid #999; }
-        
-        /* 常駐固定數據面板 */
-        #permanentCard {
-            background-color: #ffffff;
-            border: 2px solid #0d6efd;
-            border-radius: 6px;
-            padding: 10px 14px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-        }
+        /* 頂部固定數據卡 */
+        #dataCard { background-color: #ffffff; border: 2px solid #0d6efd; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
         .card-title { font-size: 15px; color: #0d6efd; font-weight: bold; margin-bottom: 6px; border-bottom: 1px dashed #0d6efd; padding-bottom: 4px; }
-
         .compact-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .compact-table td { border: 1px solid #dee2e6; padding: 5px 8px; }
         .compact-table .lbl { background-color: #f1f3f5; font-weight: bold; width: 14%; text-align: right; }
         .compact-table .val { width: 36%; font-weight: 500; color: #111; }
-        .gen-badge { background-color: #e7f5ff; color: #1c7ed6; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 
-        #network { width: 100%; height: 580px; background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 6px; }
+        /* 🌟 血統世系階梯圖容器 (網格精準定位) */
+        #pedigreeTreeContainer {
+            position: relative;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 20px;
+            min-height: 500px;
+            overflow-x: auto;
+        }
+
+        /* 方框通用樣式 */
+        .p-box {
+            position: absolute;
+            border: 2px solid #000000;
+            background-color: #ffffff;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+            z-index: 2;
+        }
+
+        /* 標籤對應顏色與層級 */
+        .box-ancestor { width: 180px; height: 42px; background-color: #ffffff; }
+        .box-target { width: 180px; height: 50px; background-color: #e7f5ff; border-color: #0d6efd; color: #0d6efd; font-size: 16px; }
+        .box-gen { width: 180px; height: 42px; background-color: #ffffff; }
+
+        canvas#lineCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
+    <!-- 控制列 -->
     <div class="control-bar">
         <div>
-            <label for="earInput"><strong>搜尋耳號：</strong></label>
-            <input type="text" id="earInput" placeholder="例如: DD26009 或 LY3492" onkeydown="if(event.key==='Enter') applyFilters()">
-            <button class="btn" onclick="applyFilters()">🔍 搜尋</button>
-        </div>
-
-        <div>
-            <strong>品種關聯：</strong>
-            <button class="btn btn-breed active" onclick="setBreedFilter('ALL', this)">全部關聯</button>
-            <button class="btn btn-breed" onclick="setBreedFilter('L', this)">只看 L 關聯</button>
-            <button class="btn btn-breed" onclick="setBreedFilter('Y', this)">只看 Y 關聯</button>
-            <button class="btn btn-breed" onclick="setBreedFilter('D', this)">只看 D 關聯</button>
-            <button class="btn btn-breed" onclick="setBreedFilter('LY', this)">只看 LY 關聯</button>
+            <label for="earInput"><strong>查詢母豬耳號：</strong></label>
+            <input type="text" id="earInput" placeholder="例如: DD26000" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <button class="btn" onclick="searchPedigree()">🔍 查詢世系表</button>
         </div>
     </div>
 
-    <div class="legend-bar" id="legendContainer">
-        <strong>世代顏色：</strong>
-    </div>
-
-    <!-- 永久固定數據面板 -->
-    <div id="permanentCard">
-        <div class="card-title" id="cardTitle">📌 育種與生產數據摘要</div>
+    <!-- 頂部數據摘要卡 -->
+    <div id="dataCard">
+        <div class="card-title" id="cardTitle">📌 查詢母豬生產與指數摘要</div>
         <div id="cardBody">
             <table class="compact-table">
                 <tr>
-                    <td class="lbl">代次 / 品種:</td>
-                    <td class="val"><span class="gen-badge">尚未搜尋</span> | <b>-</b></td>
+                    <td class="lbl">耳號 / 性別:</td>
+                    <td class="val" id="summaryEar">-</td>
                     <td class="lbl">生產指數:</td>
-                    <td class="val"><b>SPI:</b> - | <b>MLI:</b> - | <b>TSI:</b> -</td>
+                    <td class="val" id="summaryIndex">SPI: - | MLI: - | TSI: -</td>
                 </tr>
                 <tr>
                     <td class="lbl">出生日期:</td>
-                    <td class="val">-</td>
+                    <td class="val" id="summaryDob">-</td>
                     <td class="lbl">同胎數據:</td>
-                    <td class="val">總產: <b>-</b> | 活胎: <b>-</b> | 離乳: <b>-</b> (均重: - kg)</td>
+                    <td class="val" id="summaryBorn">總產: - | 活胎: - | 離乳: -</td>
                 </tr>
             </table>
         </div>
     </div>
 
-    <div id="network"></div>
+    <!-- 🌟 世系階梯繪圖畫布 -->
+    <div id="pedigreeTreeContainer">
+        <canvas id="lineCanvas"></canvas>
+        <div id="boxesContainer"></div>
+    </div>
 
     <script>
-        let network = null;
-        let allNodes = [];
-        let allEdges = [];
-        let maxGeneration = 3;
-        let currentBreedFilter = 'ALL';
-
-        function getDynamicGenColor(genNum, maxGen) {
-            const validGen = genNum || 1;
-            if (maxGen <= 1) maxGen = 2;
-            const ratio = (validGen - 1) / (maxGen - 1);
-            const r = Math.round(139 + (255 - 139) * ratio);
-            const g = Math.round(0 + (228 - 0) * ratio);
-            const b = Math.round(0 + (225 - 0) * ratio);
-
-            const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-            const fontColor = ratio < 0.4 ? "#FFFFFF" : "#000000";
-            return { background: hex, fontColor: fontColor };
-        }
+        let pedigreeData = {};
 
         fetch('data.json')
             .then(res => res.json())
             .then(data => {
-                allNodes = data.nodes;
-                allEdges = data.edges;
-
-                maxGeneration = Math.max(...allNodes.map(n => n.gen_num || 1), 3);
-                updateLegendUI();
-                applyFilters();
+                pedigreeData = data;
+                // 預設填入第一筆耳號
+                const firstEar = Object.keys(pedigreeData)[0];
+                if (firstEar) {
+                    document.getElementById('earInput').value = firstEar;
+                    drawPedigree(firstEar);
+                }
             });
 
-        function updateLegendUI() {
-            const container = document.getElementById('legendContainer');
-            container.innerHTML = '<strong>世代紅色階梯：</strong>';
+        function searchPedigree() {
+            const earInput = document.getElementById('earInput').value.trim().toUpperCase();
+            if (!earInput) return;
 
-            for (let g = 1; g <= maxGeneration; g++) {
-                const color = getDynamicGenColor(g, maxGeneration);
-                container.innerHTML += `
-                    <span class="legend-item">
-                        <span class="color-box" style="background: ${color.background};"></span> 第 ${g} 代
-                    </span>`;
-            }
-            container.innerHTML += `
-                <span class="legend-item"><span class="color-box" style="background: #FF8C00;"></span> 配種公</span>
-                <span style="margin-left: 6px;">｜</span>
-                <span class="legend-item"><strong>⬜ 方形</strong>：公豬</span>
-                <span class="legend-item"><strong>⭕ 圓形</strong>：母豬</span>`;
-        }
+            // 模糊搜尋適應
+            const matchedEar = Object.keys(pedigreeData).find(k => k.toUpperCase().includes(earInput));
 
-        function setBreedFilter(breed, btn) {
-            currentBreedFilter = breed;
-            document.querySelectorAll('.btn-breed').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            applyFilters();
-        }
-
-        function applyFilters() {
-            const rawInput = document.getElementById('earInput').value.trim();
-            
-            let baseNodeIds = new Set();
-            let exactMatchedNode = null;
-
-            if (rawInput) {
-                const searchTerms = rawInput.split(/[,，]/).map(s => s.trim().toLowerCase()).filter(s => s !== '');
-                searchTerms.forEach(term => {
-                    allNodes.forEach(node => {
-                        if (node.id.toLowerCase().includes(term)) {
-                            baseNodeIds.add(node.id);
-                            if (!exactMatchedNode || node.id.toLowerCase() === term) {
-                                exactMatchedNode = node;
-                            }
-                        }
-                    });
-                });
-
-                const expanded = new Set(baseNodeIds);
-                allEdges.forEach(e => {
-                    if (baseNodeIds.has(e.from) || baseNodeIds.has(e.to)) {
-                        expanded.add(e.from);
-                        expanded.add(e.to);
-                    }
-                });
-                baseNodeIds = expanded;
+            if (matchedEar) {
+                drawPedigree(matchedEar);
             } else {
-                allNodes.forEach(n => baseNodeIds.add(n.id));
-            }
-
-            let validNodes = allNodes.filter(n => baseNodeIds.has(n.id));
-
-            if (currentBreedFilter !== 'ALL') {
-                const filterTag = currentBreedFilter.toUpperCase();
-                const breedRelatedIds = new Set();
-
-                validNodes.forEach(node => {
-                    const bStr = (node.breed || '').toUpperCase();
-                    if (bStr.includes(filterTag)) breedRelatedIds.add(node.id);
-                });
-
-                allEdges.forEach(e => {
-                    const fromNode = allNodes.find(n => n.id === e.from);
-                    const toNode = allNodes.find(n => n.id === e.to);
-                    
-                    const fromBreed = (fromNode ? fromNode.breed : '').toUpperCase();
-                    const toBreed = (toNode ? toNode.breed : '').toUpperCase();
-
-                    if (fromBreed.includes(filterTag) || toBreed.includes(filterTag)) {
-                        if (baseNodeIds.has(e.from)) breedRelatedIds.add(e.from);
-                        if (baseNodeIds.has(e.to)) breedRelatedIds.add(e.to);
-                    }
-                });
-
-                validNodes = validNodes.filter(n => breedRelatedIds.has(n.id));
-            }
-
-            const finalNodeIds = new Set(validNodes.map(n => n.id));
-            const validEdges = allEdges.filter(e => finalNodeIds.has(e.from) && finalNodeIds.has(e.to));
-
-            renderOrthogonalGraph(validNodes, validEdges);
-
-            // 搜尋時自動帶入第一筆耳號數據
-            if (exactMatchedNode) {
-                updatePermanentDataCard(exactMatchedNode);
-            } else if (validNodes.length > 0) {
-                updatePermanentDataCard(validNodes[0]);
+                alert(`查無此母豬耳號: ${earInput}`);
             }
         }
 
-        function renderOrthogonalGraph(nodesData, edgesData) {
-            const container = document.getElementById('network');
+        // 🌟 完全依照圖片座標精準繪製階梯結構
+        function drawPedigree(ear) {
+            const data = pedigreeData[ear];
+            if (!data) return;
 
-            const formattedNodes = nodesData.map(node => {
-                let colorScheme = getDynamicGenColor(node.gen_num || 1, maxGeneration);
-                if (node.is_mate) {
-                    colorScheme = { background: '#FF8C00', fontColor: '#FFFFFF' };
-                }
-
-                return {
-                    id: node.id,
-                    label: node.label || node.id,
-                    shape: node.shape || 'ellipse',
-                    color: {
-                        background: colorScheme.background,
-                        border: '#333333',
-                        highlight: { background: colorScheme.background, border: '#000000' }
-                    },
-                    font: { size: 14, color: colorScheme.fontColor },
-                    borderWidth: 2,
-                    margin: 10
-                };
-            });
-
-            const formattedEdges = edgesData.map((edge, idx) => ({
-                id: 'e_' + idx,
-                from: edge.from,
-                to: edge.to,
-                label: edge.label || '',
-                font: { size: 11, align: 'top', background: '#ffffff' }
-            }));
-
-            const data = {
-                nodes: new vis.DataSet(formattedNodes),
-                edges: new vis.DataSet(formattedEdges)
-            };
-
-            const options = {
-                physics: { enabled: false }, // 靜態定格，不漂移
-                layout: {
-                    hierarchical: {
-                        enabled: true,
-                        direction: 'LR',           // 由左至右橫向排列
-                        sortMethod: 'directed',
-                        levelSeparation: 250,
-                        nodeSpacing: 80,
-                        treeSpacing: 120,
-                        blockShifting: false,
-                        edgeMinimization: true,
-                        parentCentralization: true
-                    }
-                },
-                nodes: { borderWidthSelected: 3 },
-                edges: {
-                    arrows: { to: { enabled: true, scaleFactor: 0.8 } },
-                    smooth: {
-                        enabled: true,
-                        type: 'cubicBezier',
-                        forceDirection: 'horizontal',
-                        roundness: 0.0             // 正 90 度直角折線
-                    },
-                    color: { color: '#666666', highlight: '#000000' }
-                }
-            };
-
-            if (network !== null) network.destroy();
-            network = new vis.Network(container, data, options);
-
-            // 點擊耳號隨時更新上方表格
-            network.on("click", function (params) {
-                if (params.nodes.length > 0) {
-                    const selectedId = params.nodes[0];
-                    const selectedNode = allNodes.find(n => n.id === selectedId);
-                    if (selectedNode) {
-                        updatePermanentDataCard(selectedNode);
-                    }
-                }
-            });
-        }
-
-        function updatePermanentDataCard(node) {
-            document.getElementById('cardTitle').innerText = `📌 耳號：${node.id} - 育種與生產數據摘要`;
-            const container = document.getElementById('cardBody');
+            // 更新頂部數據
+            document.getElementById('cardTitle').innerText = `📌 查詢母豬：${data.ear} - 生產與指數摘要`;
+            document.getElementById('summaryEar').innerHTML = `<b>${data.ear}</b> (${data.sex || 'FEMALE'})`;
             
-            const genNum = node.gen_num || 1;
-            const genText = node.is_mate ? `第 ${genNum} 代 (當胎配種公)` : `第 ${genNum} 代`;
-            const details = node.details || {};
-
-            const getVal = (keyStrs) => {
-                for (let kStr of keyStrs) {
-                    const foundKey = Object.keys(details).find(k => k.toLowerCase().includes(kStr.toLowerCase()));
-                    if (foundKey && details[foundKey] !== '' && details[foundKey] !== 'nan') {
-                        return details[foundKey];
-                    }
+            const details = data.details || {};
+            const getV = (kList) => {
+                for (let k of kList) {
+                    const foundKey = Object.keys(details).find(key => key.toLowerCase().includes(k.toLowerCase()));
+                    if (foundKey && details[foundKey]) return details[foundKey];
                 }
                 return '-';
             };
 
-            const breed = getVal(['Breed', '品']);
-            const parity = getVal(['Parity', '胎次']);
-            const dob = getVal(['DOB', '出生日期']);
-            const spi = getVal(['SPI']);
-            const mli = getVal(['MLI']);
-            const tsi = getVal(['TSI']);
-            const totalBorn = getVal(['total born', '總生', '總生產數']);
-            const bornAlive = getVal(['born alive', '活胎']);
-            const weaning = getVal(['weaning', '離乳數量']);
-            const weaningWt = getVal(['weaning weight', '均重']);
+            document.getElementById('summaryIndex').innerHTML = `<b>SPI:</b> ${getV(['SPI'])} | <b>MLI:</b> ${getV(['MLI'])} | <b>TSI:</b> ${getV(['TSI'])}`;
+            document.getElementById('summaryDob').innerText = getV(['DOB', '出生']);
+            document.getElementById('summaryBorn').innerHTML = `總產: <b>${getV(['total born', '總生'])}</b> | 活胎: <b>${getV(['born alive', '活胎'])}</b> | 離乳: <b>${getV(['weaning', '離乳'])}</b>`;
 
-            const html = `
-                <table class="compact-table">
-                    <tr>
-                        <td class="lbl">代次 / 品種:</td>
-                        <td class="val"><span class="gen-badge">${genText}</span> | <b>${breed}</b> (胎次: ${parity})</td>
-                        <td class="lbl">生產指數:</td>
-                        <td class="val"><b>SPI:</b> ${spi} | <b>MLI:</b> ${mli} | <b>TSI:</b> ${tsi}</td>
-                    </tr>
-                    <tr>
-                        <td class="lbl">出生日期:</td>
-                        <td class="val">${dob}</td>
-                        <td class="lbl">同胎數據:</td>
-                        <td class="val">總產: <b>${totalBorn}</b> | 活胎: <b>${bornAlive}</b> | 離乳: <b>${weaning}</b> (均重: ${weaningWt} kg)</td>
-                    </tr>
-                </table>
-            `;
+            const container = document.getElementById('boxesContainer');
+            container.innerHTML = '';
 
-            container.innerHTML = html;
+            // 定義圖片中的欄位座標 (X, Y)
+            const boxWidth = 180;
+            const boxHeight = 42;
+            const colGap = 80;
+            const rowGap = 20;
+
+            const col0_X = 40;                     // 左側 祖輩欄
+            const col1_X = col0_X + boxWidth + colGap; // 中間 查詢母豬欄
+            const col2_X = col1_X + boxWidth + colGap; // 右側 第一代欄
+            const col3_X = col2_X + boxWidth + colGap; // 右側 第二代欄
+
+            const row0_Y = 30;
+            const row1_Y = row0_Y + boxHeight + rowGap;
+            const row2_Y = row1_Y + boxHeight + rowGap;
+            const row3_Y = row2_Y + boxHeight + rowGap;
+
+            // 建立方框 HTML
+            const boxes = [
+                { id: 'sire_sire', text: `Sire 美系父親名(祖父)<br><b>${data.sire_sire}</b>`, x: col0_X, y: row0_Y, cls: 'box-ancestor' },
+                { id: 'sire_dam',  text: `Dam Name 美系母親名(祖母)<br><b>${data.sire_dam}</b>`, x: col0_X, y: row1_Y, cls: 'box-ancestor' },
+                { id: 'dam_sire',  text: `Sire 美系父親名(外公)<br><b>${data.dam_sire}</b>`, x: col0_X, y: row2_Y, cls: 'box-ancestor' },
+                { id: 'dam_dam',   text: `Dam Name 美系母親名(外婆)<br><b>${data.dam_dam}</b>`, x: col0_X, y: row3_Y, cls: 'box-ancestor' },
+                
+                { id: 'target_ear', text: `查詢母豬<br><b>${data.ear}</b>`, x: col1_X, y: (row1_Y + row2_Y)/2, cls: 'box-target' },
+                
+                { id: 'gen1_sire', text: `第一代公<br><b>${data.gen1_sire}</b>`, x: col2_X, y: row1_Y + 10, cls: 'box-gen' },
+                { id: 'gen2_sire', text: `第二代公<br><b>${data.gen2_sire}</b>`, x: col3_X, y: row3_Y, cls: 'box-gen' }
+            ];
+
+            boxes.forEach(b => {
+                const div = document.createElement('div');
+                div.className = `p-box ${b.cls}`;
+                div.style.left = b.x + 'px';
+                div.style.top = b.y + 'px';
+                div.innerHTML = b.text;
+                container.appendChild(div);
+            });
+
+            // 設定 Canvas 繪畫精準 90 度直角階梯連接線
+            const treeContainer = document.getElementById('pedigreeTreeContainer');
+            const canvas = document.getElementById('lineCanvas');
+            canvas.width = treeContainer.clientWidth;
+            canvas.height = Math.max(treeContainer.clientHeight, 420);
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+
+            // 畫 90 度直角折線函數
+            function drawOrthogonalLine(x1, y1, x2, y2, midX) {
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(midX, y1);
+                ctx.lineTo(midX, y2);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+
+            // 1. 左側祖輩連結到中間母豬
+            const targetLeftX = col1_X;
+            const targetLeftY = ((row1_Y + row2_Y)/2) + (boxHeight/2);
+            const midLeftX = col0_X + boxWidth + (colGap / 2);
+
+            drawOrthogonalLine(col0_X + boxWidth, row0_Y + boxHeight/2, targetLeftX, targetLeftY, midLeftX);
+            drawOrthogonalLine(col0_X + boxWidth, row1_Y + boxHeight/2, targetLeftX, targetLeftY, midLeftX);
+            drawOrthogonalLine(col0_X + boxWidth, row2_Y + boxHeight/2, targetLeftX, targetLeftY, midLeftX);
+            drawOrthogonalLine(col0_X + boxWidth, row3_Y + boxHeight/2, targetLeftX, targetLeftY, midLeftX);
+
+            // 2. 中間母豬連結到右側第一代與第二代公豬
+            const targetRightX = col1_X + boxWidth;
+            const targetRightY = targetLeftY;
+            const midRightX = col1_X + boxWidth + (colGap / 2);
+
+            drawOrthogonalLine(targetRightX, targetRightY, col2_X, row1_Y + 10 + boxHeight/2, midRightX);
+            drawOrthogonalLine(targetRightX, targetRightY, col3_X, row3_Y + boxHeight/2, midRightX);
         }
     </script>
 </body>
