@@ -1,142 +1,128 @@
-import re
 import json
+import os
 import pandas as pd
 
-# ==========================================
-# 1. Google Sheets 資料來源與設定
-# ==========================================
-SHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+SPREADSHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
+GID = "284410568"
+GOOGLE_SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID}"
 
-# 品系主題配色設定
-BREED_CONFIGS = {
-    "D": {"name": "杜洛克 (Duroc)", "colors": {"child": "#e74c3c", "sire": "#c0392b", "dam": "#f1948a"}},
-    "Y": {"name": "約克夏 (Yorkshire)", "colors": {"child": "#3498db", "sire": "#2980b9", "dam": "#85c1e9"}},
-    "L": {"name": "藍瑞斯 (Landrace)", "colors": {"child": "#2ecc71", "sire": "#27ae60", "dam": "#82e0aa"}}
-}
-DEFAULT_COLORS = {"child": "#95a5a6", "sire": "#7f8c8d", "dam": "#bdc3c7"}
-
-# ==========================================
-# 🧹 名稱清洗小工具（專門拿掉前綴與後綴編號）
-# ==========================================
-def clean_name(name_str):
-    if not name_str or str(name_str).strip() in ['-', 'nan', 'None', '']:
-        return ""
-
-    name_str = str(name_str).strip()
-    # 1. 移除最後面的個體/胎次編號（例如 488-8, 1096-1）
-    name_clean = re.sub(r'\s*\d+-\d+\s*$', '', name_str)
-    # 2. 移除最前面的開頭代號（例如 1CR2, CR2, 1CR1 等）
-    name_clean = re.sub(r'^\s*([0-9]?[A-Z]{2,4}[0-9]?)\s*', '', name_clean)
-    name_clean = name_clean.strip()
-
-    return name_clean if name_clean else name_str
-
-# ==========================================
-# 2. 主運算流程
-# ==========================================
-def generate_graph_data():
-    print("⏳ 正在從 Google Sheets 下載與解析資料...")
+def fetch_data_and_generate():
+    print("正在從 Google Sheet 擷取數據並進行代次防錯處理...")
     try:
-        df_tree = pd.read_csv(SHEET_URL)
+        df = pd.read_csv(GOOGLE_SHEET_CSV_URL)
+        print("✅ 成功下載 Google Sheet 資料！")
     except Exception as e:
-        print(f"❌ 下載失敗: {e}")
-        return
+        print(f"❌ 讀取失敗: {e}")
+        df = pd.DataFrame()
 
-    # 清理欄位名稱中的空格與換行符號
-    df_tree.columns = [str(c).strip().replace('\n', '') for c in df_tree.columns]
+    nodes = {}
+    edges = []
 
-    # 鎖定欄位：個體耳號、父親名 (祖父)、母親名 (祖母)
-    col_ear = next((c for c in df_tree.columns if "耳號" in c or "Ear" in c), df_tree.columns[0])
-    col_sire = next((c for c in df_tree.columns if "祖父" in c or "Sire" in c), df_tree.columns[4] if len(df_tree.columns) > 4 else df_tree.columns[0])
-    col_dam = next((c for c in df_tree.columns if "祖母" in c or "Dam" in c), df_tree.columns[5] if len(df_tree.columns) > 5 else df_tree.columns[0])
+    if not df.empty:
+        df.columns = [str(c).strip() for c in df.columns]
 
-    nodes_dict = {}
-    edges_list = []
-    added_edges = set()
+        ear_col = next((c for c in df.columns if '耳號' in c), None)
+        sex_col = next((c for c in df.columns if 'Sex' in c or '性別' in c), None)
+        breed_col = next((c for c in df.columns if 'Breed' in c or '品' in c), None)
+        parity_col = next((c for c in df.columns if '胎次' in c or 'Parity' in c), None)
+        mate_col = next((c for c in df.columns if '當胎配種公豬' in c), None)
 
-    for _, row in df_tree.iterrows():
-        child_raw = str(row[col_ear]).strip()
-        if not child_raw or child_raw in ['nan', 'None', '-']:
-            continue
+        gen1_sire_col = next((c for c in df.columns if '第一代公' in c), None)
+        gen1_dam_col = next((c for c in df.columns if '第一代母' in c), None)
+        gen2_sire_col = next((c for c in df.columns if '第二代公' in c), None)
+        gen2_dam_col = next((c for c in df.columns if '第二代母' in c), None)
+        gen3_col = next((c for c in df.columns if '第三代' in c), None)
 
-        sire_raw = str(row[col_sire]).strip()
-        dam_raw = str(row[col_dam]).strip()
+        def add_node(node_id, label, gen_num=1, sex="FEMALE", raw_details=None, is_mate=False):
+            if node_id and str(node_id).strip().lower() != 'nan' and str(node_id).strip() != '':
+                nid = str(node_id).strip()
+                s_type = str(sex).upper() if sex else ""
+                shape = "box" if "MALE" in s_type or "公" in s_type else "ellipse"
+                
+                breed_val = "D"
+                if breed_col and raw_details and breed_col in raw_details:
+                    b_str = str(raw_details[breed_col]).strip().upper()
+                    if b_str: breed_val = b_str
+                
+                # 🛑 關鍵防錯：如果 gen_num 不是整數，強制補回 1
+                try:
+                    valid_gen = int(gen_num)
+                except:
+                    valid_gen = 1
 
-        # 名稱清洗
-        sire = clean_name(sire_raw)
-        dam = clean_name(dam_raw)
+                if nid not in nodes:
+                    nodes[nid] = {
+                        "id": nid,
+                        "label": str(label).strip(),
+                        "gen_num": valid_gen,
+                        "is_mate": is_mate,
+                        "shape": shape,
+                        "breed": breed_val,
+                        "details": raw_details if raw_details else {"耳號": nid, "Breed": breed_val}
+                    }
 
-        # 判定品系配色 (根據耳號第一個字母 D, Y, L)
-        breed_code = child_raw[0].upper() if child_raw else ""
-        theme = BREED_CONFIGS.get(breed_code, {"name": "其他", "colors": DEFAULT_COLORS})["colors"]
-
-        # 1. 建立子代節點
-        if child_raw not in nodes_dict:
-            nodes_dict[child_raw] = {
-                'id': child_raw,
-                'label': child_raw,
-                'shape': 'circle',
-                'color': theme['child'],
-                'size': 20,
-                'title': f"耳號: {child_raw}\n品系代號: {breed_code}"
-            }
-
-        # 2. 建立父系節點（方形）與連線
-        if sire:
-            if sire not in nodes_dict:
-                nodes_dict[sire] = {
-                    'id': sire,
-                    'label': f"父: {sire}",
-                    'shape': 'square',
-                    'color': theme['sire'],
-                    'size': 24,
-                    'title': f"父系原名: {sire_raw}"
-                }
-            edge_key = (sire, child_raw)
-            if edge_key not in added_edges:
-                edges_list.append({
-                    'from': sire,
-                    'to': child_raw,
-                    'color': '#e74c3c',
-                    'width': 1.5,
-                    'title': f"父系: {sire_raw}"
+        def add_edge(source, target, relation="", parity=""):
+            s_str, t_str = str(source).strip(), str(target).strip()
+            if s_str and t_str and s_str.lower() != 'nan' and t_str.lower() != 'nan':
+                edges.append({
+                    "from": s_str,
+                    "to": t_str,
+                    "label": relation,
+                    "parity": str(parity) if pd.notna(parity) else ""
                 })
-                added_edges.add(edge_key)
 
-        # 3. 建立母系節點（橢圓形）與連線
-        if dam:
-            if dam not in nodes_dict:
-                nodes_dict[dam] = {
-                    'id': dam,
-                    'label': f"母: {dam}",
-                    'shape': 'ellipse',
-                    'color': theme['dam'],
-                    'size': 24,
-                    'title': f"母系原名: {dam_raw}"
-                }
-            edge_key = (dam, child_raw)
-            if edge_key not in added_edges:
-                edges_list.append({
-                    'from': dam,
-                    'to': child_raw,
-                    'color': '#e67e22',
-                    'width': 1.5,
-                    'title': f"母系: {dam_raw}"
-                })
-                added_edges.add(edge_key)
+        for _, row in df.iterrows():
+            row_dict = {k: (str(v) if pd.notna(v) else "") for k, v in row.to_dict().items()}
+            ear_tag = str(row[ear_col]).strip() if ear_col and pd.notna(row[ear_col]) else ""
+            
+            g1_sire = str(row[gen1_sire_col]).strip() if gen1_sire_col and pd.notna(row[gen1_sire_col]) else ""
+            g1_dam = str(row[gen1_dam_col]).strip() if gen1_dam_col and pd.notna(row[gen1_dam_col]) else ""
+            g2_sire = str(row[gen2_sire_col]).strip() if gen2_sire_col and pd.notna(row[gen2_sire_col]) else ""
+            g2_dam = str(row[gen2_dam_col]).strip() if gen2_dam_col and pd.notna(row[gen2_dam_col]) else ""
+            g3 = str(row[gen3_col]).strip() if gen3_col and pd.notna(row[gen3_col]) else ""
 
-    # 封裝成標準圖形資料 JSON
-    graph_data = {
-        'nodes': list(nodes_dict.values()),
-        'edges': edges_list
+            target_id = g3 if g3 else ear_tag
+            if not target_id or target_id.lower() == 'nan':
+                continue
+
+            sex_val = row[sex_col] if sex_col and pd.notna(row[sex_col]) else "FEMALE"
+            parity = row[parity_col] if parity_col and pd.notna(row[parity_col]) else ""
+            mate_sire = str(row[mate_col]).strip() if mate_col and pd.notna(row[mate_col]) else ""
+
+            # 第一代
+            if g1_sire: add_node(g1_sire, f"1代公:{g1_sire}", gen_num=1, sex="MALE", raw_details={"耳號": g1_sire, "Breed": "D"})
+            if g1_dam: add_node(g1_dam, f"1代母:{g1_dam}", gen_num=1, sex="FEMALE", raw_details={"耳號": g1_dam, "Breed": "D"})
+
+            # 第二代
+            if g2_sire:
+                add_node(g2_sire, f"2代公:{g2_sire}", gen_num=2, sex="MALE", raw_details={"耳號": g2_sire, "Breed": "D"})
+                if g1_sire: add_edge(g1_sire, g2_sire, "父")
+                if g1_dam: add_edge(g1_dam, g2_sire, "母")
+
+            if g2_dam:
+                add_node(g2_dam, f"2代母:{g2_dam}", gen_num=2, sex="FEMALE", raw_details={"耳號": g2_dam, "Breed": "D"})
+                if g1_sire: add_edge(g1_sire, g2_dam, "父")
+                if g1_dam: add_edge(g1_dam, g2_dam, "母")
+
+            # 第三代
+            add_node(target_id, target_id, gen_num=3, sex=sex_val, raw_details=row_dict)
+            if g2_sire: add_edge(g2_sire, target_id, "父")
+            if g2_dam: add_edge(g2_dam, target_id, "母")
+
+            # 當胎配種公
+            if mate_sire:
+                add_node(mate_sire, f"配種公:{mate_sire}", gen_num=2, sex="MALE", raw_details={"耳號": mate_sire, "Breed": "D"}, is_mate=True)
+                edge_label = f"第{int(parity)}胎配種" if pd.notna(parity) and str(parity).isdigit() else "配種"
+                add_edge(mate_sire, target_id, edge_label)
+
+    data_payload = {
+        "nodes": list(nodes.values()),
+        "edges": edges
     }
 
-    # 輸出成固定的 data.json 檔案
-    with open('data.json', 'w', encoding='utf-8') as f:
-        json.dump(graph_data, f, ensure_ascii=False, indent=2)
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump(data_payload, f, ensure_ascii=False, indent=2)
+    print(f"✅ 已修復代次 undefined 問題並成功寫入 data.json！")
 
-    print(f"✅ 成功處理 {len(nodes_dict)} 個節點與 {len(edges_list)} 條關聯線，已輸出成 data.json！")
-
-if __name__ == '__main__':
-    generate_graph_data()
+if __name__ == "__main__":
+    fetch_data_and_generate()
