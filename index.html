@@ -2,138 +2,123 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>GLA 豬隻血統與育種價值視覺化系統</title>
+    <title>血統世系圖視覺化系統</title>
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #121212; font-family: sans-serif; color: white; }
-        #header { position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(30, 30, 30, 0.9); padding: 12px 18px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; gap: 10px; align-items: center; }
-        #network { width: 100vw; height: 100vh; }
-        button { background: #2ecc71; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #27ae60; }
-        input { padding: 7px; border-radius: 4px; border: 1px solid #444; background: #222; color: white; }
-        .legend { font-size: 12px; display: flex; gap: 8px; margin-left: 10px; border-left: 1px solid #555; padding-left: 10px; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f9; }
+        .control-bar { background: #ffffff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
+        input[type="text"] { padding: 8px 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; width: 200px; }
+        button { padding: 8px 16px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .btn-toggle { background-color: #28a745; }
+        .btn-toggle:hover { background-color: #218838; }
+        #network { width: 100%; height: 750px; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-<div id="header">
-    <button onclick="fetchGoogleSheetData()">🔄 刷新/抓取最新數據</button>
-    <input type="text" id="searchInput" placeholder="搜尋耳號 (如 LY10891)..." onchange="searchPig()">
-    <div class="legend">
-        <span><span class="dot" style="background:#1E90FF;"></span> L(藍)</span>
-        <span><span class="dot" style="background:#FFD700;"></span> Y(黃)</span>
-        <span><span class="dot" style="background:#FF7F7F;"></span> D/DD(淡紅)</span>
-        <span><span class="dot" style="background:#2ECC71;"></span> LY(綠)</span>
+    <div class="control-bar">
+        <label for="earInput"><strong>查詢耳號：</strong></label>
+        <input type="text" id="earInput" placeholder="例如: D1052 或 y1266">
+        <button onclick="searchEarTag()">🔍 查詢世系樹</button>
+        <button class="btn-toggle" onclick="toggleLayout()">🔄 切換模式 (世代樹狀圖 / 全景蜘蛛網)</button>
     </div>
-</div>
 
-<div id="network"></div>
+    <div id="network"></div>
 
-<script>
-const SHEET_ID = '17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA';
-const URL_PERF = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0`;
+    <script>
+        let network = null;
+        let allNodes = [];
+        let allEdges = [];
+        let isTreeMode = true; // 預設使用你最喜歡的「世代分層樹狀圖」
 
-let network = null;
-let nodesDataset = new vis.DataSet();
-let edgesDataset = new vis.DataSet();
+        // 載入 JSON 資料
+        fetch('data.json')
+            .then(response => response.json())
+            .then(data => {
+                allNodes = data.nodes;
+                allEdges = data.edges;
+                renderGraph(allNodes, allEdges);
+            })
+            .catch(err => console.error("無法讀取 data.json:", err));
 
-const breedColors = {
-    'L': '#1E90FF',
-    'Y': '#FFD700',
-    'D': '#FF7F7F',
-    'DD': '#FF7F7F',
-    'LY': '#2ECC71'
-};
+        function renderGraph(nodesData, edgesData) {
+            const container = document.getElementById('network');
+            const data = {
+                nodes: new vis.DataSet(nodesData),
+                edges: new vis.DataSet(edgesData)
+            };
 
-function initNetwork() {
-    const container = document.getElementById('network');
-    const data = { nodes: nodesDataset, edges: edgesDataset };
-    const options = {
-        nodes: { font: { size: 14, color: '#ffffff' }, borderWidth: 2 },
-        edges: { color: { inherit: false, opacity: 0.4 }, smooth: { type: 'cubicBezier' } },
-        interaction: { hover: true, selectConnectedEdges: true, navigationButtons: true },
-        physics: { barnesHut: { gravitationalConstant: -3000, springLength: 120 } }
-    };
-    network = new vis.Network(container, data, options);
-}
+            const options = {
+                layout: {
+                    hierarchical: isTreeMode ? {
+                        enabled: true,
+                        direction: 'LR', // LR = Left to Right (由左至右橫向排列，就跟你第一張 Excel 圖一模一樣！)
+                        sortMethod: 'directed',
+                        levelSeparation: 220,
+                        nodeSpacing: 100
+                    } : { enabled: false }
+                },
+                physics: {
+                    enabled: !isTreeMode, // 樹狀模式下關閉物理漂浮，保持乾淨對齊
+                    solver: 'forceAtlas2Based'
+                },
+                nodes: {
+                    shape: 'box',
+                    margin: 10,
+                    font: { size: 14, color: '#333333' },
+                    color: { background: '#e3f2fd', border: '#2196f3' }
+                },
+                edges: {
+                    arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+                    font: { size: 11, align: 'top' },
+                    color: { color: '#888888' },
+                    smooth: { type: 'cubicBezier' }
+                }
+            };
 
-// 解析 CSV 格式
-function parseCSV(text) {
-    const lines = text.split('\n');
-    const result = [];
-    const headers = lines[0].split(',');
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].strip && !lines[i].trim()) continue;
-        const currentline = lines[i].split(',');
-        const obj = {};
-        for (let j = 0; j < headers.length; j++) {
-            obj[headers[j].replace(/"/g, '').trim()] = currentline[j] ? currentline[j].replace(/"/g, '').trim() : '';
+            if (network !== null) network.destroy();
+            network = new vis.Network(container, data, options);
         }
-        result.push(obj);
-    }
-    return result;
-}
 
-async function fetchGoogleSheetData() {
-    try {
-        const response = await fetch(URL_PERF);
-        const csvText = await response.text();
-        const data = parseCSV(csvText);
+        // 耳號搜尋功能
+        function searchEarTag() {
+            const ear = document.getElementById('earInput').value.trim();
+            if (!ear) {
+                renderGraph(allNodes, allEdges);
+                return;
+            }
 
-        nodesDataset.clear();
-        edgesDataset.clear();
-
-        data.forEach(row => {
-            const sowId = row['母豬耳號(Sow Ear Tag)'];
-            if (!sowId) return;
-
-            const breed = row['品種(Breed)'] || '未知';
-            const indexVal = row['🏆 育種選拔指數(Selection Index)'] || 'N/A';
-            const comment = row['選拔評價與行動建議(Selection Comment)'] || '無';
-            const color = breedColors[breed] || '#A0A0A0';
-
-            const tooltipHtml = `
-                <div style="font-size:14px; padding:6px;">
-                    <b>🐷 耳號:</b> ${sowId}<br>
-                    <b>🧬 品種:</b> ${breed}<br>
-                    <hr style="margin:5px 0;">
-                    <b>🏆 育種選拔指數:</b> <b style="color:#2ecc71;">${indexVal}</b><br>
-                    <b>📋 評價:</b> ${comment}
-                </div>
-            `;
-
-            nodesDataset.add({
-                id: sowId,
-                label: sowId,
-                shape: 'circle',
-                color: { background: color, border: '#ffffff' },
-                title: tooltipHtml
+            // 搜尋該耳號以及與其有血統關聯的上線/下線點位
+            const relatedNodes = new Set([ear]);
+            allEdges.forEach(edge => {
+                if (edge.from === ear || edge.to === ear) {
+                    relatedNodes.add(edge.from);
+                    relatedNodes.add(edge.to);
+                }
             });
-        });
 
-        alert("✅ 數據已成功從 Google Sheet 更新！");
-    } catch (err) {
-        alert("❌ 讀取資料失敗，請確認 Google Sheet 已設定公開檢視權限！");
-        console.error(err);
-    }
-}
+            const filteredNodes = allNodes.filter(n => relatedNodes.has(n.id));
+            const filteredEdges = allEdges.filter(e => relatedNodes.has(e.from) && relatedNodes.has(e.to));
 
-function searchPig() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (query && nodesDataset.get(query)) {
-        network.focus(query, { scale: 1.5, animation: true });
-        network.selectNodes([query]);
-    } else {
-        alert("找不到該耳號！");
-    }
-}
+            if (filteredNodes.length === 0) {
+                alert("找不到該耳號！請確認輸入是否正確。");
+                return;
+            }
 
-window.onload = () => {
-    initNetwork();
-    fetchGoogleSheetData();
-};
-</script>
+            renderGraph(filteredNodes, filteredEdges);
+        }
 
+        // 切換世代樹狀圖 / 蜘蛛網圖
+        function toggleLayout() {
+            isTreeMode = !isTreeMode;
+            const currentInput = document.getElementById('earInput').value.trim();
+            if (currentInput) {
+                searchEarTag();
+            } else {
+                renderGraph(allNodes, allEdges);
+            }
+        }
+    </script>
 </body>
 </html>
