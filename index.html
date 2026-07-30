@@ -2,12 +2,11 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>永久固定數據卡與靜態世系圖系統</title>
+    <title>自動同步數據卡與靜態世系圖系統</title>
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f8f9fa; }
         
-        /* 1. 控制列 */
         .control-bar { background: #ffffff; padding: 10px 15px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         input[type="text"] { padding: 6px 10px; font-size: 14px; border: 1px solid #ced4da; border-radius: 4px; width: 220px; }
         
@@ -16,12 +15,11 @@
         .btn-breed { background-color: #6c757d; margin-right: 2px; padding: 5px 10px; font-size: 13px; }
         .btn-breed.active { background-color: #198754; font-weight: bold; }
         
-        /* 2. 圖例欄 */
         .legend-bar { display: flex; gap: 10px; font-size: 13px; background: #fff; padding: 8px 12px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
         .legend-item { display: flex; align-items: center; gap: 4px; }
         .color-box { width: 14px; height: 14px; border-radius: 2px; border: 1px solid #999; }
         
-        /* 3. 🌟 永久固定框架 (完全沒有關閉按鈕，永遠顯眼卡在畫面上方) */
+        /* 永久固定在上方的數據卡 */
         #permanentCard {
             background-color: #ffffff;
             border: 2px solid #0d6efd;
@@ -29,29 +27,25 @@
             padding: 10px 14px;
             margin-bottom: 10px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-            display: block !important; /* 強制永遠顯示 */
         }
         .card-title { font-size: 15px; color: #0d6efd; font-weight: bold; margin-bottom: 6px; border-bottom: 1px dashed #0d6efd; padding-bottom: 4px; }
 
-        /* 雙欄精簡兩行表格 */
         .compact-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .compact-table td { border: 1px solid #dee2e6; padding: 5px 8px; }
         .compact-table .lbl { background-color: #f1f3f5; font-weight: bold; width: 14%; text-align: right; }
         .compact-table .val { width: 36%; font-weight: 500; color: #111; }
         .gen-badge { background-color: #e7f5ff; color: #1c7ed6; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 
-        /* 4. 世系樹畫布容器 */
         #network { width: 100%; height: 580px; background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 6px; }
     </style>
 </head>
 <body>
 
-    <!-- 1. 搜尋與品種過濾控制列 -->
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>搜尋耳號：</strong></label>
-            <input type="text" id="earInput" placeholder="例如: DD26002 或 LY3492">
-            <button class="btn" onclick="applyFilters()">🔍 搜尋比對</button>
+            <input type="text" id="earInput" placeholder="例如: DD26009 或 LY3492" onkeydown="if(event.key==='Enter') applyFilters()">
+            <button class="btn" onclick="applyFilters()">🔍 搜尋</button>
         </div>
 
         <div>
@@ -64,19 +58,18 @@
         </div>
     </div>
 
-    <!-- 2. 世代顏色圖例 -->
     <div class="legend-bar" id="legendContainer">
         <strong>世代紅色階梯：</strong>
     </div>
 
-    <!-- 3. 🌟 永久固定在最上方的育種數據面板 (無彈窗、無關閉按鈕，永遠固定在圖正上方) -->
+    <!-- 永久固定數據面板 -->
     <div id="permanentCard">
-        <div class="card-title" id="cardTitle">📌 育種與生產數據摘要 (請點選下方世系圖中的耳號)</div>
+        <div class="card-title" id="cardTitle">📌 育種與生產數據摘要</div>
         <div id="cardBody">
             <table class="compact-table">
                 <tr>
                     <td class="lbl">代次 / 品種:</td>
-                    <td class="val"><span class="gen-badge">尚未點選</span> | <b>-</b></td>
+                    <td class="val"><span class="gen-badge">尚未搜尋</span> | <b>-</b></td>
                     <td class="lbl">生產指數:</td>
                     <td class="val"><b>SPI:</b> - | <b>MLI:</b> - | <b>TSI:</b> -</td>
                 </tr>
@@ -90,7 +83,6 @@
         </div>
     </div>
 
-    <!-- 4. 世系圖畫布 -->
     <div id="network"></div>
 
     <script>
@@ -153,11 +145,18 @@
             const rawInput = document.getElementById('earInput').value.trim();
             
             let baseNodeIds = new Set();
+            let exactMatchedNode = null;
+
             if (rawInput) {
                 const searchTerms = rawInput.split(/[,，]/).map(s => s.trim().toLowerCase()).filter(s => s !== '');
                 searchTerms.forEach(term => {
                     allNodes.forEach(node => {
-                        if (node.id.toLowerCase().includes(term)) baseNodeIds.add(node.id);
+                        if (node.id.toLowerCase().includes(term)) {
+                            baseNodeIds.add(node.id);
+                            if (!exactMatchedNode || node.id.toLowerCase() === term) {
+                                exactMatchedNode = node; // 優先抓取完全符合的耳號
+                            }
+                        }
                     });
                 });
 
@@ -204,6 +203,13 @@
             const validEdges = allEdges.filter(e => finalNodeIds.has(e.from) && finalNodeIds.has(e.to));
 
             renderOrthogonalGraph(validNodes, validEdges);
+
+        // 🌟 核心升級：只要一按搜尋，自動把找到的第一筆耳號數據填進上方表格！
+            if (exactMatchedNode) {
+                updatePermanentDataCard(exactMatchedNode);
+            } else if (validNodes.length > 0) {
+                updatePermanentDataCard(validNodes[0]);
+            }
         }
 
         function renderOrthogonalGraph(nodesData, edgesData) {
@@ -244,11 +250,11 @@
             };
 
             const options = {
-                physics: { enabled: false }, // 靜態不抖動
+                physics: { enabled: false },
                 layout: {
                     hierarchical: {
                         enabled: true,
-                        direction: 'LR',           // 由左至右階層排列
+                        direction: 'LR',
                         sortMethod: 'directed',
                         levelSeparation: 250,
                         nodeSpacing: 80,
@@ -265,7 +271,7 @@
                         enabled: true,
                         type: 'cubicBezier',
                         forceDirection: 'horizontal',
-                        roundness: 0.0             // 90度直角折線
+                        roundness: 0.0
                     },
                     color: { color: '#666666', highlight: '#000000' }
                 }
@@ -274,7 +280,7 @@
             if (network !== null) network.destroy();
             network = new vis.Network(container, data, options);
 
-            // 點擊耳號 ➔ 更新固定面板
+            // 點擊圖上耳號隨時切換上方表格
             network.on("click", function (params) {
                 if (params.nodes.length > 0) {
                     const selectedId = params.nodes[0];
@@ -284,15 +290,8 @@
                     }
                 }
             });
-
-            // 預設填入第一個耳號數據
-            if (nodesData.length > 0) {
-                const firstNode = allNodes.find(n => n.id === nodesData[0].id);
-                if (firstNode) updatePermanentDataCard(firstNode);
-            }
         }
 
-        // 即時更新固定面板的內容
         function updatePermanentDataCard(node) {
             document.getElementById('cardTitle').innerText = `📌 耳號：${node.id} - 育種與生產數據摘要`;
             const container = document.getElementById('cardBody');
@@ -301,21 +300,26 @@
             const genText = node.is_mate ? `第 ${genNum} 代 (當胎配種公)` : `第 ${genNum} 代`;
             const details = node.details || {};
 
-            const getVal = (keyStr) => {
-                const foundKey = Object.keys(details).find(k => k.toLowerCase().includes(keyStr.toLowerCase()));
-                return (foundKey && details[foundKey] !== '') ? details[foundKey] : '-';
+            const getVal = (keyStrs) => {
+                for (let kStr of keyStrs) {
+                    const foundKey = Object.keys(details).find(k => k.toLowerCase().includes(kStr.toLowerCase()));
+                    if (foundKey && details[foundKey] !== '' && details[foundKey] !== 'nan') {
+                        return details[foundKey];
+                    }
+                }
+                return '-';
             };
 
-            const breed = getVal('Breed');
-            const parity = getVal('Parity');
-            const dob = getVal('DOB');
-            const spi = getVal('SPI');
-            const mli = getVal('MLI');
-            const tsi = getVal('TSI');
-            const totalBorn = getVal('Total born');
-            const bornAlive = getVal('Born alive');
-            const weaning = getVal('Weaning');
-            const weaningWt = getVal('weaning weight');
+            const breed = getVal(['Breed', '品']);
+            const parity = getVal(['Parity', '胎次']);
+            const dob = getVal(['DOB', '出生日期']);
+            const spi = getVal(['SPI']);
+            const mli = getVal(['MLI']);
+            const tsi = getVal(['TSI']);
+            const totalBorn = getVal(['total born', '總生', '總生產數']);
+            const bornAlive = getVal(['born alive', '活胎']);
+            const weaning = getVal(['weaning', '離乳數量']);
+            const weaningWt = getVal(['weaning weight', '均重']);
 
             const html = `
                 <table class="compact-table">
