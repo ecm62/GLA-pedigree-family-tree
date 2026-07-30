@@ -2,17 +2,18 @@ import json
 import os
 import pandas as pd
 
+# 指定你的 Google Sheet 網址（自動轉換 CSV 格式）
 SPREADSHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
 GID = "284410568"
 GOOGLE_SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID}"
 
 def fetch_data_and_generate():
-    print("正在從 Google Sheet 擷取數據並進行代次防錯處理...")
+    print("正在從 Google Sheet 下載最新數據...")
     try:
         df = pd.read_csv(GOOGLE_SHEET_CSV_URL)
         print("✅ 成功下載 Google Sheet 資料！")
     except Exception as e:
-        print(f"❌ 讀取失敗: {e}")
+        print(f"❌ 下載失敗: {e}")
         df = pd.DataFrame()
 
     nodes = {}
@@ -42,19 +43,13 @@ def fetch_data_and_generate():
                 breed_val = "D"
                 if breed_col and raw_details and breed_col in raw_details:
                     b_str = str(raw_details[breed_col]).strip().upper()
-                    if b_str: breed_val = b_str
-                
-                # 🛑 關鍵防錯：如果 gen_num 不是整數，強制補回 1
-                try:
-                    valid_gen = int(gen_num)
-                except:
-                    valid_gen = 1
+                    if b_str and b_str != 'NAN': breed_val = b_str
 
                 if nid not in nodes:
                     nodes[nid] = {
                         "id": nid,
                         "label": str(label).strip(),
-                        "gen_num": valid_gen,
+                        "gen_num": int(gen_num),
                         "is_mate": is_mate,
                         "shape": shape,
                         "breed": breed_val,
@@ -89,11 +84,11 @@ def fetch_data_and_generate():
             parity = row[parity_col] if parity_col and pd.notna(row[parity_col]) else ""
             mate_sire = str(row[mate_col]).strip() if mate_col and pd.notna(row[mate_col]) else ""
 
-            # 第一代
+            # 建立第一代
             if g1_sire: add_node(g1_sire, f"1代公:{g1_sire}", gen_num=1, sex="MALE", raw_details={"耳號": g1_sire, "Breed": "D"})
             if g1_dam: add_node(g1_dam, f"1代母:{g1_dam}", gen_num=1, sex="FEMALE", raw_details={"耳號": g1_dam, "Breed": "D"})
 
-            # 第二代
+            # 建立第二代
             if g2_sire:
                 add_node(g2_sire, f"2代公:{g2_sire}", gen_num=2, sex="MALE", raw_details={"耳號": g2_sire, "Breed": "D"})
                 if g1_sire: add_edge(g1_sire, g2_sire, "父")
@@ -104,7 +99,7 @@ def fetch_data_and_generate():
                 if g1_sire: add_edge(g1_sire, g2_dam, "父")
                 if g1_dam: add_edge(g1_dam, g2_dam, "母")
 
-            # 第三代
+            # 建立第三代
             add_node(target_id, target_id, gen_num=3, sex=sex_val, raw_details=row_dict)
             if g2_sire: add_edge(g2_sire, target_id, "父")
             if g2_dam: add_edge(g2_dam, target_id, "母")
@@ -122,7 +117,7 @@ def fetch_data_and_generate():
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(data_payload, f, ensure_ascii=False, indent=2)
-    print(f"✅ 已修復代次 undefined 問題並成功寫入 data.json！")
+    print(f"✅ 已成功封裝 {len(nodes)} 個節點至 data.json！")
 
 if __name__ == "__main__":
     fetch_data_and_generate()
