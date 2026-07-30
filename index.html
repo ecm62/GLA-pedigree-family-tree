@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>自動同步數據卡與靜態世系圖系統</title>
+    <title>直角血統世系圖系統</title>
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f8f9fa; }
@@ -19,7 +19,7 @@
         .legend-item { display: flex; align-items: center; gap: 4px; }
         .color-box { width: 14px; height: 14px; border-radius: 2px; border: 1px solid #999; }
         
-        /* 永久固定在上方的數據卡 */
+        /* 常駐固定數據面板 */
         #permanentCard {
             background-color: #ffffff;
             border: 2px solid #0d6efd;
@@ -59,7 +59,7 @@
     </div>
 
     <div class="legend-bar" id="legendContainer">
-        <strong>世代紅色階梯：</strong>
+        <strong>世代顏色：</strong>
     </div>
 
     <!-- 永久固定數據面板 -->
@@ -154,7 +154,7 @@
                         if (node.id.toLowerCase().includes(term)) {
                             baseNodeIds.add(node.id);
                             if (!exactMatchedNode || node.id.toLowerCase() === term) {
-                                exactMatchedNode = node; // 優先抓取完全符合的耳號
+                                exactMatchedNode = node;
                             }
                         }
                     });
@@ -204,7 +204,7 @@
 
             renderOrthogonalGraph(validNodes, validEdges);
 
-        // 🌟 核心升級：只要一按搜尋，自動把找到的第一筆耳號數據填進上方表格！
+            // 搜尋時自動帶入第一筆耳號數據
             if (exactMatchedNode) {
                 updatePermanentDataCard(exactMatchedNode);
             } else if (validNodes.length > 0) {
@@ -250,11 +250,11 @@
             };
 
             const options = {
-                physics: { enabled: false },
+                physics: { enabled: false }, // 靜態定格，不漂移
                 layout: {
                     hierarchical: {
                         enabled: true,
-                        direction: 'LR',
+                        direction: 'LR',           // 由左至右橫向排列
                         sortMethod: 'directed',
                         levelSeparation: 250,
                         nodeSpacing: 80,
@@ -271,7 +271,7 @@
                         enabled: true,
                         type: 'cubicBezier',
                         forceDirection: 'horizontal',
-                        roundness: 0.0
+                        roundness: 0.0             // 正 90 度直角折線
                     },
                     color: { color: '#666666', highlight: '#000000' }
                 }
@@ -280,7 +280,7 @@
             if (network !== null) network.destroy();
             network = new vis.Network(container, data, options);
 
-            // 點擊圖上耳號隨時切換上方表格
+            // 點擊耳號隨時更新上方表格
             network.on("click", function (params) {
                 if (params.nodes.length > 0) {
                     const selectedId = params.nodes[0];
