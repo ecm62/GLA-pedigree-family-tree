@@ -2,122 +2,355 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>血統世系圖視覺化系統</title>
+    <title>動態世代與直角交錯高亮血統系統</title>
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
-        body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f9; }
-        .control-bar { background: #ffffff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
-        input[type="text"] { padding: 8px 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; width: 200px; }
-        button { padding: 8px 16px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
-        .btn-toggle { background-color: #28a745; }
-        .btn-toggle:hover { background-color: #218838; }
-        #network { width: 100%; height: 750px; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 15px; background-color: #f8f9fa; }
+        .control-bar { background: #ffffff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 12px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        input[type="text"] { padding: 8px 12px; font-size: 15px; border: 1px solid #ced4da; border-radius: 4px; width: 280px; }
+        button { padding: 8px 16px; font-size: 15px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0b5ed7; }
+        .btn-toggle { background-color: #198754; }
+        .btn-toggle:hover { background-color: #157347; }
+        
+        .legend-bar { display: flex; gap: 12px; font-size: 14px; background: #fff; padding: 10px 15px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .color-box { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #999; }
+        
+        #network { width: 100%; height: 720px; background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 8px; }
+
+        /* 詳細資訊彈窗 Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fff; margin: 5% auto; padding: 20px; border-radius: 8px; width: 60%; max-height: 80vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .close-btn { float: right; font-size: 24px; font-weight: bold; cursor: pointer; color: #aaa; }
+        .close-btn:hover { color: #000; }
+        table.detail-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        table.detail-table th, table.detail-table td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
+        table.detail-table th { background-color: #f1f3f5; width: 35%; }
+        .gen-highlight-row { background-color: #e7f5ff !important; font-size: 16px; font-weight: bold; color: #1c7ed6; }
     </style>
 </head>
 <body>
 
     <div class="control-bar">
-        <label for="earInput"><strong>查詢耳號：</strong></label>
-        <input type="text" id="earInput" placeholder="例如: D1052 或 y1266">
-        <button onclick="searchEarTag()">🔍 查詢世系樹</button>
-        <button class="btn-toggle" onclick="toggleLayout()">🔄 切換模式 (世代樹狀圖 / 全景蜘蛛網)</button>
+        <div>
+            <label for="earInput"><strong>搜尋耳號 (支援多耳號逗號比對)：</strong></label>
+            <input type="text" id="earInput" placeholder="例如: D1052, DD26002 或 26002">
+            <button onclick="applySearch()">🔍 搜尋比對</button>
+        </div>
+
+        <button class="btn-toggle" onclick="toggleLayout()">🔄 切換視角 (世代樹狀圖 / 巨觀蜘蛛網)</button>
+    </div>
+
+    <div class="legend-bar" id="legendContainer">
+        <strong>世代紅色階梯：</strong>
     </div>
 
     <div id="network"></div>
+
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle">豬隻詳細育種與生產指數資訊</h3>
+            <table class="detail-table" id="detailTable"></table>
+        </div>
+    </div>
 
     <script>
         let network = null;
         let allNodes = [];
         let allEdges = [];
-        let isTreeMode = true; // 預設使用你最喜歡的「世代分層樹狀圖」
+        let nodesDataSet = null;
+        let edgesDataSet = null;
+        let isTreeMode = true;
+        let maxGeneration = 3;
 
-        // 載入 JSON 資料
+        // 世代顏色動態計算
+        function getDynamicGenColor(genNum, maxGen) {
+            if (maxGen <= 1) maxGen = 2;
+            const ratio = (genNum - 1) / (maxGen - 1);
+            const r = Math.round(139 + (255 - 139) * ratio);
+            const g = Math.round(0 + (228 - 0) * ratio);
+            const b = Math.round(0 + (225 - 0) * ratio);
+
+            const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            const fontColor = ratio < 0.4 ? "#FFFFFF" : "#000000";
+            return { background: hex, fontColor: fontColor };
+        }
+
+        function getBreedBorderColor(breed) {
+            if (!breed || breed === 'DEFAULT') return '#888888';
+            let hash = 0;
+            for (let i = 0; i < breed.length; i++) hash = breed.charCodeAt(i) + ((hash << 5) - hash);
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return '#' + "000000".substring(0, 6 - c.length) + c;
+        }
+
         fetch('data.json')
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
                 allNodes = data.nodes;
                 allEdges = data.edges;
-                renderGraph(allNodes, allEdges);
-            })
-            .catch(err => console.error("無法讀取 data.json:", err));
+
+                maxGeneration = Math.max(...allNodes.map(n => n.gen_num || 1), 3);
+                updateLegendUI();
+                applySearch();
+            });
+
+        function updateLegendUI() {
+            const container = document.getElementById('legendContainer');
+            container.innerHTML = '<strong>世代紅色階梯 (動態漸變)：</strong>';
+
+            for (let g = 1; g <= maxGeneration; g++) {
+                const color = getDynamicGenColor(g, maxGeneration);
+                container.innerHTML += `
+                    <span class="legend-item">
+                        <span class="color-box" style="background: ${color.background};"></span> 第 ${g} 代
+                    </span>`;
+            }
+            container.innerHTML += `
+                <span class="legend-item"><span class="color-box" style="background: #FF8C00;"></span> 配種公</span>
+                <span style="margin-left: 8px;">｜</span>
+                <span class="legend-item"><strong>⬜ 方形</strong>：公豬</span>
+                <span class="legend-item"><strong>⭕ 圓形</strong>：母豬</span>`;
+        }
 
         function renderGraph(nodesData, edgesData) {
             const container = document.getElementById('network');
-            const data = {
-                nodes: new vis.DataSet(nodesData),
-                edges: new vis.DataSet(edgesData)
-            };
+            
+            const formattedNodes = nodesData.map(node => {
+                let colorScheme = getDynamicGenColor(node.gen_num || 1, maxGeneration);
+                if (node.is_mate) {
+                    colorScheme = { background: '#FF8C00', fontColor: '#FFFFFF' };
+                }
+                const borderColor = getBreedBorderColor(node.breed);
+
+                return {
+                    ...node,
+                    shape: node.shape || 'ellipse',
+                    baseColor: colorScheme.background,
+                    baseFontColor: colorScheme.fontColor,
+                    baseBorderColor: borderColor,
+                    color: {
+                        background: colorScheme.background,
+                        border: borderColor,
+                        highlight: { background: colorScheme.background, border: '#000000' }
+                    },
+                    borderWidth: 3,
+                    font: { size: 14, color: colorScheme.fontColor }
+                };
+            });
+
+            // 線條改為直角排線 (cubicBezier 搭配適度平滑或 direct 直角)
+            const formattedEdges = edgesData.map((edge, idx) => ({
+                ...edge,
+                id: 'e_' + idx,
+                baseColor: '#888888',
+                color: { color: '#888888', highlight: '#000000' }
+            }));
+
+            nodesDataSet = new vis.DataSet(formattedNodes);
+            edgesDataSet = new vis.DataSet(formattedEdges);
+
+            const data = { nodes: nodesDataSet, edges: edgesDataSet };
 
             const options = {
                 layout: {
                     hierarchical: isTreeMode ? {
                         enabled: true,
-                        direction: 'LR', // LR = Left to Right (由左至右橫向排列，就跟你第一張 Excel 圖一模一樣！)
+                        direction: 'LR',
                         sortMethod: 'directed',
-                        levelSeparation: 220,
-                        nodeSpacing: 100
+                        levelSeparation: 260, // 加大間距避開藏線
+                        nodeSpacing: 110,
+                        treeSpacing: 160,
+                        blockShifting: true,
+                        edgeMinimization: true,
+                        parentCentralization: true
                     } : { enabled: false }
                 },
-                physics: {
-                    enabled: !isTreeMode, // 樹狀模式下關閉物理漂浮，保持乾淨對齊
-                    solver: 'forceAtlas2Based'
-                },
+                physics: { enabled: !isTreeMode },
                 nodes: {
-                    shape: 'box',
-                    margin: 10,
-                    font: { size: 14, color: '#333333' },
-                    color: { background: '#e3f2fd', border: '#2196f3' }
+                    margin: 12 // 讓文字與外框保有空間，避免線條插進內部
                 },
                 edges: {
                     arrows: { to: { enabled: true, scaleFactor: 0.8 } },
-                    font: { size: 11, align: 'top' },
-                    color: { color: '#888888' },
-                    smooth: { type: 'cubicBezier' }
+                    font: { size: 11, align: 'middle', background: '#ffffff' }, // 標籤加上白底，防線條重疊看不清
+                    smooth: {
+                        enabled: true,
+                        type: 'cubicBezier', // 直角優雅拐彎排線
+                        forceDirection: 'horizontal',
+                        roundness: 0.2
+                    }
                 }
             };
 
             if (network !== null) network.destroy();
             network = new vis.Network(container, data, options);
+
+            // 🌟 核心功能：點擊節點/線條時，凸顯有關係的血統，其他變灰！
+            network.on("click", function (params) {
+                if (params.nodes.length > 0) {
+                    const selectedNodeId = params.nodes[0];
+                    highlightRelatedSubtree(selectedNodeId);
+                    
+                    // 同時打開彈窗資訊
+                    const selectedNode = allNodes.find(n => n.id === selectedNodeId);
+                    if (selectedNode) showDetailsModal(selectedNode);
+
+                } else {
+                    // 點擊空白處重置，恢復全部亮色
+                    resetHighlight();
+                }
+            });
         }
 
-        // 耳號搜尋功能
-        function searchEarTag() {
-            const ear = document.getElementById('earInput').value.trim();
-            if (!ear) {
+        // 🌟 血統系統高亮演算法（只亮有關係的，其他變淡灰色）
+        function highlightRelatedSubtree(selectedId) {
+            const connectedNodes = new Set([selectedId]);
+            const connectedEdges = new Set();
+
+            // 尋找上下游直接與間接關聯點
+            allEdges.forEach(edge => {
+                if (edge.from === selectedId || edge.to === selectedId) {
+                    connectedNodes.add(edge.from);
+                    connectedNodes.add(edge.to);
+                }
+            });
+
+            // 再次擴展一階血統
+            allEdges.forEach(edge => {
+                if (connectedNodes.has(edge.from) && connectedNodes.has(edge.to)) {
+                    connectedEdges.add(edge.from + "->" + edge.to);
+                }
+            });
+
+            // 更新所有 Node 顏色：關係豬隻保持亮色，其他變灰
+            const updateNodes = [];
+            nodesDataSet.forEach(node => {
+                if (connectedNodes.has(node.id)) {
+                    updateNodes.push({
+                        id: node.id,
+                        color: { background: node.baseColor, border: node.baseBorderColor },
+                        font: { color: node.baseFontColor },
+                        opacity: 1.0
+                    });
+                } else {
+                    updateNodes.push({
+                        id: node.id,
+                        color: { background: '#E0E0E0', border: '#CCCCCC' }, // 灰化
+                        font: { color: '#A0A0A0' },
+                        opacity: 0.25
+                    });
+                }
+            });
+            nodesDataSet.update(updateNodes);
+
+            // 更新所有 Edge 顏色：關係線條黑實線，其他半透明灰
+            const updateEdges = [];
+            edgesDataSet.forEach(edge => {
+                const key = edge.from + "->" + edge.to;
+                if (connectedEdges.has(key)) {
+                    updateEdges.push({
+                        id: edge.id,
+                        color: { color: '#000000' }, // 關係線變黑醒目
+                        width: 2.5
+                    });
+                } else {
+                    updateEdges.push({
+                        id: edge.id,
+                        color: { color: '#E0E0E0' }, // 無關線條變淡灰
+                        width: 1
+                    });
+                }
+            });
+            edgesDataSet.update(updateEdges);
+        }
+
+        // 重置高亮，全部恢復原色
+        function resetHighlight() {
+            const updateNodes = [];
+            nodesDataSet.forEach(node => {
+                updateNodes.push({
+                    id: node.id,
+                    color: { background: node.baseColor, border: node.baseBorderColor },
+                    font: { color: node.baseFontColor },
+                    opacity: 1.0
+                });
+            });
+            nodesDataSet.update(updateNodes);
+
+            const updateEdges = [];
+            edgesDataSet.forEach(edge => {
+                updateEdges.push({
+                    id: edge.id,
+                    color: { color: edge.baseColor },
+                    width: 1
+                });
+            });
+            edgesDataSet.update(updateEdges);
+        }
+
+        function applySearch() {
+            const rawInput = document.getElementById('earInput').value.trim();
+            if (!rawInput) {
                 renderGraph(allNodes, allEdges);
                 return;
             }
 
-            // 搜尋該耳號以及與其有血統關聯的上線/下線點位
-            const relatedNodes = new Set([ear]);
-            allEdges.forEach(edge => {
-                if (edge.from === ear || edge.to === ear) {
-                    relatedNodes.add(edge.from);
-                    relatedNodes.add(edge.to);
+            const searchTerms = rawInput.split(/[,，]/).map(s => s.trim().toLowerCase()).filter(s => s !== '');
+            const matchedNodeIds = new Set();
+
+            searchTerms.forEach(term => {
+                allNodes.forEach(node => {
+                    if (node.id.toLowerCase().includes(term)) matchedNodeIds.add(node.id);
+                });
+            });
+
+            const finalRelatedIds = new Set(matchedNodeIds);
+            allEdges.forEach(e => {
+                if (matchedNodeIds.has(e.from) || matchedNodeIds.has(e.to)) {
+                    finalRelatedIds.add(e.from);
+                    finalRelatedIds.add(e.to);
                 }
             });
 
-            const filteredNodes = allNodes.filter(n => relatedNodes.has(n.id));
-            const filteredEdges = allEdges.filter(e => relatedNodes.has(e.from) && relatedNodes.has(e.to));
+            const filteredNodes = allNodes.filter(n => finalRelatedIds.has(n.id));
+            const filteredEdges = allEdges.filter(e => finalRelatedIds.has(e.from) && finalRelatedIds.has(e.to));
 
             if (filteredNodes.length === 0) {
-                alert("找不到該耳號！請確認輸入是否正確。");
+                alert("找不到相符的耳號！請確認輸入。");
                 return;
             }
 
             renderGraph(filteredNodes, filteredEdges);
         }
 
-        // 切換世代樹狀圖 / 蜘蛛網圖
         function toggleLayout() {
             isTreeMode = !isTreeMode;
-            const currentInput = document.getElementById('earInput').value.trim();
-            if (currentInput) {
-                searchEarTag();
-            } else {
-                renderGraph(allNodes, allEdges);
+            applySearch();
+        }
+
+        function showDetailsModal(node) {
+            document.getElementById('modalTitle').innerText = `耳號：${node.id} - 詳細數據與指數`;
+            const table = document.getElementById('detailTable');
+            table.innerHTML = '';
+
+            const genText = node.is_mate ? `第 ${node.gen_num} 代 (當胎配種公)` : `第 ${node.gen_num} 代`;
+            table.innerHTML += `<tr class="gen-highlight-row"><th>代次 (Generation)</th><td>【 ${genText} 】</td></tr>`;
+
+            if (node.details) {
+                for (const [key, value] of Object.entries(node.details)) {
+                    if (value !== null && value !== '' && key !== '代次') {
+                        const row = `<tr><th>${key}</th><td>${value}</td></tr>`;
+                        table.innerHTML += row;
+                    }
+                }
             }
+            document.getElementById('infoModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('infoModal').style.display = 'none';
         }
     </script>
 </body>
