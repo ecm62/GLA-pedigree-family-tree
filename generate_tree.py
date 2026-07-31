@@ -5,8 +5,6 @@ import io
 
 SPREADSHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
 GID_TREE = "0"
-
-# 使用 pub 導出與標準 csv 導出備用網址
 URL_TREE = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID_TREE}"
 
 def fetch_and_parse():
@@ -15,15 +13,10 @@ def fetch_and_parse():
     
     try:
         res = requests.get(URL_TREE, headers=headers, timeout=15)
-        res.encoding = 'utf-8-sig' # 處理 BOM 與萬國碼
+        res.encoding = 'utf-8-sig'
         
         if res.status_code != 200:
             print(f"❌ 下載失敗，HTTP 狀態碼: {res.status_code}")
-            return
-
-        # 檢查是否被重定向到登入頁 HTML
-        if "<html" in res.text.lower():
-            print("❌ 抓取到 HTML 網頁而非 CSV，請確認 Google Sheet 已開啟『知道連結的任何人皆可存取』！")
             return
 
         df = pd.read_csv(io.StringIO(res.text))
@@ -33,18 +26,14 @@ def fetch_and_parse():
         return
 
     if df.empty:
-        print("⚠️ 警告：讀取到的 DataFrame 為空！")
         return
 
-    # 清理所有欄位標題（移除空格、換行符號、特殊可見字元）
     df.columns = [str(c).replace('\n', '').replace('\r', '').strip() for c in df.columns]
-    print("📋 抓取到的欄位標題：", list(df.columns))
 
-    # 🎯 動態精確對應欄位 (模糊匹配，避免因空格錯字抓不到)
     def find_col(keywords):
         for kw in keywords:
             for col in df.columns:
-                if kw in col:
+                if kw.lower() in col.lower():
                     return col
         return None
 
@@ -62,7 +51,6 @@ def fetch_and_parse():
     for idx, row in df.iterrows():
         ear = str(row.get(col_ear, '')).strip() if pd.notna(row.get(col_ear)) else ""
         
-        # 過濾無效耳號
         if not ear or ear.lower() in ['nan', 'none', '-', '', 'null']:
             continue
 
@@ -90,6 +78,12 @@ def fetch_and_parse():
         parity    = get_str(col_parity)
         mate_sire = get_str(col_mate)
 
+        # 把該行所有的欄位資料都打包封裝進 details
+        raw_details = {}
+        for col_k, col_v in row.items():
+            if pd.notna(col_v):
+                raw_details[str(col_k).strip()] = str(col_v).strip()
+
         entry = {
             "ear": ear,
             "breed": breed,
@@ -102,26 +96,12 @@ def fetch_and_parse():
             "dam_dam": dam_dam,
             "gen1_sire": mate_sire,
             "gen2_sire": "-",
-            "details": {
-                "Breed": breed,
-                "Ear Tag": ear,
-                "DOB": dob,
-                "Parity": parity,
-                "Mating Sire": mate_sire,
-                "Sire_Sire": sire_sire,
-                "Sire_Dam": sire_dam,
-                "Dam_Sire": dam_sire,
-                "Dam_Dam": dam_dam,
-                "SPI": "-",
-                "MLI": "-",
-                "TSI": "-"
-            }
+            "details": raw_details
         }
         pedigree_data.append(entry)
 
     print(f"🎉 成功轉換！共處理 {len(pedigree_data)} 筆有效耳號資料！")
 
-    # 寫入 data.json
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
 
