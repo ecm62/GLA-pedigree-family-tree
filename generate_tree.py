@@ -1,86 +1,114 @@
 import json
 import pandas as pd
+import requests
+import io
 
-# Google Sheet CSV 下載網址
+# 🌟 指定 Google Sheet ID 與三個工作表 (GID) 的 CSV 導出網址
 SPREADSHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
-GID = "284410568"
-GOOGLE_SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID}"
 
-def fetch_data_and_generate():
-    print("正在從 Google Sheet 擷取血統與數據...")
+# 1. 家族樹 (模式B)
+GID_TREE = "0"
+# 2. 母豬育種價值分析
+GID_INDEX = "1872161273"  # 若您有專屬 GID，可替換；此處同時支援備用合併邏輯
+
+URL_TREE = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID_TREE}"
+
+def fetch_and_parse():
+    print("🚀 開始從 Google Sheet 下載精確數據...")
+    
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    
     try:
-        # 強制指定 encoding 與抓取 CSV
-        df = pd.read_csv(GOOGLE_SHEET_CSV_URL)
-        print(f"✅ 成功下載資料！共取得 {len(df)} 行數據。")
+        res = requests.get(URL_TREE, headers=headers)
+        res.encoding = 'utf-8'
+        if res.status_code != 200:
+            print(f"❌ 下載失敗，HTTP 狀態碼: {res.status_code}")
+            return
+        
+        df = pd.read_csv(io.StringIO(response.text if 'response' in locals() else res.text))
+        print(f"✅ 成功讀取 CSV！總共有 {len(df)} 筆個體資料。")
     except Exception as e:
-        print(f"❌ 讀取失敗: {e}")
-        df = pd.DataFrame()
+        print(f"❌ 讀取發生例外錯誤: {e}")
+        return
+
+    # 清除欄位首尾空白標題
+    df.columns = [str(c).strip() for c in df.columns]
+
+    # 🎯 確切對齊抓取到的欄位名稱
+    EAR_COL = "耳號 (C)"
+    PARITY_COL = "胎次 (D)"
+    MATE_COL = "當胎配種公 (E)"
+    DOB_COL = "出生日期 (F)"
+    SIRE_SIRE_COL = "祖父 (Z:Sire)"
+    SIRE_DAM_COL = "祖母 (AF:Dam)"
+    DAM_SIRE_COL = "外公 (AM:Sire)"
+    DAM_DAM_COL = "外婆 (AS:Dam)"
 
     pedigree_data = []
 
-    if not df.empty:
-        # 清理欄位名稱標題的空白空格
-        df.columns = [str(c).replace('\n', '').strip() for c in df.columns]
+    for idx, row in df.iterrows():
+        # 抓取主角耳號
+        ear = str(row.get(EAR_COL, '')).strip() if pd.notna(row.get(EAR_COL)) else ""
+        
+        if not ear or ear.lower() in ['nan', 'none', '-', '']:
+            continue
 
-        # 靈活匹配欄位標題 (降低名稱精準度要求)
-        ear_col = next((c for c in df.columns if '耳號' in c), df.columns[1] if len(df.columns) > 1 else None)
-        sex_col = next((c for c in df.columns if 'sex' in c.lower() or '性別' in c), None)
-        breed_col = next((c for c in df.columns if 'breed' in c.lower() or '品' in c), None)
-        parity_col = next((c for c in df.columns if '胎次' in c or 'parity' in c.lower()), None)
-        mate_col = next((c for c in df.columns if '配種公' in c), None)
+        # 自動判斷品種 (依據耳號字首)
+        ear_upper = ear.upper()
+        if 'LY' in ear_upper:
+            breed = 'LY'
+        elif 'YY' in ear_upper or ear_upper.startswith('Y'):
+            breed = 'Y'
+        elif 'LL' in ear_upper or ear_upper.startswith('L'):
+            breed = 'L'
+        else:
+            breed = 'D'  # 預設為杜洛克 (D)
 
-        sire_sire_col = next((c for c in df.columns if '祖父' in c or ('sire' in c.lower() and '外' not in c and '母' not in c)), None)
-        sire_dam_col = next((c for c in df.columns if '祖母' in c or ('dam' in c.lower() and '外' not in c)), None)
-        dam_sire_col = next((c for c in df.columns if '外公' in c), None)
-        dam_dam_col = next((c for c in df.columns if '外婆' in c), None)
+        # 抓取祖輩血統名稱
+        sire_sire = str(row.get(SIRE_SIRE_COL, '-')).strip() if pd.notna(row.get(SIRE_SIRE_COL)) else "-"
+        sire_dam  = str(row.get(SIRE_DAM_COL, '-')).strip() if pd.notna(row.get(SIRE_DAM_COL)) else "-"
+        dam_sire  = str(row.get(DAM_SIRE_COL, '-')).strip() if pd.notna(row.get(DAM_SIRE_COL)) else "-"
+        dam_dam   = str(row.get(DAM_DAM_COL, '-')).strip() if pd.notna(row.get(DAM_DAM_COL)) else "-"
+        
+        dob       = str(row.get(DOB_COL, '-')).strip() if pd.notna(row.get(DOB_COL)) else "-"
+        parity    = str(row.get(PARITY_COL, '-')).strip() if pd.notna(row.get(PARITY_COL)) else "-"
+        mate_sire = str(row.get(MATE_COL, '-')).strip() if pd.notna(row.get(MATE_COL)) else "-"
 
-        gen1_sire_col = next((c for c in df.columns if '第一代' in c or '1代' in c), None)
-        gen2_sire_col = next((c for c in df.columns if '第二代' in c or '2代' in c), None)
-
-        for _, row in df.iterrows():
-            row_dict = {k: (str(v).strip() if pd.notna(v) else "") for k, v in row.to_dict().items()}
-            
-            ear_tag = ""
-            if ear_col and pd.notna(row[ear_col]):
-                ear_tag = str(row[ear_col]).strip()
-
-            # 若抓不到耳號標題，備用逐欄尋找耳號樣式
-            if not ear_tag or ear_tag.lower() == 'nan':
-                for col_name in df.columns:
-                    val_str = str(row[col_name]).strip()
-                    if val_str and val_str.lower() != 'nan' and ('DD' in val_str.upper() or 'LY' in val_str.upper() or 'D' in val_str.upper()):
-                        ear_tag = val_str
-                        break
-
-            if not ear_tag or ear_tag.lower() == 'nan':
-                continue
-
-            breed_val = "D"
-            if breed_col and pd.notna(row[breed_col]):
-                b_str = str(row[breed_col]).strip().upper()
-                if b_str and b_str != 'NAN':
-                    breed_val = b_str
-
-            entry = {
-                "ear": ear_tag,
-                "breed": breed_val,
-                "sex": str(row[sex_col]).strip() if sex_col and pd.notna(row[sex_col]) else "",
-                "parity": str(row[parity_col]).strip() if parity_col and pd.notna(row[parity_col]) else "-",
-                "mate": str(row[mate_col]).strip() if mate_col and pd.notna(row[mate_col]) else "-",
-                "sire_sire": str(row[sire_sire_col]).strip() if sire_sire_col and pd.notna(row[sire_sire_col]) else "-",
-                "sire_dam": str(row[sire_dam_col]).strip() if sire_dam_col and pd.notna(row[sire_dam_col]) else "-",
-                "dam_sire": str(row[dam_sire_col]).strip() if dam_sire_col and pd.notna(row[dam_sire_col]) else "-",
-                "dam_dam": str(row[dam_dam_col]).strip() if dam_dam_col and pd.notna(row[dam_dam_col]) else "-",
-                "gen1_sire": str(row[gen1_sire_col]).strip() if gen1_sire_col and pd.notna(row[gen1_sire_col]) else "-",
-                "gen2_sire": str(row[gen2_sire_col]).strip() if gen2_sire_col and pd.notna(row[gen2_sire_col]) else "-",
-                "details": row_dict
+        # 建立格式化個體字典
+        entry = {
+            "ear": ear,
+            "breed": breed,
+            "sex": "FEMALE" if breed in ['LY', 'Y', 'L'] else "MALE",
+            "parity": parity,
+            "mate": mate_sire,
+            "sire_sire": sire_sire if sire_sire != "" else "-",
+            "sire_dam": sire_dam if sire_dam != "" else "-",
+            "dam_sire": dam_sire if dam_sire != "" else "-",
+            "dam_dam": dam_dam if dam_dam != "" else "-",
+            "gen1_sire": mate_sire if mate_sire != "" else "-",
+            "gen2_sire": "-",
+            "details": {
+                "Breed": breed,
+                "Ear Tag": ear,
+                "DOB": dob,
+                "Parity": parity,
+                "Mating Sire": mate_sire,
+                "Sire_Sire": sire_sire,
+                "Sire_Dam": sire_dam,
+                "Dam_Sire": dam_sire,
+                "Dam_Dam": dam_dam,
+                "SPI": "-",
+                "MLI": "-",
+                "TSI": "-"
             }
-            pedigree_data.append(entry)
+        }
+        pedigree_data.append(entry)
 
-    print(f"解析成功！共產生 {len(pedigree_data)} 筆血統資料。")
+    print(f"🎉 成功轉換！共抓取到 {len(pedigree_data)} 筆完整的個體血統數據！")
 
+    # 寫入 data.json
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
-    fetch_data_and_generate()
+    fetch_and_parse()
