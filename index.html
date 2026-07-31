@@ -68,12 +68,13 @@
         #permanentCard { background: #ffffff; border: 1px solid #e0e6ed; border-left: 4px solid #0d6efd; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .card-title { font-size: 16px; color: #1e293b; font-weight: 700; margin-bottom: 8px; }
 
-        .data-table-wrapper { width: 100%; overflow-x: auto; max-height: 360px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .data-table-wrapper { width: 100%; overflow-x: auto; max-height: 380px; border: 1px solid #cbd5e1; border-radius: 6px; }
         .excel-data-table { width: 100%; border-collapse: collapse; font-size: 12px; background-color: #fff; white-space: nowrap; text-align: center; }
         .excel-data-table th { background-color: #1e293b; color: #ffffff; font-weight: 600; padding: 8px 10px; border: 1px solid #475569; position: sticky; top: 0; z-index: 5; }
         .excel-data-table td { padding: 6px 10px; border: 1px solid #e2e8f0; color: #1e293b; }
-        .excel-data-table tr:nth-child(even) { background-color: #f8fafc; }
-        .excel-data-table tr:hover { background-color: #e0f2fe; }
+        .excel-data-table tr.main-row { background-color: #ffffff; font-weight: 600; }
+        .excel-data-table tr.rel-row { background-color: #f8fafc; color: #64748b; }
+        .excel-data-table tr:hover { background-color: #e0f2fe !important; }
 
         /* 5. 個體直系血統演進圖 */
         #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
@@ -92,6 +93,7 @@
         .tree-node:hover { transform: scale(1.06); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-width: 2.5px; }
 
         .mate-node-sire { border-style: dashed !important; border-color: #0284c7 !important; background-color: #f0f9ff !important; }
+        .mate-node-dam  { border-style: dashed !important; border-color: #e11d48 !important; background-color: #fff1f2 !important; }
 
         /* 品種顏色 */
         .breed-LY { background-color: #d1fae5 !important; color: #065f46; border-color: #10b981; }
@@ -130,7 +132,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>全血統搜尋 Pedigree Search (耳號/ANNA/公豬/血統鏈)：</strong></label>
-            <input type="text" id="earInput" placeholder="例如: LY10312 或 D1397" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如: L1160 或 LY3612 或 D1397" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 展開血統樹 Expand Tree</button>
         </div>
 
@@ -152,7 +154,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>左側：</b>第一代親本 (父/母) ｜ <b>中央：</b>查詢主角母豬 (LY10312) ｜ <b>右側：</b>當胎配種公豬 (D1397 / DD26055)
+            <b>置頂列：</b>核心查詢個體 ｜ <b>下方列：</b>關聯後代家族 ｜ <b>右側：</b>當胎配種歷程
         </span>
     </div>
 
@@ -336,6 +338,15 @@
             return v;
         }
 
+        // 🌟 胎次數字清洗防呆：如果混入編號（如 1042-2），非純數字胎次清空，避免畫面錯亂
+        function cleanParityVal(v) {
+            if (!v || v === '-' || v === 'undefined' || v === 'NaN' || v === 'nan') return '-';
+            const str = String(v).trim();
+            if (str.includes('-') || str.length > 5) return '-'; // 排除如 1042-2 的美系編號
+            const num = parseFloat(str);
+            return isNaN(num) ? '-' : num.toFixed(1);
+        }
+
         function getDetail(d, keys) {
             if (!d) return '-';
             for (let k of keys) {
@@ -354,9 +365,10 @@
             if (item.matingBoar && item.matingBoar !== '-') return item.matingBoar;
             const d = item.details || {};
             const val = getDetail(d, ['當胎配種', 'mate', 'matingBoar']);
-            return val !== '-' ? val : '未記載公豬';
+            return val;
         }
 
+        // 🌟 核心升級：關鍵字搜尋 ＋ 主主角置頂排序 (權重演算法)
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
@@ -368,6 +380,7 @@
                 return;
             }
 
+            const targetTerm = rawInput.toLowerCase();
             let matchedItems = [];
 
             if (rawInput.includes('+')) {
@@ -377,19 +390,41 @@
                     return checkBreedAllowed(item.breed, item.ear) && andTerms.every(term => str.includes(term));
                 });
             } else {
-                const term = rawInput.toLowerCase();
                 matchedItems = pedigreeList.filter(item => {
                     const str = JSON.stringify(item).toLowerCase();
-                    return checkBreedAllowed(item.breed, item.ear) && str.includes(term);
+                    return checkBreedAllowed(item.breed, item.ear) && str.includes(targetTerm);
                 });
             }
 
             if (matchedItems.length > 0) {
-                renderExcelDataTable(matchedItems, rawInput);
-                drawSingleLineageTree(matchedItems, matchedItems[0]);
+                // 🌟 分集邏輯：核心個體（ear 完全符合）擺第一順位集區，其餘關聯後代擺第二順位集區
+                let primaryMatches = [];
+                let relatedMatches = [];
+
+                matchedItems.forEach(item => {
+                    if ((item.ear || '').toLowerCase() === targetTerm) {
+                        primaryMatches.push(item);
+                    } else {
+                        relatedMatches.push(item);
+                    }
+                });
+
+                // 排序：主個體按胎次 1.0 ➔ 2.0 ➔ 3.0 正向排列
+                primaryMatches.sort((a, b) => {
+                    const pA = parseFloat(a.parity) || 0;
+                    const pB = parseFloat(b.parity) || 0;
+                    return pA - pB;
+                });
+
+                // 組合最終渲染陣列：主主角在最上方，次要關聯後代排在下方
+                const sortedItems = [...primaryMatches, ...relatedMatches];
+                const targetItem = primaryMatches[0] || sortedItems[0];
+
+                renderExcelDataTable(sortedItems, primaryMatches, rawInput);
+                drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem);
 
                 document.getElementById('macroTreePanel').style.display = 'block';
-                drawButterflyFamilyTree(matchedItems, matchedItems[0]);
+                drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem);
             } else {
                 document.getElementById('macroTreePanel').style.display = 'none';
                 document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:40px; text-align:center; color:#888;">查無相關血統數據 No Data Found</div>';
@@ -397,25 +432,32 @@
             }
         }
 
-        function renderExcelDataTable(items, searchTerm) {
+        // 🌟 渲染資料表：區分主主角 (白色底) 與 關聯後代 (灰色底)
+        function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
             const titleTerm = searchTerm ? `搜尋：「${searchTerm}」` : '當前檢視數據';
             
-            title.innerHTML = `📌 育種成績與指數完整數據評估表：<span style="color:#0d6efd;">${titleTerm}</span> (共 ${items.length} 筆，全選可直接複製貼至 Excel)`;
+            const mainCount = primaryItems.length;
+            const relCount = allSortedItems.length - mainCount;
+            title.innerHTML = `📌 育種成績與指數完整數據評估表：<span style="color:#0d6efd;">${titleTerm}</span> (核心主個體 ${mainCount} 筆，關聯後代 ${relCount} 筆)`;
 
             let html = '';
-            items.forEach(item => {
+            allSortedItems.forEach(item => {
                 const d = item.details || {};
                 const mateBoar = getMatingBoar(item);
+                const isPrimary = (item.ear || '').toLowerCase() === searchTerm.toLowerCase();
+
+                // 胎次號洗淨
+                const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getDetail(d, ['胎次', 'Parity']));
 
                 html += `
-                    <tr>
+                    <tr class="${isPrimary ? 'main-row' : 'rel-row'}">
                         <td><b>${cleanVal(item.ear)}</b></td>
                         <td>${cleanVal(item.breed)}</td>
                         <td>${cleanVal(item.sex)}</td>
                         <td>${cleanVal(item.dob !== '-' ? item.dob : getDetail(d, ['DOB', '生日']))}</td>
-                        <td>${cleanVal(item.parity !== '-' ? item.parity : getDetail(d, ['胎次', 'Parity']))}</td>
+                        <td><b>${parityClean}</b></td>
                         <td><b>${cleanVal(mateBoar)}</b></td>
                         
                         <td><b>${cleanVal(item.total_born !== '-' ? item.total_born : getDetail(d, ['total', '總產', '總生']))}</b></td>
@@ -438,7 +480,7 @@
             tbody.innerHTML = html;
         }
 
-        // 🌟 正確樹狀繪製：左側第一代親本 (Y1456 / L1180) ➔ 中間主角 (LY10312) ➔ 右側當胎配種公 (D1397 / DD26055)
+        // 🌟 個體直系血統樹（精準判斷主角與交配歷程）
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -448,11 +490,32 @@
             container.innerHTML = '';
             const boxW = 135, boxH = 40, colGap = 55, rowGap = 65;
 
+            const isMale = (targetItem.sex || '').toUpperCase().includes('MALE');
+
             const col0_X = 25;
             const col1_X = col0_X + boxW + colGap;
             const col2_X = col1_X + boxW + colGap;
 
-            const totalMates = items.length;
+            const parentSire = (targetItem.gen1_sire && targetItem.gen1_sire !== '-') ? targetItem.gen1_sire : (targetItem.sire_sire && targetItem.sire_sire !== '-' ? targetItem.sire_sire : '-');
+            const parentDam  = (targetItem.gen1_dam && targetItem.gen1_dam !== '-') ? targetItem.gen1_dam : (targetItem.sire_dam && targetItem.sire_dam !== '-' ? targetItem.sire_dam : '-');
+
+            let mateList = [];
+            if (isMale) {
+                items.forEach(i => {
+                    if (i.ear && i.ear !== targetItem.ear) {
+                        mateList.push({ name: i.ear, label: '♀ 配種母豬', parity: cleanParityVal(i.parity) });
+                    }
+                });
+            } else {
+                items.forEach(i => {
+                    const boar = getMatingBoar(i);
+                    if (boar && boar !== '-' && boar !== '未記載公豬') {
+                        mateList.push({ name: boar, label: '♂ 當胎配種公', parity: cleanParityVal(i.parity) });
+                    }
+                });
+            }
+
+            const totalMates = Math.max(mateList.length, 1);
             const cardHeight = Math.max(totalMates * rowGap + 120, 300);
 
             canvas.width = Math.max(col2_X + boxW + 60, 800);
@@ -470,13 +533,10 @@
 
             const targetY = cardHeight / 2 - boxH / 2;
 
-            // 1. 左側第一代親本 (正確讀取第一代公 gen1_sire 與第一代母 gen1_dam)
-            const parentSire = targetItem.gen1_sire && targetItem.gen1_sire !== '-' ? targetItem.gen1_sire : (targetItem.paternalSire || 'Y1456');
-            const parentDam  = targetItem.gen1_dam && targetItem.gen1_dam !== '-' ? targetItem.gen1_dam : (targetItem.maternalDam || 'L1180');
-
+            // 1. 左側親本
             const parents = [
-                { name: parentSire, label: "♂ 第一代公 (父親)", y: targetY - 45 },
-                { name: parentDam,  label: "♀ 第一代母 (母親)", y: targetY + 45 }
+                { name: parentSire, label: "♂ 父親 / Sire", y: targetY - 45 },
+                { name: parentDam,  label: "♀ 母親 / Dam", y: targetY + 45 }
             ];
 
             parents.forEach(p => {
@@ -485,41 +545,46 @@
                 div.style.left = col0_X + 'px'; div.style.top = p.y + 'px';
                 div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                 div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                div.onclick = () => { document.getElementById('earInput').value = p.name; searchPedigree(); };
+                if (p.name && p.name !== '-') {
+                    div.onclick = () => { document.getElementById('earInput').value = p.name; searchPedigree(); };
+                }
                 container.appendChild(div);
 
                 const midX = col0_X + boxW + colGap / 2;
                 drawOrthogonal(col0_X + boxW, p.y + boxH/2, col1_X, targetY + boxH/2, midX);
             });
 
-            // 2. 中央主角母豬 (例如 LY10312)
+            // 2. 中央主角
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target ${getBreedClass(targetItem.ear, targetItem.breed)}`;
             targetDiv.style.left = col1_X + 'px'; targetDiv.style.top = targetY + 'px';
             targetDiv.style.width = boxW + 'px'; targetDiv.style.height = (boxH + 6) + 'px';
-            targetDiv.innerHTML = `<span class="sub-label">核心主角 Target</span><b>${cleanVal(targetItem.ear)}</b>`;
+            const sexLabel = isMale ? '♂ 核心公豬' : '♀ 核心母豬';
+            targetDiv.innerHTML = `<span class="sub-label">${sexLabel}</span><b>${cleanVal(targetItem.ear)}</b>`;
             container.appendChild(targetDiv);
 
-            // 3. 右側：依胎次繪製當胎配種公 (例如 D1397, DD26055)
-            items.forEach((item, idx) => {
-                const currentY = targetY + (idx - (totalMates - 1) / 2) * rowGap;
-                const mateBoar = getMatingBoar(item);
+            // 3. 右側配對歷程
+            if (mateList.length > 0) {
+                mateList.forEach((m, idx) => {
+                    const currentY = targetY + (idx - (totalMates - 1) / 2) * rowGap;
 
-                const mDiv = document.createElement('div');
-                mDiv.className = `tree-node mate-node-sire ${getBreedClass(mateBoar)}`;
-                mDiv.style.left = col2_X + 'px'; mDiv.style.top = currentY + 'px';
-                mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
-                const parityText = item.parity ? ` (胎次 ${item.parity})` : '';
-                mDiv.innerHTML = `<span class="sub-label" style="color:#0284c7;">♂ 當胎配種公${parityText}</span><b>${cleanVal(mateBoar)}</b>`;
-                mDiv.onclick = () => { document.getElementById('earInput').value = mateBoar; searchPedigree(); };
-                container.appendChild(mDiv);
+                    const mDiv = document.createElement('div');
+                    const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
+                    mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name)}`;
+                    mDiv.style.left = col2_X + 'px'; mDiv.style.top = currentY + 'px';
+                    mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
+                    const parityText = (m.parity && m.parity !== '-') ? ` (胎次 ${m.parity})` : '';
+                    mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>`;
+                    mDiv.onclick = () => { document.getElementById('earInput').value = m.name; searchPedigree(); };
+                    container.appendChild(mDiv);
 
-                const midXRight = col1_X + boxW + colGap / 2;
-                drawOrthogonal(col1_X + boxW, targetY + boxH/2, col2_X, currentY + boxH/2, midXRight);
-            });
+                    const midXRight = col1_X + boxW + colGap / 2;
+                    drawOrthogonal(col1_X + boxW, targetY + boxH/2, col2_X, currentY + boxH/2, midXRight);
+                });
+            }
         }
 
-        // 🌟 核心全景圖（對齊草圖：左 1st 第一代親本 ➔ 中 2nd 主角 ➔ 右 配種公豬）
+        // 🌟 核心全景圖
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -530,9 +595,10 @@
 
             container.innerHTML = '';
             headerBar.innerHTML = '';
-            countTag.innerText = `(以 ${targetItem.ear} 為主角，左側第一代親本，右側連動當胎配種公豬)`;
+            countTag.innerText = `(以 ${targetItem.ear} 為主角，左側親本世代，右側連動配對歷程)`;
 
             const boxW = 135, boxH = 38, colGap = 65;
+            const isMale = (targetItem.sex || '').toUpperCase().includes('MALE');
 
             const colX = [
                 25,
@@ -540,10 +606,11 @@
                 25 + (boxW + colGap) * 2
             ];
 
+            const rightHeaderTitle = isMale ? '配對母豬 (Dam)' : '當胎配種公 (Sire E欄)';
             const headers = [
-                { text: '1st (第一代親本)', x: colX[0] },
-                { text: '2nd (核心主角)', x: colX[1] },
-                { text: '當胎配種公 (Sire E欄)', x: colX[2] }
+                { text: '親本世代 (1st Parents)', x: colX[0] },
+                { text: '核心主角 (Target)', x: colX[1] },
+                { text: rightHeaderTitle, x: colX[2] }
             ];
             headers.forEach(h => {
                 const div = document.createElement('div');
@@ -552,7 +619,23 @@
                 headerBar.appendChild(div);
             });
 
-            const totalMates = items.length;
+            let mateList = [];
+            if (isMale) {
+                items.forEach(i => {
+                    if (i.ear && i.ear !== targetItem.ear) {
+                        mateList.push({ name: i.ear, label: '♀ 配對母豬', parity: cleanParityVal(i.parity) });
+                    }
+                });
+            } else {
+                items.forEach(i => {
+                    const boar = getMatingBoar(i);
+                    if (boar && boar !== '-' && boar !== '未記載公豬') {
+                        mateList.push({ name: boar, label: '♂ 當胎配種公', parity: cleanParityVal(i.parity) });
+                    }
+                });
+            }
+
+            const totalMates = Math.max(mateList.length, 1);
             const rowGap = 75;
             const startY = 65;
             const finalCanvasHeight = Math.max(totalMates * rowGap + 160, 420);
@@ -572,12 +655,12 @@
 
             const targetY = finalCanvasHeight / 2 - boxH / 2;
 
-            const parentSire = targetItem.gen1_sire && targetItem.gen1_sire !== '-' ? targetItem.gen1_sire : (targetItem.paternalSire || 'Y1456');
-            const parentDam  = targetItem.gen1_dam && targetItem.gen1_dam !== '-' ? targetItem.gen1_dam : (targetItem.maternalDam || 'L1180');
+            const parentSire = (targetItem.gen1_sire && targetItem.gen1_sire !== '-') ? targetItem.gen1_sire : (targetItem.sire_sire && targetItem.sire_sire !== '-' ? targetItem.sire_sire : '-');
+            const parentDam  = (targetItem.gen1_dam && targetItem.gen1_dam !== '-') ? targetItem.gen1_dam : (targetItem.sire_dam && targetItem.sire_dam !== '-' ? targetItem.sire_dam : '-');
 
             const parents = [
-                { name: parentSire, label: '♂ 第一代公 (父親)', y: targetY - 45 },
-                { name: parentDam,  label: '♀ 第一代母 (母親)', y: targetY + 45 }
+                { name: parentSire, label: '♂ 父親 (Sire)', y: targetY - 45 },
+                { name: parentDam,  label: '♀ 母親 (Dam)', y: targetY + 45 }
             ];
 
             parents.forEach(p => {
@@ -586,7 +669,9 @@
                 div.style.left = colX[0] + 'px'; div.style.top = p.y + 'px';
                 div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                 div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                div.onclick = () => { document.getElementById('earInput').value = p.name; searchPedigree(); };
+                if (p.name && p.name !== '-') {
+                    div.onclick = () => { document.getElementById('earInput').value = p.name; searchPedigree(); };
+                }
                 container.appendChild(div);
 
                 const midX = colX[0] + boxW + colGap / 2;
@@ -600,22 +685,24 @@
             targetDiv.innerHTML = `<span class="sub-label">核心主角 Target</span><b>${targetItem.ear}</b>`;
             container.appendChild(targetDiv);
 
-            items.forEach((item, idx) => {
-                const mateY = startY + idx * rowGap;
+            if (mateList.length > 0) {
+                mateList.forEach((m, idx) => {
+                    const mateY = startY + idx * rowGap;
 
-                const mateName = getMatingBoar(item);
-                const mDiv = document.createElement('div');
-                mDiv.className = `tree-node mate-node-sire ${getBreedClass(mateName)}`;
-                mDiv.style.left = colX[2] + 'px'; mDiv.style.top = mateY + 'px';
-                mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
-                const parityLabel = item.parity ? ` (胎次 ${item.parity})` : '';
-                mDiv.innerHTML = `<span class="sub-label" style="color:#0284c7;">♂ 當胎配種公${parityLabel}</span><b>${cleanVal(mateName)}</b>`;
-                mDiv.onclick = () => { document.getElementById('earInput').value = mateName; searchPedigree(); };
-                container.appendChild(mDiv);
+                    const mDiv = document.createElement('div');
+                    const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
+                    mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name)}`;
+                    mDiv.style.left = colX[2] + 'px'; mDiv.style.top = mateY + 'px';
+                    mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
+                    const parityLabel = (m.parity && m.parity !== '-') ? ` (胎次 ${m.parity})` : '';
+                    mDiv.innerHTML = `<span class="sub-label">${m.label}${parityLabel}</span><b>${cleanVal(m.name)}</b>`;
+                    mDiv.onclick = () => { document.getElementById('earInput').value = m.name; searchPedigree(); };
+                    container.appendChild(mDiv);
 
-                const midXRight = colX[1] + boxW + colGap / 2;
-                drawOrthogonal(colX[1] + boxW, targetY + boxH/2, colX[2], mateY + boxH/2, midXRight);
-            });
+                    const midXRight = colX[1] + boxW + colGap / 2;
+                    drawOrthogonal(colX[1] + boxW, targetY + boxH/2, colX[2], mateY + boxH/2, midXRight);
+                });
+            }
         }
 
         function exportMacroTreeAsPNG() {
