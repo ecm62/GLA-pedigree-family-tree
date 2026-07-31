@@ -5,117 +5,44 @@
     <title>進階血統比較與數據評估系統</title>
     <style>
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 15px; background-color: #f8f9fa; }
-        
-        /* 控制列 */
         .control-bar { background: #ffffff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 12px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
         input[type="text"] { padding: 8px 14px; font-size: 15px; border: 1px solid #ced4da; border-radius: 6px; width: 320px; }
-        
         .btn { padding: 8px 18px; font-size: 15px; background-color: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .btn:hover { background-color: #0b5ed7; }
         .btn-breed { background-color: #6c757d; margin-right: 3px; padding: 6px 14px; font-size: 14px; }
         .btn-breed.active { font-weight: bold; border: 2px solid #000; }
-        
-        /* 圖例說明 */
         .legend-bar { display: flex; gap: 15px; font-size: 13px; background: #fff; padding: 10px 15px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 12px; align-items: center; }
         .color-badge { padding: 3px 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; }
-
-        /* 常駐評估卡 */
-        #permanentCard { 
-            background-color: #ffffff; 
-            border: 2px solid #0d6efd; 
-            border-radius: 8px; 
-            padding: 15px 20px; 
-            margin-bottom: 15px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
-            display: block; 
-        }
+        #permanentCard { background-color: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 15px 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: block; }
         .card-title { font-size: 17px; color: #0d6efd; font-weight: bold; margin-bottom: 10px; border-bottom: 1px dashed #0d6efd; padding-bottom: 6px; }
-        
-        /* 單隻顯示表格 */
         .compact-table { width: 100%; border-collapse: collapse; font-size: 14px; }
         .compact-table td { border: 1px solid #dee2e6; padding: 7px 12px; }
         .compact-table .lbl { background-color: #f1f3f5; font-weight: bold; width: 15%; text-align: right; }
         .compact-table .val { width: 35%; font-weight: 500; color: #111; }
-
-        /* 多隻比較表格 */
         .compare-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; table-layout: fixed; }
         .compare-table th, .compare-table td { border: 1px solid #dee2e6; padding: 6px 4px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
         .compare-table th { background-color: #0d6efd; color: white; }
         .compare-row-lbl { background-color: #f8f9fa; font-weight: bold; width: 120px; text-align: left !important; padding-left: 8px !important; }
-
-        /* 繪圖區域 */
-        #pedigreeTreeArea {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 20px;
-            min-height: 480px;
-            overflow: auto;
-        }
-
-        .individual-pedigree {
-            position: relative;
-            width: 860px;
-            height: 380px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            background: #fff;
-            padding: 10px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
-            margin-bottom: 10px;
-        }
-
-        /* 階梯框樣式 */
-        .p-box {
-            position: absolute;
-            border: 2px solid #333333;
-            border-radius: 5px;
-            text-align: center;
-            font-size: 13px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 2px 2px 6px rgba(0,0,0,0.08);
-            z-index: 2;
-            padding: 3px;
-            box-sizing: border-box;
-            cursor: pointer;
-            transition: transform 0.1s ease;
-        }
-        .p-box:hover {
-            transform: scale(1.03);
-            border-width: 3px;
-        }
-
-        /* 品種顏色 */
+        #pedigreeTreeArea { display: flex; flex-direction: column; gap: 20px; background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; min-height: 480px; overflow: auto; }
+        .individual-pedigree { position: relative; width: 860px; height: 380px; border: 1px solid #ccc; border-radius: 8px; background: #fff; padding: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); margin-bottom: 10px; }
+        .p-box { position: absolute; border: 2px solid #333333; border-radius: 5px; text-align: center; font-size: 13px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 2px 2px 6px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; cursor: pointer; transition: transform 0.1s ease; }
+        .p-box:hover { transform: scale(1.03); border-width: 3px; }
         .breed-LY { background-color: #D4EDDA !important; color: #155724; border-color: #28a745; }
-        .breed-Y  { background-color: #FFF3CD !important; color: #856404; border-color: #ffc107; }
-        .breed-L  { background-color: #D1ECF1 !important; color: #0c5460; border-color: #17a2b8; }
-        .breed-D  { background-color: #F8D7DA !important; color: #721c24; border-color: #dc3545; }
+        .breed-Y { background-color: #FFF3CD !important; color: #856404; border-color: #ffc107; }
+        .breed-L { background-color: #D1ECF1 !important; color: #0c5460; border-color: #17a2b8; }
+        .breed-D { background-color: #F8D7DA !important; color: #721c24; border-color: #dc3545; }
         .breed-DEFAULT { background-color: #FFFFFF; color: #000; }
         .box-target { border-width: 3px !important; font-size: 14px; font-weight: bold; }
-
-        canvas.lineCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-            pointer-events: none;
-        }
+        canvas.lineCanvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
         .empty-msg { text-align: center; padding: 60px; font-size: 17px; color: #888; font-weight: bold; width: 100%; }
     </style>
 </head>
 <body>
 
-    <!-- 控制列 -->
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>進階比較模式 (耳號以逗號分隔)：</strong></label>
-            <input type="text" id="earInput" placeholder="支援多耳號比較 (如 DD26000, anna, LY1234)" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="支援多耳號比較 (如 DD26000, 26000, anna)" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 查詢世系</button>
         </div>
 
@@ -129,7 +56,6 @@
         </div>
     </div>
 
-    <!-- 品種指示說明 -->
     <div class="legend-bar">
         <strong>品種框底色圖例：</strong>
         <span class="color-badge breed-LY">LY：淡綠色</span>
@@ -138,9 +64,8 @@
         <span class="color-badge breed-D">D：淡紅色</span>
     </div>
 
-    <!-- 評估卡面板 -->
     <div id="permanentCard">
-        <div class="card-title" id="cardTitle">📌 查詢個體成績與生產指數數據評估卡 (支援多隻比較)</div>
+        <div class="card-title" id="cardTitle">📌 查詢個體成績與生產指數數據評估卡</div>
         <div id="cardBody">
             <table class="compact-table" id="singleSummaryTable">
                 <tr>
@@ -159,29 +84,37 @@
         </div>
     </div>
 
-    <!-- 世系圖畫布容器 -->
     <div id="pedigreeTreeArea"></div>
 
     <script>
         let pedigreeList = [];
         let currentBreedFilter = 'ALL';
 
-        // 頁面初次載入
         window.addEventListener('DOMContentLoaded', () => {
-            // 加載 JSON 並防止快取
-            fetch('data.json?t=' + new Date().getTime())
-                .then(res => res.json())
+            fetch('data.json?v=' + Date.now())
+                .then(res => {
+                    if (!res.ok) throw new Error("Http " + res.status);
+                    return res.json();
+                })
                 .then(data => {
-                    pedigreeList = data || [];
+                    // 兼容陣列或物件結構
+                    if (Array.isArray(data)) {
+                        pedigreeList = data;
+                    } else if (typeof data === 'object' && data !== null) {
+                        pedigreeList = Object.values(data);
+                    } else {
+                        pedigreeList = [];
+                    }
+
                     if (pedigreeList.length > 0) {
                         drawCompareMode([pedigreeList[0]]);
                     } else {
-                        showEmptyMsg("data.json 無數據");
+                        showEmptyMsg("data.json 內無任何豬隻資料");
                     }
                 })
                 .catch(err => {
                     console.error("無法讀取 data.json:", err);
-                    showEmptyMsg("讀取數據檔失敗");
+                    showEmptyMsg("讀取 data.json 失敗，請確認已執行 generate_tree.py 生成檔案");
                 });
         });
 
@@ -202,7 +135,6 @@
             return 'breed-DEFAULT';
         }
 
-        // 超級模糊搜尋核心
         function searchPedigree() {
             const rawInput = document.getElementById('earInput').value.trim();
             let matchedItems = [];
@@ -211,7 +143,6 @@
                 const searchTerms = rawInput.split(/[,，]/).map(s => s.trim().toLowerCase()).filter(s => s !== '');
                 
                 searchTerms.forEach(term => {
-                    // 比對全部合格耳號
                     const matched = pedigreeList.filter(item => {
                         const earLower = (item.ear || '').toLowerCase();
                         const sireSireLower = (item.sire_sire || '').toLowerCase();
@@ -237,8 +168,7 @@
                     });
 
                     if (matched.length > 0) {
-                        // 優先尋找完全精確相符的，否則取第一筆
-                        const exact = matched.find(m => m.ear.toLowerCase() === term);
+                        const exact = matched.find(m => (m.ear || '').toLowerCase() === term);
                         matchedItems.push(exact || matched[0]);
                     }
                 });
@@ -258,7 +188,7 @@
         }
 
         function showEmptyMsg(inputStr) {
-            document.getElementById('cardTitle').innerText = "📌 查詢結果：無資料";
+            document.getElementById('cardTitle').innerText = "📌 查詢結果：無相符資料";
             const singleTable = document.getElementById('singleSummaryTable');
             if (singleTable) singleTable.style.display = 'table';
             
@@ -340,7 +270,6 @@
             }
         }
 
-        // 渲染血統畫布
         function drawCompareMode(items) {
             if (!items || items.length === 0) return;
 
@@ -349,7 +278,6 @@
             const boxesArea = document.getElementById('pedigreeTreeArea');
             boxesArea.innerHTML = '';
 
-            // 生成繪圖 DOM
             items.forEach((item, idx) => {
                 const uniqueId = `tree_${idx}`;
                 const pedigreeHtml = `
@@ -361,7 +289,6 @@
                 boxesArea.innerHTML += pedigreeHtml;
             });
 
-            // 確保 DOM 渲染完畢後繪製 Canvas 與節點
             setTimeout(() => {
                 items.forEach((item, idx) => {
                     const uniqueId = `tree_${idx}`;
@@ -372,8 +299,7 @@
 
         function drawPedigreeBoxContents(item, containerId) {
             const container = document.getElementById(`${containerId}_boxes`);
-            const parentDiv = document.getElementById(containerId);
-            if (!container || !parentDiv) return;
+            if (!container) return;
             container.innerHTML = '';
 
             const boxWidth = 175;
@@ -414,7 +340,6 @@
                 div.style.height = boxHeight + 'px';
                 div.innerHTML = b.text;
 
-                // 點擊節點即可快速切換查詢該個體
                 if (b.ear && b.ear !== '-') {
                     div.onclick = (e) => {
                         e.stopPropagation();
@@ -425,7 +350,6 @@
                 container.appendChild(div);
             });
 
-            // 繪製 Canvas 90度直角折線
             const canvas = document.getElementById(`${containerId}_canvas`);
             if (!canvas) return;
             canvas.width = 860;
