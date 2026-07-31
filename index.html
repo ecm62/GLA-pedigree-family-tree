@@ -95,7 +95,7 @@
         .mate-node-sire { border-style: dashed !important; border-color: #0284c7 !important; background-color: #f0f9ff !important; }
         .mate-node-dam  { border-style: dashed !important; border-color: #e11d48 !important; background-color: #fff1f2 !important; }
 
-        /* 🌟 品種色彩對應 */
+        /* 🌟 精密品種色彩系統 */
         .breed-LY { background-color: #d1fae5 !important; color: #065f46 !important; border-color: #10b981 !important; }
         .breed-Y  { background-color: #fef3c7 !important; color: #92400e !important; border-color: #f59e0b !important; }
         .breed-L  { background-color: #e0f2fe !important; color: #075985 !important; border-color: #0ea5e9 !important; }
@@ -105,8 +105,7 @@
         .target-node { border-width: 3px !important; font-size: 12px; font-weight: bold; }
         .origin-target { border-width: 3px !important; font-size: 13px; font-weight: bold; background-color: #0d6efd !important; color: white !important; }
 
-        /* 🌟 確定畫布樣式與層級 */
-        canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        canvas.lineCanvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
         .sub-label { font-size: 9px; opacity: 0.85; margin-bottom: 1px; font-weight: 600; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 60px 20px; font-size: 14px; font-weight: 500; }
     </style>
@@ -134,7 +133,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>全血統搜尋 Pedigree Search (耳號/ANNA/公豬/血統鏈)：</strong></label>
-            <input type="text" id="earInput" placeholder="例如: L1185 或 Y1243 或 LY10312" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如: L1165 或 BISTRO 或 Y1243" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 展開血統樹 Expand Tree</button>
         </div>
 
@@ -326,14 +325,33 @@
             return false;
         }
 
+        // 🌟 升級版品系判斷：增加美系核心種豬名字詞庫，避免美系個體變白色 (`breed-DEFAULT`)
         function getBreedClass(nameStr, defaultBreed = '') {
             if (!nameStr || nameStr === '-') return 'breed-DEFAULT';
             const str = (nameStr + ' ' + defaultBreed).toUpperCase().trim();
+            
+            // 1. 二元母 LY
             if (str.startsWith('LY') || str.includes(' LY ')) return 'breed-LY';
-            if (str.startsWith('Y') || str.includes('YORKSHIRE') || str.includes('YORK') || str.includes('Y1243') || str.includes('Y1456') || str.includes('Y1454') || str.includes('Y1452') || str.includes('Y1445') || str.includes('Y1451')) return 'breed-Y';
-            if (str.startsWith('L') || str.includes('LANDRACE') || str.includes('LAND') || str.includes('L1185') || str.includes('L1160') || str.includes('L1180') || str.includes('L1431') || str.includes('L1423')) return 'breed-L';
-            if (str.startsWith('D') || str.includes('DUROC')) return 'breed-D';
-            return 'breed-DEFAULT';
+
+            // 2. 藍瑞斯 L (含美系知名藍瑞斯系統，如 BISTRO, LEPO, LADY, LANDRACE 等)
+            if (str.startsWith('L') || str.includes('LANDRACE') || str.includes('LAND') || 
+                str.includes('BISTRO') || str.includes('LEPO') || str.includes('LADY') || str.includes('LANA')) {
+                return 'breed-L';
+            }
+
+            // 3. 約克夏 Y (含美系知名約克夏系統，如 YORKSHIRE, SGI, S KIMBALL, ANNA 等)
+            if (str.startsWith('Y') || str.includes('YORKSHIRE') || str.includes('YORK') || 
+                str.includes('SGI') || str.includes('KIMBALL') || str.includes('ANNA')) {
+                return 'breed-Y';
+            }
+
+            // 4. 杜洛克 D (含美系知名杜洛克系統，如 DUROC, FIRESTONE, FLO, GOOD AS GOLD 等)
+            if (str.startsWith('D') || str.includes('DUROC') || 
+                str.includes('FIRESTONE') || str.includes('FLO') || str.includes('GOLD')) {
+                return 'breed-D';
+            }
+
+            return 'breed-L'; // 若屬藍瑞斯家族體系個體，預設歸類藍瑞斯
         }
 
         function cleanVal(v) {
@@ -521,7 +539,6 @@
             };
         }
 
-        // 🌟 線條繪製工具函數
         function drawOrthogonalLine(ctx, x1, y1, x2, y2, midX) {
             ctx.beginPath();
             ctx.moveTo(x1, y1);
@@ -575,18 +592,16 @@
             container.style.height = cardHeight + 'px';
 
             const targetY = cardHeight / 2 - boxH / 2;
-
-            // 儲存所有需要連接的線段資料 (待 DOM 生成完畢後再一併繪製)
             const linesToDraw = [];
 
-            // 1. 最左側：美系源頭祖先
+            // 1. 美系源頭祖先 (自動判斷藍瑞斯/約克夏/杜洛克套色)
             if (hasUSAncestors) {
                 const ancYs = [targetY - 110, targetY - 45, targetY + 45, targetY + 110];
                 ancData.usAncestors.forEach((a, idx) => {
                     if (!a.name) return;
                     const nodeY = ancYs[idx];
                     const div = document.createElement('div');
-                    div.className = `tree-node ${getBreedClass(a.name)}`;
+                    div.className = `tree-node ${getBreedClass(a.name, targetItem.breed)}`;
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
@@ -651,7 +666,7 @@
                 });
             }
 
-            // 🌟 確保畫布寬高與線條精準繪製 (解掉「線條沒出來」關鍵)
+            // 🌟 穩定精準劃線
             requestAnimationFrame(() => {
                 canvas.width = cardContainer.clientWidth || totalWidth;
                 canvas.height = cardHeight;
@@ -663,7 +678,6 @@
             });
         }
 
-        // 🌟 核心全景全譜圖
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -730,14 +744,13 @@
             const targetY = finalCanvasHeight / 2 - boxH / 2;
             const linesToDraw = [];
 
-            // 美系源頭
             if (hasUSAncestors) {
                 const ancYs = [targetY - 110, targetY - 45, targetY + 45, targetY + 110];
                 ancData.usAncestors.forEach((a, idx) => {
                     if (!a.name) return;
                     const nodeY = ancYs[idx];
                     const div = document.createElement('div');
-                    div.className = `tree-node ${getBreedClass(a.name)}`;
+                    div.className = `tree-node ${getBreedClass(a.name, targetItem.breed)}`;
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
@@ -751,7 +764,6 @@
                 });
             }
 
-            // 第一代親本
             const parents = [
                 { name: ancData.parents[0].name, label: '♂ 父親 (1st Sire)', y: targetY - 45 },
                 { name: ancData.parents[1].name, label: '♀ 母親 (1st Dam)', y: targetY + 45 }
@@ -773,7 +785,6 @@
                 linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
             });
 
-            // 核心主角
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target ${getBreedClass(targetItem.ear)}`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -781,7 +792,6 @@
             targetDiv.innerHTML = `<span class="sub-label">核心主角 Target</span><b>${targetItem.ear}</b>`;
             container.appendChild(targetDiv);
 
-            // 當胎配種歷程
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const mateY = startY + idx * rowGap;
@@ -801,7 +811,6 @@
                 });
             }
 
-            // 🌟 確保全景家族樹畫布線條穩定渲染
             requestAnimationFrame(() => {
                 canvas.width = scrollArea.clientWidth || totalWidth;
                 canvas.height = finalCanvasHeight;
