@@ -8,27 +8,28 @@ GID_TREE = "0"
 URL_TREE = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID_TREE}"
 
 def fetch_and_parse():
-    print("🚀 開始從 Google Sheet 下載完整交錯數據...")
+    print("🚀 開始從 Google Sheet 下載完整世代軸線數據...")
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
     
     try:
         res = requests.get(URL_TREE, headers=headers, timeout=15)
         res.encoding = 'utf-8-sig'
         if res.status_code != 200:
-            print(f"❌ 下載失敗: {res.status_code}")
+            print(f"❌ 下載失敗，狀態碼: {res.status_code}")
             return
         df = pd.read_csv(io.StringIO(res.text))
-        print(f"✅ 成功下載！原始資料總筆數：{len(df)}")
+        print(f"✅ 成功下載！原始資料筆數：{len(df)}")
     except Exception as e:
-        print(f"❌ 下載錯誤: {e}")
+        print(f"❌ 錯誤: {e}")
         return
 
     if df.empty:
         return
 
-    # 清理欄位名稱空格
+    # 清理欄位名稱 Spaces & Newlines
     df.columns = [str(c).replace('\n', '').replace('\r', '').strip() for c in df.columns]
 
+    # 🎯 對齊試算表的精確欄位名稱
     def find_col(keywords):
         for kw in keywords:
             for col in df.columns:
@@ -37,30 +38,32 @@ def fetch_and_parse():
         return None
 
     col_ear = find_col(['耳號', 'C']) or df.columns[2]
-    col_sex = find_col(['Sex', '性別', 'B'])
-    col_parity = find_col(['胎次', 'Parity', 'D'])
-    col_mate = find_col(['當胎', '配種公', 'E'])
-    col_dob = find_col(['DOB', '生日', 'F'])
-    col_breed = find_col(['Breed', '品', 'H'])
+    col_sex = find_col(['Sex', '性別'])
+    col_parity = find_col(['胎次', 'Parity'])
+    col_mate = find_col(['當胎', '配種公'])
+    col_dob = find_col(['DOB', '生日', '出生日期'])
+    col_breed = find_col(['Breed', '品'])
     
-    # 指數與成績欄位
     col_spi = find_col(['SPI'])
     col_mli = find_col(['MLI'])
     col_tsi = find_col(['TSI'])
-    col_total_born = find_col(['Total', '總生產', 'I'])
-    col_born_alive = find_col(['Born', '活胎', 'J'])
-    col_weaning = find_col(['Weaning', '離乳', 'K'])
-    col_weaning_wt = find_col(['weight', '均重', 'L'])
+    col_total_born = find_col(['Total', '總生產'])
+    col_born_alive = find_col(['Born', '活胎'])
+    col_weaning = find_col(['Weaning', '離乳'])
+    col_weaning_wt = find_col(['均重', 'weight'])
 
     # 祖輩欄位
-    col_sire_sire = find_col(['祖父', 'Sire 美系'])
-    col_sire_dam  = find_col(['祖母', 'Dam Name美系'])
-    col_dam_sire  = find_col(['外公', 'Sire 美系父親名(外'])
-    col_dam_dam   = find_col(['外婆', 'Dam Name美系母親名(外'])
+    col_sire_sire = find_col(['Sire 美系父親名(祖父)', 'Sire 美系父親名', '祖父'])
+    col_sire_dam  = find_col(['Dam Name美系母親名(祖母)', 'Dam Name美系母親名', '祖母'])
+    col_dam_sire  = find_col(['Sire 美系父親名(外公)', '外公'])
+    col_dam_dam   = find_col(['Dam Name美系母親名(外婆)', '外婆'])
 
-    # 世代欄位
-    col_gen1 = find_col(['第一代公'])
-    col_gen2 = find_col(['第二代公'])
+    # 🌟 世代軸線演進欄位 (第一代公/第一代母/第二代公/第二代母/第三代)
+    col_gen1_sire = find_col(['第一代公'])
+    col_gen1_dam  = find_col(['第一代母'])
+    col_gen2_sire = find_col(['第二代公'])
+    col_gen2_dam  = find_col(['第二代母'])
+    col_gen3_sire = find_col(['第三代公', '第三代'])
 
     pedigree_data = []
 
@@ -80,12 +83,6 @@ def fetch_and_parse():
                 return val if val.lower() not in ['nan', 'none', ''] else '-'
             return '-'
 
-        # 封裝完整詳細數據字典
-        raw_details = {}
-        for col_k, col_v in row.items():
-            if pd.notna(col_v):
-                raw_details[str(col_k).strip()] = str(col_v).strip()
-
         entry = {
             "ear": ear,
             "breed": breed,
@@ -100,17 +97,22 @@ def fetch_and_parse():
             "born_alive": get_v(col_born_alive),
             "weaning": get_v(col_weaning),
             "weaning_wt": get_v(col_weaning_wt),
+            # 祖輩
             "sire_sire": get_v(col_sire_sire),
             "sire_dam": get_v(col_sire_dam),
             "dam_sire": get_v(col_dam_sire),
             "dam_dam": get_v(col_dam_dam),
-            "gen1_sire": get_v(col_gen1),
-            "gen2_sire": get_v(col_gen2),
-            "details": raw_details
+            # 🌟 完整世代演進鏈
+            "gen1_sire": get_v(col_gen1_sire),
+            "gen1_dam":  get_v(col_gen1_dam),
+            "gen2_sire": get_v(col_gen2_sire),
+            "gen2_dam":  get_v(col_gen2_dam),
+            "gen3_sire": get_v(col_gen3_sire),
+            "details": {str(k).strip(): (str(v).strip() if pd.notna(v) else "") for k, v in row.items()}
         }
         pedigree_data.append(entry)
 
-    print(f"🎉 成功轉換！共抓取 {len(pedigree_data)} 筆包含全套 SPI/MLI/TSI 與交錯血系之數據！")
+    print(f"🎉 成功轉換！共處理 {len(pedigree_data)} 筆包含全世代演進軸線之數據！")
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
