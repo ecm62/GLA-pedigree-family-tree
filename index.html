@@ -99,7 +99,7 @@
         .target-node { border-width: 3px !important; font-size: 12px; font-weight: bold; }
         .origin-target { border-width: 3px !important; font-size: 13px; font-weight: bold; background-color: #0d6efd !important; color: white !important; }
 
-        /* 📊 6. Excel 完整表格數據儀表板 Dashboard */
+        /* 📊 6. Excel 完整 18 欄位數據儀表板 */
         #permanentCard { background: #ffffff; border: 1px solid #e0e6ed; border-left: 4px solid #0d6efd; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
         .card-title { font-size: 16px; color: #1e293b; font-weight: 700; margin-bottom: 8px; }
 
@@ -199,37 +199,35 @@
         </div>
     </div>
 
-    <!-- 📊 6. 育種成績與指數完整數據表格 Dashboard (100% 複製 friendly) -->
+    <!-- 📊 6. 育種成績與指數完整數據表格 Dashboard (18欄位，直接複製友好) -->
     <div id="permanentCard">
         <div class="card-title" id="cardTitle">📌 育種成績與指數完整數據評估表 Dashboard (直接框選可貼至 Excel)</div>
         <div class="data-table-wrapper">
             <table class="excel-data-table">
                 <thead>
                     <tr>
-                        <th>耳號 (Ear)</th>
-                        <th>品種 (Breed)</th>
-                        <th>性別 (Sex)</th>
-                        <th>出生日期 (DOB)</th>
-                        <th>胎次 (Parity)</th>
-                        <th>當胎配種公 (Mate)</th>
-                        <th>Total born<br>同胎總生產數</th>
-                        <th>Born alive<br>同胎次活胎數量</th>
-                        <th>Weaning<br>同胎次離乳數</th>
-                        <th>Mother total Weight<br>母豬生育重量</th>
-                        <th>weaning weight<br>同胎次離乳平均重</th>
+                        <th>耳號 Tag</th>
+                        <th>品種 Breed</th>
+                        <th>性別 Sex</th>
+                        <th>生日 DOB</th>
+                        <th>胎次 Parity</th>
+                        <th>配種公 Sire</th>
+                        <th>Total born<br>(同胎總生產數)</th>
+                        <th>Born alive<br>(同胎次活胎數量)</th>
+                        <th>Weaning<br>(同胎次離乳數)</th>
+                        <th>Mother total Weight<br>(母豬生育重)</th>
+                        <th>weaning weight<br>(同胎次離乳平均重)</th>
                         <th>SPI</th>
                         <th>MLI</th>
                         <th>TSI</th>
-                        <th>TNB B</th>
-                        <th>NB A</th>
+                        <th>TNB</th>
+                        <th>NBA</th>
                         <th>Lte at</th>
                         <th>Rte at</th>
-                        <th>祖父 (Sire)</th>
-                        <th>祖母 (Dam)</th>
                     </tr>
                 </thead>
                 <tbody id="excelTableBody">
-                    <tr><td colspan="20">載入中...</td></tr>
+                    <tr><td colspan="18">載入中...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -273,7 +271,6 @@
             return v;
         }
 
-        // 從原始 details 字典內尋找特定對應數值
         function getDetail(d, keys) {
             if (!d) return '-';
             for (let k of keys) {
@@ -321,11 +318,11 @@
             } else {
                 document.getElementById('macroTreePanel').style.display = 'none';
                 document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:40px; text-align:center; color:#888;">查無相關血統數據</div>';
-                document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="20">查無數據 No Data</td></tr>';
+                document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="18">查無數據 No Data</td></tr>';
             }
         }
 
-        // 🌟 渲染完整數據 Excel 表格 (方便整個複製)
+        // 🌟 18 欄位完美對齊渲染
         function renderExcelDataTable(items, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
@@ -343,11 +340,11 @@
                         <td>${cleanVal(item.breed)}</td>
                         <td>${cleanVal(item.sex)}</td>
                         <td>${cleanVal(item.dob !== '-' ? item.dob : getDetail(d, ['DOB', '生日']))}</td>
-                        <td>${cleanVal(item.parity !== '-' ? item.parity : getDetail(d, ['胎次']))}</td>
-                        <td>${cleanVal(item.mate !== '-' ? item.mate : getDetail(d, ['當胎']))}</td>
+                        <td>${cleanVal(item.parity !== '-' ? item.parity : getDetail(d, ['胎次', 'Parity']))}</td>
+                        <td>${cleanVal(item.mate !== '-' ? item.mate : getDetail(d, ['當胎', '配種']))}</td>
                         
                         <!-- 產仔離乳成績 -->
-                        <td><b>${cleanVal(item.total_born !== '-' ? item.total_born : getDetail(d, ['total', '總產']))}</b></td>
+                        <td><b>${cleanVal(item.total_born !== '-' ? item.total_born : getDetail(d, ['total', '總產', '總生']))}</b></td>
                         <td><b>${cleanVal(item.born_alive !== '-' ? item.born_alive : getDetail(d, ['alive', '活胎']))}</b></td>
                         <td>${cleanVal(item.weaning !== '-' ? item.weaning : getDetail(d, ['wean', '離乳']))}</td>
                         <td>${cleanVal(getDetail(d, ['mother total', '生育重']))}</td>
@@ -358,15 +355,11 @@
                         <td><b>${cleanVal(item.mli !== '-' ? item.mli : getDetail(d, ['mli']))}</b></td>
                         <td><b>${cleanVal(item.tsi !== '-' ? item.tsi : getDetail(d, ['tsi']))}</b></td>
 
-                        <!-- TNB / NB / Lte / Rte -->
-                        <td>${cleanVal(getDetail(d, ['tnb']))}</td>
-                        <td>${cleanVal(getDetail(d, ['nba']))}</td>
+                        <!-- TNB / NBA / Lte at / Rte at -->
+                        <td>${cleanVal(getDetail(d, ['tnb', 'tn_b']))}</td>
+                        <td>${cleanVal(getDetail(d, ['nba', 'nb_a']))}</td>
                         <td>${cleanVal(getDetail(d, ['lte']))}</td>
                         <td>${cleanVal(getDetail(d, ['rte']))}</td>
-
-                        <!-- 祖輩 -->
-                        <td>${cleanVal(item.sire_sire)}</td>
-                        <td>${cleanVal(item.sire_dam)}</td>
                     </tr>
                 `;
             });
