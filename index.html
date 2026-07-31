@@ -105,7 +105,8 @@
         .target-node { border-width: 3px !important; font-size: 12px; font-weight: bold; }
         .origin-target { border-width: 3px !important; font-size: 13px; font-weight: bold; background-color: #0d6efd !important; color: white !important; }
 
-        canvas.lineCanvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+        /* 🌟 確定畫布樣式與層級 */
+        canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         .sub-label { font-size: 9px; opacity: 0.85; margin-bottom: 1px; font-weight: 600; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 60px 20px; font-size: 14px; font-weight: 500; }
     </style>
@@ -133,7 +134,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>全血統搜尋 Pedigree Search (耳號/ANNA/公豬/血統鏈)：</strong></label>
-            <input type="text" id="earInput" placeholder="例如: Y1243 或 LY10312 或 L1160" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如: L1185 或 Y1243 或 LY10312" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 展開血統樹 Expand Tree</button>
         </div>
 
@@ -155,7 +156,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>最左側：</b>美系源頭祖代 (祖父/祖母/外公/外婆) ｜ <b>中間：</b>1st 親本 ➔ 2nd 主角 ｜ <b>右側：</b>當胎配種歷程
+            <b>最左側：</b>美系源頭祖代 ｜ <b>中間：</b>1st 親本 ➔ 2nd 主角 ｜ <b>右側：</b>當胎配種歷程
         </span>
     </div>
 
@@ -325,13 +326,12 @@
             return false;
         }
 
-        // 🌟 品種色彩精密判斷
         function getBreedClass(nameStr, defaultBreed = '') {
             if (!nameStr || nameStr === '-') return 'breed-DEFAULT';
             const str = (nameStr + ' ' + defaultBreed).toUpperCase().trim();
             if (str.startsWith('LY') || str.includes(' LY ')) return 'breed-LY';
-            if (str.startsWith('Y') || str.includes('YORKSHIRE') || str.includes('YORK') || str.includes('Y1243') || str.includes('Y1456')) return 'breed-Y';
-            if (str.startsWith('L') || str.includes('LANDRACE') || str.includes('LAND') || str.includes('L1160') || str.includes('L1180') || str.includes('L1431')) return 'breed-L';
+            if (str.startsWith('Y') || str.includes('YORKSHIRE') || str.includes('YORK') || str.includes('Y1243') || str.includes('Y1456') || str.includes('Y1454') || str.includes('Y1452') || str.includes('Y1445') || str.includes('Y1451')) return 'breed-Y';
+            if (str.startsWith('L') || str.includes('LANDRACE') || str.includes('LAND') || str.includes('L1185') || str.includes('L1160') || str.includes('L1180') || str.includes('L1431') || str.includes('L1423')) return 'breed-L';
             if (str.startsWith('D') || str.includes('DUROC')) return 'breed-D';
             return 'breed-DEFAULT';
         }
@@ -349,11 +349,8 @@
             return isNaN(num) ? '-' : num.toFixed(1);
         }
 
-        // 🌟 超強相容性：多欄位 Key 值掃描相容機制
         function getValueFromMultiKeys(obj, possibleKeys) {
             if (!obj) return '-';
-            
-            // 1. 先在第一層物件屬性中搜尋
             for (let k of possibleKeys) {
                 if (obj[k] && obj[k] !== 'nan' && obj[k] !== 'None' && obj[k] !== '') return obj[obj[k]] || obj[k];
                 for (let rawK in obj) {
@@ -363,8 +360,6 @@
                     }
                 }
             }
-
-            // 2. 如果物件中有 details 屬性，進入 details 搜尋
             if (obj.details) {
                 for (let k of possibleKeys) {
                     for (let rawK in obj.details) {
@@ -384,13 +379,11 @@
             return getValueFromMultiKeys(item, ['當胎配種', 'mate', 'matingBoar']);
         }
 
-        // 🌟 精準性別判定
         function checkIsMale(item) {
             if (!item) return false;
             const sexStr = (item.sex || getValueFromMultiKeys(item, ['Sex', '性別']) || '').toUpperCase();
             if (sexStr.includes('FEMALE')) return false;
             if (sexStr.includes('MALE') || sexStr.includes('公')) return true;
-            
             const earStr = (item.ear || '').toUpperCase();
             if (earStr.startsWith('D') && !earStr.startsWith('DD') && !sexStr.includes('FEMALE')) return true;
             return false;
@@ -478,7 +471,7 @@
                         
                         <td><b>${cleanVal(item.total_born !== '-' ? item.total_born : getValueFromMultiKeys(item, ['total', '總產', '總生']))}</b></td>
                         <td><b>${cleanVal(item.born_alive !== '-' ? item.born_alive : getValueFromMultiKeys(item, ['alive', '活胎']))}</b></td>
-                        <td>${cleanVal(item.weaning !== '-' ? item.weaning : getValueFromMultiKeys(item, ['wean', '離乳']))}</td>
+                        <td>${cleanVal(getValueFromMultiKeys(item, ['wean', '離乳']))}</td>
                         <td>${cleanVal(getValueFromMultiKeys(item, ['mother total', '生育重']))}</td>
                         <td>${cleanVal(item.weaning_wt !== '-' ? item.weaning_wt : getValueFromMultiKeys(item, ['weaning weight', '均重']))}</td>
 
@@ -496,14 +489,12 @@
             tbody.innerHTML = html;
         }
 
-        // 🌟 核心防護：跨欄位抓取美國祖先 (Sire/Dam 欄位) 與第一代親本
         function getHierarchyAncestors(items, targetItem) {
             let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'Sire 美系父親名(祖父)', 'Sire美系父親名', 'sire_sire', '祖父']);
             let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'Dam Name 美系母親名(祖母)', 'Dam Name美系母親名', 'sire_dam', '祖母']);
             let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系父親名(外公)', 'Sire 美系父親名(外公)', 'Sire美系父親名', 'dam_sire', '外公']);
             let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(外婆)', 'Dam Name 美系母親名(外婆)', 'Dam Name美系母親名', 'dam_dam', '外婆']);
 
-            // 若目前項目沒有，全域遍歷補充
             if (usSireSire === '-' || usSireDam === '-' || usDamSire === '-' || usDamDam === '-') {
                 for (let it of items) {
                     if (usSireSire === '-') usSireSire = getValueFromMultiKeys(it, ['Sire美系父親名(祖父)', 'Sire 美系父親名(祖父)', 'sire_sire']);
@@ -528,6 +519,18 @@
                     { name: gen1Dam  !== '-' ? gen1Dam  : (usDamDam   !== '-' ? usDamDam   : '-'), label: '♀ 母親 (1st Dam)' }
                 ]
             };
+        }
+
+        // 🌟 線條繪製工具函數
+        function drawOrthogonalLine(ctx, x1, y1, x2, y2, midX) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(midX, y1);
+            ctx.lineTo(midX, y2);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.stroke();
         }
 
         function drawSingleLineageTree(items, targetItem) {
@@ -566,23 +569,17 @@
 
             const totalMates = Math.max(mateList.length, 1);
             const cardHeight = Math.max(totalMates * rowGap + 120, 360);
+            const totalWidth = Math.max(col3_X + boxW + 60, 900);
 
-            canvas.width = Math.max(col3_X + boxW + 60, 900);
-            canvas.height = cardHeight;
             cardContainer.style.height = cardHeight + 'px';
             container.style.height = cardHeight + 'px';
 
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.8;
-
-            function drawOrthogonal(x1, y1, x2, y2, midX) {
-                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(midX, y1); ctx.lineTo(midX, y2); ctx.lineTo(x2, y2); ctx.stroke();
-            }
-
             const targetY = cardHeight / 2 - boxH / 2;
 
-            // 1. 最左側：美系源頭祖先 (Sire/Dam 欄位)
+            // 儲存所有需要連接的線段資料 (待 DOM 生成完畢後再一併繪製)
+            const linesToDraw = [];
+
+            // 1. 最左側：美系源頭祖先
             if (hasUSAncestors) {
                 const ancYs = [targetY - 110, targetY - 45, targetY + 45, targetY + 110];
                 ancData.usAncestors.forEach((a, idx) => {
@@ -599,11 +596,11 @@
                     container.appendChild(div);
 
                     const midX = col0_X + boxW + colGap / 2;
-                    drawOrthogonal(col0_X + boxW, nodeY + boxH/2, col1_X, targetY + boxH/2, midX);
+                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: targetY + boxH/2, midX: midX });
                 });
             }
 
-            // 2. 第一代親本 (嚴格套對品種色彩)
+            // 2. 第一代親本
             const parents = [
                 { name: ancData.parents[0].name, label: "♂ 父親 (1st Sire)", y: targetY - 45 },
                 { name: ancData.parents[1].name, label: "♀ 母親 (1st Dam)", y: targetY + 45 }
@@ -622,7 +619,7 @@
                 container.appendChild(div);
 
                 const midX = col1_X + boxW + colGap / 2;
-                drawOrthogonal(col1_X + boxW, p.y + boxH/2, col2_X, targetY + boxH/2, midX);
+                linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
             });
 
             // 3. 中央核心主角
@@ -650,12 +647,23 @@
                     container.appendChild(mDiv);
 
                     const midXRight = col2_X + boxW + colGap / 2;
-                    drawOrthogonal(col2_X + boxW, targetY + boxH/2, col3_X, currentY + boxH/2, midXRight);
+                    linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: currentY + boxH/2, midX: midXRight });
                 });
             }
+
+            // 🌟 確保畫布寬高與線條精準繪製 (解掉「線條沒出來」關鍵)
+            requestAnimationFrame(() => {
+                canvas.width = cardContainer.clientWidth || totalWidth;
+                canvas.height = cardHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                linesToDraw.forEach(l => {
+                    drawOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX);
+                });
+            });
         }
 
-        // 🌟 核心全景圖
+        // 🌟 核心全景全譜圖
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -714,21 +722,13 @@
             const rowGap = 75;
             const startY = 65;
             const finalCanvasHeight = Math.max(totalMates * rowGap + 180, 480);
+            const totalWidth = col3_X + boxW + 60;
 
-            canvas.width = col3_X + boxW + 60;
-            canvas.height = finalCanvasHeight;
             scrollArea.style.height = finalCanvasHeight + 'px';
             container.style.height = finalCanvasHeight + 'px';
 
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.8;
-
-            function drawOrthogonal(x1, y1, x2, y2, midX) {
-                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(midX, y1); ctx.lineTo(midX, y2); ctx.lineTo(x2, y2); ctx.stroke();
-            }
-
             const targetY = finalCanvasHeight / 2 - boxH / 2;
+            const linesToDraw = [];
 
             // 美系源頭
             if (hasUSAncestors) {
@@ -747,11 +747,11 @@
                     container.appendChild(div);
 
                     const midX = col0_X + boxW + colGap / 2;
-                    drawOrthogonal(col0_X + boxW, nodeY + boxH/2, col1_X, targetY + boxH/2, midX);
+                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: targetY + boxH/2, midX: midX });
                 });
             }
 
-            // 第一代親本 (嚴格套色)
+            // 第一代親本
             const parents = [
                 { name: ancData.parents[0].name, label: '♂ 父親 (1st Sire)', y: targetY - 45 },
                 { name: ancData.parents[1].name, label: '♀ 母親 (1st Dam)', y: targetY + 45 }
@@ -770,7 +770,7 @@
                 container.appendChild(div);
 
                 const midX = col1_X + boxW + colGap / 2;
-                drawOrthogonal(col1_X + boxW, p.y + boxH/2, col2_X, targetY + boxH/2, midX);
+                linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
             });
 
             // 核心主角
@@ -797,9 +797,20 @@
                     container.appendChild(mDiv);
 
                     const midXRight = col2_X + boxW + colGap / 2;
-                    drawOrthogonal(col2_X + boxW, targetY + boxH/2, col3_X, mateY + boxH/2, midXRight);
+                    linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: midXRight });
                 });
             }
+
+            // 🌟 確保全景家族樹畫布線條穩定渲染
+            requestAnimationFrame(() => {
+                canvas.width = scrollArea.clientWidth || totalWidth;
+                canvas.height = finalCanvasHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                linesToDraw.forEach(l => {
+                    drawOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX);
+                });
+            });
         }
 
         function exportMacroTreeAsPNG() {
