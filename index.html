@@ -5,35 +5,99 @@
     <title>進階血統比較與數據評估系統</title>
     <style>
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 15px; background-color: #f8f9fa; }
+        
         .control-bar { background: #ffffff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 12px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
         input[type="text"] { padding: 8px 14px; font-size: 15px; border: 1px solid #ced4da; border-radius: 6px; width: 320px; }
+        
         .btn { padding: 8px 18px; font-size: 15px; background-color: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .btn:hover { background-color: #0b5ed7; }
-        .btn-breed { background-color: #6c757d; margin-right: 3px; padding: 6px 14px; font-size: 14px; }
+        .btn-breed { background-color: #6c757d; margin-right: 3px; padding: 6px 14px; font-size: 14px; color: white; border: none; border-radius: 4px; cursor: pointer; }
         .btn-breed.active { font-weight: bold; border: 2px solid #000; }
+        
         .legend-bar { display: flex; gap: 15px; font-size: 13px; background: #fff; padding: 10px 15px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 12px; align-items: center; }
         .color-badge { padding: 3px 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; }
-        #permanentCard { background-color: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 15px 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: block; }
+
+        #permanentCard { 
+            background-color: #ffffff; 
+            border: 2px solid #0d6efd; 
+            border-radius: 8px; 
+            padding: 15px 20px; 
+            margin-bottom: 15px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            display: block; 
+        }
         .card-title { font-size: 17px; color: #0d6efd; font-weight: bold; margin-bottom: 10px; border-bottom: 1px dashed #0d6efd; padding-bottom: 6px; }
+        
         .compact-table { width: 100%; border-collapse: collapse; font-size: 14px; }
         .compact-table td { border: 1px solid #dee2e6; padding: 7px 12px; }
         .compact-table .lbl { background-color: #f1f3f5; font-weight: bold; width: 15%; text-align: right; }
         .compact-table .val { width: 35%; font-weight: 500; color: #111; }
+
         .compare-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; table-layout: fixed; }
         .compare-table th, .compare-table td { border: 1px solid #dee2e6; padding: 6px 4px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
         .compare-table th { background-color: #0d6efd; color: white; }
         .compare-row-lbl { background-color: #f8f9fa; font-weight: bold; width: 120px; text-align: left !important; padding-left: 8px !important; }
-        #pedigreeTreeArea { display: flex; flex-direction: column; gap: 20px; background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; min-height: 480px; overflow: auto; }
-        .individual-pedigree { position: relative; width: 860px; height: 380px; border: 1px solid #ccc; border-radius: 8px; background: #fff; padding: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); margin-bottom: 10px; }
-        .p-box { position: absolute; border: 2px solid #333333; border-radius: 5px; text-align: center; font-size: 13px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 2px 2px 6px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; cursor: pointer; transition: transform 0.1s ease; }
-        .p-box:hover { transform: scale(1.03); border-width: 3px; }
+
+        #pedigreeTreeArea {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 480px;
+            overflow: auto;
+        }
+
+        .individual-pedigree {
+            position: relative;
+            width: 860px;
+            height: 380px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background: #fff;
+            padding: 10px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 10px;
+        }
+
+        .p-box {
+            position: absolute;
+            border: 2px solid #333333;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.08);
+            z-index: 2;
+            padding: 3px;
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        .p-box:hover {
+            transform: scale(1.03);
+            border-width: 3px;
+        }
+
         .breed-LY { background-color: #D4EDDA !important; color: #155724; border-color: #28a745; }
-        .breed-Y { background-color: #FFF3CD !important; color: #856404; border-color: #ffc107; }
-        .breed-L { background-color: #D1ECF1 !important; color: #0c5460; border-color: #17a2b8; }
-        .breed-D { background-color: #F8D7DA !important; color: #721c24; border-color: #dc3545; }
+        .breed-Y  { background-color: #FFF3CD !important; color: #856404; border-color: #ffc107; }
+        .breed-L  { background-color: #D1ECF1 !important; color: #0c5460; border-color: #17a2b8; }
+        .breed-D  { background-color: #F8D7DA !important; color: #721c24; border-color: #dc3545; }
         .breed-DEFAULT { background-color: #FFFFFF; color: #000; }
         .box-target { border-width: 3px !important; font-size: 14px; font-weight: bold; }
-        canvas.lineCanvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+
+        canvas.lineCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
         .empty-msg { text-align: center; padding: 60px; font-size: 17px; color: #888; font-weight: bold; width: 100%; }
     </style>
 </head>
@@ -42,13 +106,13 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>進階比較模式 (耳號以逗號分隔)：</strong></label>
-            <input type="text" id="earInput" placeholder="支援多耳號比較 (如 DD26000, 26000, anna)" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如: d1393, D1395, LY10891" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 查詢世系</button>
         </div>
 
         <div>
             <strong>品種關聯篩選：</strong>
-            <button class="btn btn-breed active" style="background:#6c757d;" onclick="setBreedFilter('ALL', this)">全部</button>
+            <button class="btn btn-breed active" style="background:#343a40;" onclick="setBreedFilter('ALL', this)">全部</button>
             <button class="btn btn-breed" style="background:#28a745;" onclick="setBreedFilter('LY', this)">LY (淡綠)</button>
             <button class="btn btn-breed" style="background:#ffc107; color:#000;" onclick="setBreedFilter('Y', this)">Y (淡黃)</button>
             <button class="btn btn-breed" style="background:#17a2b8;" onclick="setBreedFilter('L', this)">L (淡藍)</button>
@@ -91,13 +155,14 @@
         let currentBreedFilter = 'ALL';
 
         window.addEventListener('DOMContentLoaded', () => {
-            fetch('data.json?v=' + Date.now())
+            // 🌟 加入時間戳記破壞快取，強迫下載 2.57MB 最新 JSON
+            const cacheBuster = 'data.json?nocache=' + new Date().getTime();
+            fetch(cacheBuster)
                 .then(res => {
                     if (!res.ok) throw new Error("Http " + res.status);
                     return res.json();
                 })
                 .then(data => {
-                    // 兼容陣列或物件結構
                     if (Array.isArray(data)) {
                         pedigreeList = data;
                     } else if (typeof data === 'object' && data !== null) {
@@ -106,15 +171,17 @@
                         pedigreeList = [];
                     }
 
+                    console.log("✅ 成功載入豬隻總數量：", pedigreeList.length);
+
                     if (pedigreeList.length > 0) {
                         drawCompareMode([pedigreeList[0]]);
                     } else {
-                        showEmptyMsg("data.json 內無任何豬隻資料");
+                        showEmptyMsg("data.json 內無數據");
                     }
                 })
                 .catch(err => {
                     console.error("無法讀取 data.json:", err);
-                    showEmptyMsg("讀取 data.json 失敗，請確認已執行 generate_tree.py 生成檔案");
+                    showEmptyMsg("讀取 data.json 失敗");
                 });
         });
 
@@ -135,6 +202,7 @@
             return 'breed-DEFAULT';
         }
 
+        // 🌟 極致寬鬆搜尋邏輯
         function searchPedigree() {
             const rawInput = document.getElementById('earInput').value.trim();
             let matchedItems = [];
@@ -147,27 +215,26 @@
                         const earLower = (item.ear || '').toLowerCase();
                         const sireSireLower = (item.sire_sire || '').toLowerCase();
                         const sireDamLower = (item.sire_dam || '').toLowerCase();
-                        const damSireLower = (item.dam_sire || '').toLowerCase();
-                        const damDamLower = (item.dam_dam || '').toLowerCase();
                         const detailsStr = JSON.stringify(item.details || {}).toLowerCase();
 
+                        // 品種比對 (選「ALL」時不鎖品種)
                         let breedPass = true;
                         if (currentBreedFilter !== 'ALL') {
                             const b = (item.breed || '').toUpperCase();
                             breedPass = b.includes(currentBreedFilter);
                         }
 
+                        // 文字比對：只要包含搜尋關鍵字即中
                         const textMatch = earLower.includes(term) || 
                                           sireSireLower.includes(term) || 
                                           sireDamLower.includes(term) || 
-                                          damSireLower.includes(term) || 
-                                          damDamLower.includes(term) || 
                                           detailsStr.includes(term);
 
                         return breedPass && textMatch;
                     });
 
                     if (matched.length > 0) {
+                        // 優先抓完全匹配項
                         const exact = matched.find(m => (m.ear || '').toLowerCase() === term);
                         matchedItems.push(exact || matched[0]);
                     }
@@ -225,10 +292,10 @@
                     return '-';
                 };
 
-                document.getElementById('singleEar').innerHTML = `<b>${item.ear}</b> | 品種: <b>${item.breed || getV(['Breed'])}</b>`;
+                document.getElementById('singleEar').innerHTML = `<b>${item.ear}</b> | 品種: <b>${item.breed || getV(['Breed'])}</b> (${item.sex || ''})`;
                 document.getElementById('singleIndex').innerHTML = `<b>SPI:</b> ${getV(['SPI'])} | <b>MLI:</b> ${getV(['MLI'])} | <b>TSI:</b> ${getV(['TSI'])}`;
                 document.getElementById('singleDob').innerText = `出生: ${getV(['DOB', '出生'])} / Parity: ${getV(['Parity', '胎次'])}`;
-                document.getElementById('singleBorn').innerHTML = `總產: <b>${getV(['total born', '總生'])}</b> | 活胎: <b>${getV(['born alive', '活胎'])}</b> | 均重: ${getV(['weight', '均重'])} kg`;
+                document.getElementById('singleBorn').innerHTML = `總產: <b>${getV(['total born', '總生'])}</b> | 活胎: <b>${getV(['born alive', '活胎'])}</b> | 離乳: <b>${getV(['weaning'])}</b>`;
 
             } else {
                 singleTable.style.display = 'none';
@@ -249,14 +316,12 @@
 
                 const fields = [
                     { name: '品種', keys: ['Breed'] },
+                    { name: '性別 Sex', keys: ['Sex'] },
                     { name: 'SPI 母性指數', keys: ['SPI'] },
                     { name: 'MLI 母系指數', keys: ['MLI'] },
                     { name: 'TSI 公系指數', keys: ['TSI'] },
                     { name: 'DOB 生日', keys: ['DOB', '出生'] },
-                    { name: '胎次 Parity', keys: ['Parity', '胎次'] },
-                    { name: '同胎總生', keys: ['total born', '總生'] },
-                    { name: 'Born alive', keys: ['born alive', '活胎'] },
-                    { name: '離乳均重', keys: ['weight', '均重'] }
+                    { name: '胎次 Parity', keys: ['Parity', '胎次'] }
                 ];
 
                 fields.forEach(field => {
