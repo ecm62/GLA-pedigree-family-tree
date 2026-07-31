@@ -2,15 +2,15 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>動態家族血系擴充與分析系統 (中英對照版)</title>
+    <title>交錯家族血系與成績評估系統</title>
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 16px; background-color: #f4f6f9; color: #333; }
         
         .control-bar { background: #ffffff; padding: 14px 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 12px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
-        input[type="text"] { padding: 8px 14px; font-size: 15px; border: 1px solid #ced4da; border-radius: 6px; width: 340px; outline: none; transition: border-color 0.2s; }
+        input[type="text"] { padding: 8px 14px; font-size: 15px; border: 1px solid #ced4da; border-radius: 6px; width: 340px; outline: none; }
         input[type="text"]:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
 
-        .btn { padding: 8px 20px; font-size: 15px; background-color: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        .btn { padding: 8px 20px; font-size: 15px; background-color: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
         .btn:hover { background-color: #0b5ed7; }
         .btn-breed { background-color: #6c757d; margin-right: 4px; padding: 6px 14px; font-size: 14px; color: white; border: none; border-radius: 5px; cursor: pointer; }
         .btn-breed.active { font-weight: bold; border: 2px solid #111; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
@@ -43,10 +43,9 @@
             min-height: 520px;
             overflow: auto;
             position: relative;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
         }
 
-        .family-group { border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; position: relative; background: #fafbfc; }
+        .family-group { border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; position: relative; background: #fafbfc; margin-bottom: 20px; }
         .family-group-title { font-size: 14px; font-weight: bold; color: #0d6efd; margin-bottom: 12px; }
 
         .p-box {
@@ -66,11 +65,11 @@
             cursor: pointer;
             transition: all 0.15s ease;
             line-height: 1.25;
-            word-break: break-word;
+            word-break: break-all;
         }
         .p-box:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.15); border-width: 3px; }
 
-        /* 品種顏色 */
+        /* 品種專屬顏色 */
         .breed-LY { background-color: #d1fae5 !important; color: #065f46; border-color: #10b981; }
         .breed-Y  { background-color: #fef3c7 !important; color: #92400e; border-color: #f59e0b; }
         .breed-L  { background-color: #e0f2fe !important; color: #075985; border-color: #0ea5e9; }
@@ -88,7 +87,7 @@
 
     <div class="control-bar">
         <div>
-            <label for="earInput"><strong>全血統搜尋 Search Pedigree (耳號/祖父/祖母/配種公)：</strong></label>
+            <label for="earInput"><strong>全血統交錯搜尋 Search Pedigree：</strong></label>
             <input type="text" id="earInput" placeholder="例如: GOOD AS GOLD 或 D1393" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 擴充搜尋 Expand Tree</button>
         </div>
@@ -109,26 +108,32 @@
         <span class="color-badge breed-Y">Y：約克夏 (Yorkshire)</span>
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc)</span>
-        <span style="margin-left: auto; color: #64748b; font-size: 12px;">💡 點擊任一方框即可切換核心檢視 Click box to center view</span>
     </div>
 
+    <!-- Excel 風格成績卡面板 -->
     <div id="permanentCard">
         <div class="card-header">
-            <div class="card-title" id="cardTitle">📌 全血系分析與數據評估儀表板 Pedigree Dashboard</div>
+            <div class="card-title" id="cardTitle">📌 育種成績與指數評估儀表板 Dashboard</div>
         </div>
         <div id="cardBody">
             <table class="excel-table" id="singleSummaryTable">
                 <tr>
-                    <td class="lbl-col">當前檢視 Target:</td>
+                    <td class="lbl-col">查詢個體 / 性別:</td>
                     <td class="val-col" id="singleEar">-</td>
-                    <td class="lbl-col">家族匹配 Count:</td>
-                    <td class="val-col" id="singleCount">-</td>
+                    <td class="lbl-col">生產指數 (SPI / MLI / TSI):</td>
+                    <td class="val-col" id="singleIndex">-</td>
                 </tr>
                 <tr>
-                    <td class="lbl-col">出生日期 DOB:</td>
+                    <td class="lbl-col">出生 DOB / 胎次 Parity:</td>
                     <td class="val-col" id="singleDob">-</td>
-                    <td class="lbl-col">當胎配種公 Mating Sire:</td>
-                    <td class="val-col" id="singleMate">-</td>
+                    <td class="lbl-col">同胎數據 (總產 / 活胎 / 離乳均重):</td>
+                    <td class="val-col" id="singleBorn">-</td>
+                </tr>
+                <tr>
+                    <td class="lbl-col">父系血統 (祖父/祖母):</td>
+                    <td class="val-col" id="singleSireTree">-</td>
+                    <td class="lbl-col">母系外祖血統 (外公/外婆):</td>
+                    <td class="val-col" id="singleDamTree">-</td>
                 </tr>
             </table>
         </div>
@@ -149,12 +154,10 @@
                     if (pedigreeList.length > 0) {
                         searchPedigree();
                     } else {
-                        showEmptyMsg("data.json 內無數據 No Data");
+                        showEmptyMsg("data.json 內無數據");
                     }
                 })
-                .catch(err => {
-                    showEmptyMsg("讀取 data.json 失敗 Read Error");
-                });
+                .catch(err => showEmptyMsg("讀取 data.json 失敗"));
         });
 
         function setBreedFilter(breed, btn) {
@@ -164,25 +167,13 @@
             searchPedigree();
         }
 
-        // 🌟 升級版品種識別演算法：強效對應祖代血統美系名稱
         function getBreedClass(nameStr, defaultBreed = '') {
             if (!nameStr || nameStr === '-') return 'breed-DEFAULT';
             const str = (nameStr + ' ' + defaultBreed).toUpperCase();
-            
             if (str.includes('LY')) return 'breed-LY';
-            if (str.includes('YY') || str.includes('YORK') || str.includes(' Y ')) return 'breed-Y';
-            if (str.includes('LL') || str.includes('LAND') || str.includes(' L ')) return 'breed-L';
-            
-            // 強制美系登記入 D 品種 (紅色)
-            if (str.includes('1CR') || str.includes('GOOD AS GOLD') || str.includes('FLO') || 
-                str.includes('FIRESTONE') || str.includes('DUROC') || str.includes(' D ') || str.startsWith('D')) {
-                return 'breed-D';
-            }
-            
-            if (str.startsWith('Y')) return 'breed-Y';
-            if (str.startsWith('L')) return 'breed-L';
-
-            return 'breed-D'; // 預設套用 D 杜洛克
+            if (str.includes('YY') || str.includes('YORK') || str.startsWith('Y')) return 'breed-Y';
+            if (str.includes('LL') || str.includes('LAND') || str.startsWith('L')) return 'breed-L';
+            return 'breed-D';
         }
 
         function searchPedigree() {
@@ -190,7 +181,6 @@
             let matchedItems = [];
 
             if (rawInput) {
-                // 清理標點與多餘空格
                 const searchTerms = rawInput.split(/[,，]/).map(s => s.trim().toLowerCase()).filter(s => s !== '');
                 
                 searchTerms.forEach(term => {
@@ -208,14 +198,8 @@
                             breedPass = (item.breed || '').toUpperCase().includes(currentBreedFilter);
                         }
 
-                        // 只要耳號、祖父、祖母、外公、外婆或詳細紀錄含有關鍵字即算匹配
-                        const isRelated = ear.includes(term) || 
-                                          sireSire.includes(term) || 
-                                          sireDam.includes(term) || 
-                                          damSire.includes(term) || 
-                                          damDam.includes(term) || 
-                                          mate.includes(term) ||
-                                          detailsStr.includes(term);
+                        const isRelated = ear.includes(term) || sireSire.includes(term) || sireDam.includes(term) || 
+                                          damSire.includes(term) || damDam.includes(term) || mate.includes(term) || detailsStr.includes(term);
 
                         return breedPass && isRelated;
                     });
@@ -223,20 +207,14 @@
                     matchedItems = matchedItems.concat(matched);
                 });
 
-                // 去除重複耳號項目
                 const uniqueSet = new Set();
                 matchedItems = matchedItems.filter(item => {
                     if (uniqueSet.has(item.ear)) return false;
                     uniqueSet.add(item.ear);
                     return true;
                 });
-
             } else {
-                if (currentBreedFilter !== 'ALL') {
-                    matchedItems = pedigreeList.filter(item => (item.breed || '').toUpperCase().includes(currentBreedFilter));
-                } else {
-                    matchedItems = pedigreeList;
-                }
+                matchedItems = pedigreeList;
             }
 
             if (matchedItems.length > 0) {
@@ -247,41 +225,34 @@
         }
 
         function showEmptyMsg(inputStr) {
-            document.getElementById('cardTitle').innerText = "📌 查詢結果：無相關血系資料 No Results Found";
+            document.getElementById('cardTitle').innerText = "📌 查詢結果：無相關血系資料 No Results";
             document.getElementById('singleEar').innerText = "-";
-            document.getElementById('singleCount').innerText = "0 筆";
+            document.getElementById('singleIndex').innerText = "-";
             document.getElementById('singleDob').innerText = "-";
-            document.getElementById('singleMate').innerText = "-";
+            document.getElementById('singleBorn').innerText = "-";
+            document.getElementById('singleSireTree').innerText = "-";
+            document.getElementById('singleDamTree').innerText = "-";
 
             const boxesArea = document.getElementById('pedigreeTreeArea');
-            boxesArea.innerHTML = `<div class="empty-msg">⚠️ 查無與 "${inputStr || ''}" 相關之血統數據。 No matching pedigree records.</div>`;
-        }
-
-        function getDetailVal(details, keyList) {
-            if (!details) return '-';
-            for (let k of keyList) {
-                for (let rawKey in details) {
-                    if (rawKey.toLowerCase().includes(k.toLowerCase())) {
-                        const val = details[rawKey];
-                        if (val && val !== 'nan' && val !== 'None' && val !== '') return val;
-                    }
-                }
-            }
-            return '-';
+            boxesArea.innerHTML = `<div class="empty-msg">⚠️ 查無與 "${inputStr || ''}" 相關之血統數據。</div>`;
         }
 
         function drawExpandedPedigree(items, searchTerm) {
             const area = document.getElementById('pedigreeTreeArea');
             area.innerHTML = '';
 
+            const item = items[0];
             const titleTerm = searchTerm ? `關鍵字：「${searchTerm}」` : '全場血系 All Pedigrees';
-            document.getElementById('cardTitle').innerHTML = `📌 育種血系關聯分析：<span style="color:#0d6efd;">${titleTerm}</span>`;
-            document.getElementById('singleEar').innerHTML = `<span class="badge">${searchTerm || items[0].ear} 後代血系家族</span>`;
-            document.getElementById('singleCount').innerHTML = `<b>${items.length} 隻個體關聯 Matches</b>`;
-            document.getElementById('singleDob').innerText = getDetailVal(items[0].details, ['出生日期', 'DOB']);
-            document.getElementById('singleMate').innerText = items[0].mate || '-';
+            
+            // 填入 Excel 數據面板
+            document.getElementById('cardTitle').innerHTML = `📌 育種成績與指數評估：<span style="color:#0d6efd;">${titleTerm}</span> (共匹配 ${items.length} 隻個體)`;
+            document.getElementById('singleEar').innerHTML = `<span class="badge">${item.ear}</span> ｜ 品種: <b>${item.breed}</b> (${item.sex || 'FEMALE'})`;
+            document.getElementById('singleIndex').innerHTML = `<b>SPI:</b> ${item.spi} ｜ <b>MLI:</b> ${item.mli} ｜ <b>TSI:</b> ${item.tsi}`;
+            document.getElementById('singleDob').innerText = `DOB: ${item.dob} ｜ Parity: ${item.parity}`;
+            document.getElementById('singleBorn').innerHTML = `總產: <b>${item.total_born}</b> ｜ 活胎: <b>${item.born_alive}</b> ｜ 離乳: <b>${item.weaning}</b> (均重: ${item.weaning_wt} kg)`;
+            document.getElementById('singleSireTree').innerHTML = `祖父: <b>${item.sire_sire}</b> / 祖母: <b>${item.sire_dam}</b>`;
+            document.getElementById('singleDamTree').innerHTML = `外公: <b>${item.dam_sire}</b> / 外婆: <b>${item.dam_dam}</b>`;
 
-            // 展開最多前 15 組匹配的後代血系家族
             const displayItems = items.slice(0, 15);
 
             displayItems.forEach((item, idx) => {
@@ -290,10 +261,9 @@
                 groupDiv.id = `group_${idx}`;
                 groupDiv.style.position = 'relative';
                 groupDiv.style.height = '380px';
-                groupDiv.style.marginBottom = '20px';
 
                 groupDiv.innerHTML = `
-                    <div class="family-group-title">血系家族分支 Pedigree Branch #${idx+1}：個體 ${item.ear} (品種 Breed: ${item.breed})</div>
+                    <div class="family-group-title">血系家族分支 Pedigree Branch #${idx+1}：個體 ${item.ear} (品種: ${item.breed})</div>
                     <canvas class="lineCanvas" id="canvas_${idx}"></canvas>
                     <div id="boxes_${idx}"></div>
                 `;
@@ -346,7 +316,6 @@
                 div.style.height = boxHeight + 'px';
                 div.innerHTML = b.text;
 
-                // 🌟 點擊事件：清理文字內的換行與特殊字元，精準搜尋點選的耳號或祖代名稱
                 if (b.ear && b.ear !== '-') {
                     div.onclick = (e) => {
                         e.stopPropagation();
