@@ -80,14 +80,14 @@
         #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .single-tree-card { position: relative; width: 100%; height: auto; min-height: 340px; overflow: auto; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
 
-        /* 6. 雙向全系譜家族拓撲樹 (父左 / 母右) */
+        /* 6. 雙向全系譜拓撲樹 (父左 ➔ 主角 ➔ 母右 ➔ 當胎 ➔ 後代) */
         #macroTreePanel { background: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: none; }
         .macro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
         .macro-title { font-size: 15px; font-weight: 700; color: #0d6efd; display: flex; align-items: center; gap: 8px; }
 
         #macroScrollArea { width: 100%; height: auto; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; }
         .gen-header-bar { position: absolute; top: 10px; left: 0; right: 0; height: 28px; display: flex; pointer-events: none; z-index: 3; }
-        .gen-header-title { position: absolute; font-size: 12px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 12px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
         .tree-node { position: absolute; border: 2px solid #334155; border-radius: 6px; text-align: center; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; cursor: pointer; transition: all 0.15s ease; line-height: 1.25; white-space: nowrap; }
         .tree-node:hover { transform: scale(1.06); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-width: 2.5px; }
@@ -155,7 +155,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>上圖：</b>三代內精簡直系樹 ｜ <b>下圖：</b>雙向全系譜拓撲圖 (👈 父系血脈 ｜ <b>中央主角</b> ｜ 母系血脈 👉)
+            <b>上圖：</b>三代直系圖 ｜ <b>下圖：</b>雙向全系譜 (👈 父系祖代 ➔ 父親 ➔ <b>核心主角</b> ➔ 母親 ➔ 母系祖代 ➔ 配種公 ➔ 後代延伸 👉)
         </span>
     </div>
 
@@ -204,11 +204,11 @@
         </div>
     </div>
 
-    <!-- 6. 雙向全系譜拓撲樹 (父左 ➔ 主角 ➔ 母右) -->
+    <!-- 6. 7欄位零重疊 雙向全系譜拓撲樹 -->
     <div id="macroTreePanel">
         <div class="macro-header">
             <div class="macro-title">
-                <span>🌳 2. 雙向全系譜拓撲家族樹 (Full Butterfly Lineage: 父系左延伸 ➔ 核心主角 ➔ 母系右延伸)</span>
+                <span>🌳 2. 雙向全系譜拓撲家族樹 (Full Butterfly Topology: 👈 父系血脈 ➔ 父親 ➔ 🎯核心主角 ➔ 母親 ➔ 母系血脈 ➔ 配種公 ➔ 產出世代 👉)</span>
                 <span id="macroHeaderCount" style="font-size:12px; font-weight:normal; color:#475569;"></span>
             </div>
             <div>
@@ -330,7 +330,7 @@
             const str = (nameStr + ' ' + defaultBreed).toUpperCase().trim();
             if (str.startsWith('LY') || str.includes(' LY ')) return 'breed-LY';
             if (str.startsWith('Y') || str.includes('YORKSHIRE') || str.includes('YORK') || str.includes('Y1243') || str.includes('Y1456') || str.includes('Y1454') || str.includes('Y1452') || str.includes('Y1445') || str.includes('Y1451')) return 'breed-Y';
-            if (str.startsWith('L') || str.includes('LANDRACE') || str.includes('LAND') || str.includes('L1185') || str.includes('L1160') || str.includes('L1180') || str.includes('L1431') || str.includes('L1423') || str.includes('BISTRO') || str.includes('LEPO') || str.includes('LADY')) return 'breed-L';
+            if (str.startsWith('L') || str.includes('LANDRACE') || str.includes('LAND') || str.includes('L1185') || str.includes('L1160') || str.includes('L1180') || str.includes('L1431') || str.includes('L1423') || str.includes('BISTRO') || str.includes('LEPO') || str.includes('LADY') || str.includes('MAATTO')) return 'breed-L';
             if (str.startsWith('D') || str.includes('DUROC') || str.includes('RODMAN')) return 'breed-D';
             return 'breed-L';
         }
@@ -531,7 +531,7 @@
             ctx.stroke();
         }
 
-        // 🌟 1. 上圖：單純三代個體直系樹 (精簡乾淨)
+        // 🌟 1. 上圖：單純三代個體直系演進圖
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -657,7 +657,7 @@
             });
         }
 
-        // 🌟 2. 下圖：雙向全系譜拓撲家族樹 (👈 父系基因 ➔ 核心主角 ➔ 母系基因 👉)
+        // 🌟 2. 下圖：7 欄位零重疊 雙向全系譜拓撲家族樹 (父左 ➔ 父親 ➔ 主角 ➔ 母親 ➔ 母祖 ➔ 配種公 ➔ 小孩/延伸)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -668,30 +668,36 @@
 
             container.innerHTML = '';
             headerBar.innerHTML = '';
-            countTag.innerText = `(以 ${targetItem.ear} 為核心，左側為父系全親本血脈，右側為母系全親本血脈與交配歷程)`;
+            countTag.innerText = `(以 ${targetItem.ear} 為核心，左側延伸父系祖代與父親，右側嚴格獨立排列母親、母系祖代、當胎配種公與產出世代)`;
 
             const boxW = 135, boxH = 38, colGap = 55;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
 
-            // 雙向拓撲 5 欄位標題座標:
+            // 🌟 7 欄位完全錯開 X 軸邏輯 (絕對零重疊！):
             // col0: 父系祖代 (Sire Grandparents)
-            // col1: 父系親本 (1st Sire)
-            // col2: 核心主角 (Target)
-            // col3: 母系親本 (1st Dam) / 配對對象
+            // col1: 父親 (1st Sire)
+            // col2: 🎯 核心主角 (Target)
+            // col3: 母親 (1st Dam)
             // col4: 母系祖代 (Dam Grandparents)
+            // col5: 當胎配種公 (Sire E欄)
+            // col6: 產出小孩 / 家族世代延伸
             const col0_X = 25;
             const col1_X = col0_X + boxW + colGap;
             const col2_X = col1_X + boxW + colGap;
             const col3_X = col2_X + boxW + colGap;
             const col4_X = col3_X + boxW + colGap;
+            const col5_X = col4_X + boxW + colGap;
+            const col6_X = col5_X + boxW + colGap;
 
             const headers = [
                 { text: '👈 父系祖代 (Sire Side)', x: col0_X },
                 { text: '父親 (1st Sire)', x: col1_X },
                 { text: '🎯 核心主角 (Target)', x: col2_X },
-                { text: isMale ? '配對母豬 / 母親 (Dam)' : '當胎配種公 (Sire E欄)', x: col3_X },
-                { text: '母系祖代 (Dam Side) 👉', x: col4_X }
+                { text: '母親 (1st Dam)', x: col3_X },
+                { text: '母系祖代 (Dam Side)', x: col4_X },
+                { text: isMale ? '配對母豬 (Dam)' : '當胎配種公 (Sire E)', x: col5_X },
+                { text: '產出小孩/延伸 👉', x: col6_X }
             ];
 
             headers.forEach(h => {
@@ -705,14 +711,14 @@
             if (isMale) {
                 items.forEach(i => {
                     if (i.ear && i.ear.toLowerCase() !== targetItem.ear.toLowerCase()) {
-                        mateList.push({ name: i.ear, label: '♀ 配對母豬', parity: cleanParityVal(i.parity) });
+                        mateList.push({ name: i.ear, label: '♀ 配對母豬', parity: cleanParityVal(i.parity), child: i.gen2Sire });
                     }
                 });
             } else {
                 items.forEach(i => {
                     const boar = getMatingBoar(i);
                     if (boar && boar !== '-' && boar !== '未記載公豬') {
-                        mateList.push({ name: boar, label: '♂ 當胎配種公', parity: cleanParityVal(i.parity) });
+                        mateList.push({ name: boar, label: '♂ 當胎配種公', parity: cleanParityVal(i.parity), child: (i.gen2Sire && i.gen2Sire !== boar ? i.gen2Sire : `${targetItem.ear}-胎${i.parity}`) });
                     }
                 });
             }
@@ -720,8 +726,8 @@
             const totalMates = Math.max(mateList.length, 2);
             const rowGap = 70;
             const startY = 70;
-            const finalCanvasHeight = Math.max(totalMates * rowGap + 180, 480);
-            const totalWidth = col4_X + boxW + 60;
+            const finalCanvasHeight = Math.max(totalMates * rowGap + 180, 520);
+            const totalWidth = col6_X + boxW + 60;
 
             scrollArea.style.height = finalCanvasHeight + 'px';
             container.style.height = finalCanvasHeight + 'px';
@@ -730,7 +736,6 @@
             const linesToDraw = [];
 
             // A. 父系左側鏈 (col0 ➔ col1 ➔ col2)
-            // 父系祖父/祖母
             if (ancData.sireSide[0].name) {
                 const s1Div = document.createElement('div');
                 s1Div.className = `tree-node ${getBreedClass(ancData.sireSide[0].name)}`;
@@ -790,42 +795,56 @@
             if (ancData.damSide[1].name) {
                 const d1Div = document.createElement('div');
                 d1Div.className = `tree-node ${getBreedClass(ancData.damSide[1].name)}`;
-                d1Div.style.left = col4_X + 'px'; d1Div.style.top = (targetY + 30) + 'px';
+                d1Div.style.left = col4_X + 'px'; d1Div.style.top = (targetY + 10) + 'px';
                 d1Div.style.width = boxW + 'px'; d1Div.style.height = boxH + 'px';
                 d1Div.innerHTML = `<span class="sub-label">${ancData.damSide[1].label}</span><b>${cleanVal(ancData.damSide[1].name)}</b>`;
                 container.appendChild(d1Div);
 
-                linesToDraw.push({ x1: col3_X + boxW, y1: targetY + 40 + boxH/2, x2: col4_X, y2: targetY + 30 + boxH/2, midX: col3_X + boxW + colGap/2 });
+                linesToDraw.push({ x1: col3_X + boxW, y1: targetY + 40 + boxH/2, x2: col4_X, y2: targetY + 10 + boxH/2, midX: col3_X + boxW + colGap/2 });
             }
 
             if (ancData.damSide[2].name) {
                 const d2Div = document.createElement('div');
                 d2Div.className = `tree-node ${getBreedClass(ancData.damSide[2].name)}`;
-                d2Div.style.left = col4_X + 'px'; d2Div.style.top = (targetY + 90) + 'px';
+                d2Div.style.left = col4_X + 'px'; d2Div.style.top = (targetY + 70) + 'px';
                 d2Div.style.width = boxW + 'px'; d2Div.style.height = boxH + 'px';
                 d2Div.innerHTML = `<span class="sub-label">${ancData.damSide[2].label}</span><b>${cleanVal(ancData.damSide[2].name)}</b>`;
                 container.appendChild(d2Div);
 
-                linesToDraw.push({ x1: col3_X + boxW, y1: targetY + 40 + boxH/2, x2: col4_X, y2: targetY + 90 + boxH/2, midX: col3_X + boxW + colGap/2 });
+                linesToDraw.push({ x1: col3_X + boxW, y1: targetY + 40 + boxH/2, x2: col4_X, y2: targetY + 70 + boxH/2, midX: col3_X + boxW + colGap/2 });
             }
 
-            // D. 當胎交配公豬 (掛載於主角右側下延伸)
+            // D. 當胎交配公豬 (col5) ➔ 產出小孩 (col6) 完全移至最右側獨立排開！
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const mateY = startY + idx * rowGap;
 
+                    // 當胎配種公 (col5)
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
                     mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name)}`;
-                    mDiv.style.left = col3_X + 'px'; mDiv.style.top = mateY + 'px';
+                    mDiv.style.left = col5_X + 'px'; mDiv.style.top = mateY + 'px';
                     mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
                     const parityLabel = (m.parity && m.parity !== '-') ? ` (胎次 ${m.parity})` : '';
                     mDiv.innerHTML = `<span class="sub-label">${m.label}${parityLabel}</span><b>${cleanVal(m.name)}</b>`;
                     mDiv.onclick = () => { document.getElementById('earInput').value = m.name; searchPedigree(); };
                     container.appendChild(mDiv);
 
-                    const midXRight = col2_X + boxW + colGap / 2;
-                    linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: midXRight });
+                    // 連接：主角 ➔ 當胎配種公
+                    linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col5_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
+
+                    // 產出小孩 / 家族延伸 (col6)
+                    if (m.child) {
+                        const cDiv = document.createElement('div');
+                        cDiv.className = `tree-node ${getBreedClass(m.child, targetItem.breed)}`;
+                        cDiv.style.left = col6_X + 'px'; cDiv.style.top = mateY + 'px';
+                        cDiv.style.width = boxW + 'px'; cDiv.style.height = boxH + 'px';
+                        cDiv.innerHTML = `<span class="sub-label">產出世代/後代</span><b>${cleanVal(m.child)}</b>`;
+                        container.appendChild(cDiv);
+
+                        // 連接：當胎配種公 ➔ 產出小孩 (橫向直線)
+                        linesToDraw.push({ x1: col5_X + boxW, y1: mateY + boxH/2, x2: col6_X, y2: mateY + boxH/2, midX: col5_X + boxW + colGap/2 });
+                    }
                 });
             }
 
