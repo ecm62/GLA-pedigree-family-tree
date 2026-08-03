@@ -126,7 +126,7 @@
     <!-- 1. System Header Banner -->
     <div class="system-header-banner">
         <h1>GLA Pedigree Family Tree Searching System</h1>
-        <p>Professional Architecture for Breeding Pedigree & Lineage Chain Analysis ｜ 育种血统树与世代链分析系统</p>
+        <p>Professional Architecture for Breeding Pedigree & Lineage Chain Analysis ｜ 育种血统树与世代链分析系統</p>
     </div>
 
     <!-- 2. Control Bar -->
@@ -155,7 +155,7 @@
         <span class="color-badge breed-L">L: Landrace (蓝瑞斯)</span>
         <span class="color-badge breed-D">D: Duroc (杜洛克)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>Authentic Topology:</b> Left Sire ➔ Target ➔ Bottom Dam ➔ Right Mating Boars (仅真实留种后代才向右延伸)
+            <b>Authentic Topology:</b> Left Sire Side ➔ 🎯 Target (Center) ➔ Right Dam Side & Mating Boars (右向延伸留种母猪)
         </span>
     </div>
 
@@ -213,7 +213,7 @@
     <div id="macroTreePanel">
         <div class="macro-header">
             <div class="macro-title">
-                <span>🌳 2. Full Pedigree Topology Tree (正统全系谱拓扑树: 左父系 ➔ 🎯Target ➔ 下母系/外公婆 ➔ 右當胎配種公)</span>
+                <span>🌳 2. Full Pedigree Topology Tree (正统全系谱拓扑树: 👈 左父系 ➔ 🎯Target ➔ 右母系 & 右配种公猪 ➔ 右向延伸留种母猪 👉)</span>
                 <span id="macroHeaderCount" style="font-size:12px; font-weight:normal; color:#475569;"></span>
             </div>
             <div>
@@ -580,7 +580,7 @@
             const targetY = cardHeight / 2 - boxH / 2;
             const linesToDraw = [];
 
-            // Ancestors
+            // Ancestors (Left)
             const ancYs = [targetY - 100, targetY - 40, targetY + 40, targetY + 100];
             const usList = [ancData.sireSide[0], ancData.sireSide[1], ancData.damSide[1], ancData.damSide[2]];
             usList.forEach((a, idx) => {
@@ -600,7 +600,7 @@
                 linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: targetY + boxH/2, midX: midX });
             });
 
-            // Parents
+            // Parents (1st Sire Left, 1st Dam)
             const parents = [
                 { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父亲)", y: targetY - 40 },
                 { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母亲)",  y: targetY + 40 }
@@ -622,7 +622,7 @@
                 linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
             });
 
-            // Target
+            // Target (Center)
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target ${getBreedClass(targetItem.ear, targetItem.breed)}`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -631,7 +631,7 @@
             targetDiv.innerHTML = `<span class="sub-label">${sexLabel}</span><b>${cleanVal(targetItem.ear)}</b>`;
             container.appendChild(targetDiv);
 
-            // Mating History
+            // Mating History (Right)
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const currentY = targetY + (idx - (totalMates - 1) / 2) * rowGap;
@@ -662,7 +662,7 @@
             });
         }
 
-        // 🌟 2. 正统手稿拓扑樹 (完全去除無效預設後代方框，僅真實存在留種個體才延伸)
+        // 🌟 2. 正統「左父、中主角、右母、右配種公豬」全系譜拓撲樹
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -673,22 +673,33 @@
 
             container.innerHTML = '';
             headerBar.innerHTML = '';
-            countTag.innerText = `(Hand-drawn Alignment: Top Sire ➔ Target ${targetItem.ear} ➔ Bottom Dam/Ancestors ➔ Right Mating Boars)`;
+            countTag.innerText = `(Authentic Topology: Left Sire ➔ Target ${targetItem.ear} ➔ Right Dam & Mating Boars ➔ Rightward Extension)`;
 
-            const boxW = 135, boxH = 38, colGap = 55, rowGap = 65;
+            const boxW = 135, boxH = 38, colGap = 55, rowGap = 70;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
 
+            // 🌟 欄位定義 (正統水平橫向展開):
+            // col0: 👈 父系祖代 (Sire Grandparents)
+            // col1: 父親 (1st Sire)
+            // col2: 🎯 核心主角 (Target: L1185)
+            // col3: 母親 (1st Dam: LANA) & 當胎配種公 (Mating Boars: Y1454, Y1452...)
+            // col4: 母系祖代 (Dam Grandparents: MAATTO K, LANA)
+            // col5: 👉 留種母豬後代向右延伸 (Reserved Progeny Sow Extension)
             const col0_X = 25;
             const col1_X = col0_X + boxW + colGap;
             const col2_X = col1_X + boxW + colGap + 20;
             const col3_X = col2_X + boxW + colGap;
+            const col4_X = col3_X + boxW + colGap;
+            const col5_X = col4_X + boxW + colGap;
 
             const headers = [
-                { text: '👈 Grandparents (祖辈)', x: col0_X },
-                { text: '🎯 Direct Line (1st & Target)', x: col1_X },
-                { text: isMale ? 'Mating Dam (配种母)' : 'Mating Sire (配种公)', x: col2_X },
-                { text: 'Progeny / Breeding Extension 👉', x: col3_X }
+                { text: '👈 Sire Side Ancestors (父系祖代)', x: col0_X },
+                { text: '1st Sire (父亲)', x: col1_X },
+                { text: '🎯 Target (核心主角)', x: col2_X },
+                { text: '1st Dam & Mating Sire (母系/配种公)', x: col3_X },
+                { text: 'Dam Side Ancestors (母系祖代)', x: col4_X },
+                { text: 'Progeny Extension (留种母猪延伸) 👉', x: col5_X }
             ];
 
             headers.forEach(h => {
@@ -698,12 +709,11 @@
                 headerBar.appendChild(div);
             });
 
-            // 抓取真實配種歷史與真實產出後代
+            // 抓取真實配種歷史與留種母豬後代
             let mateList = [];
             if (isMale) {
                 items.forEach(i => {
                     if (i.ear && i.ear.toLowerCase() !== targetItem.ear.toLowerCase()) {
-                        // 檢查是否有真實後代名稱，若無則為 null
                         const realChild = (i.gen2Sire && i.gen2Sire !== '-' && i.gen2Sire !== i.ear) ? i.gen2Sire : null;
                         mateList.push({ name: i.ear, label: '♀ Dam (配种母)', parity: cleanParityVal(i.parity), realChild: realChild });
                     }
@@ -712,7 +722,6 @@
                 items.forEach(i => {
                     const boar = getMatingBoar(i);
                     if (boar && boar !== '-' && boar !== '未記載公豬') {
-                        // 僅當資料庫中寫有真實產出耳號時提取，絕不造假/不設占位符
                         const realChild = (i.gen2Sire && i.gen2Sire !== '-' && i.gen2Sire !== boar && !i.gen2Sire.includes('胎')) ? i.gen2Sire : null;
                         mateList.push({ name: boar, label: '♂ Sire (配种公)', parity: cleanParityVal(i.parity), realChild: realChild });
                     }
@@ -720,125 +729,130 @@
             }
 
             const totalMates = Math.max(mateList.length, 3);
-            const finalCanvasHeight = Math.max(totalMates * rowGap + 320, 580);
-            const totalWidth = col3_X + boxW + 80;
+            const finalCanvasHeight = Math.max(totalMates * rowGap + 260, 580);
+            const totalWidth = col5_X + boxW + 80;
 
             scrollArea.style.height = finalCanvasHeight + 'px';
             container.style.height = finalCanvasHeight + 'px';
 
             const linesToDraw = [];
 
-            // 1. 核心主角 (Target) 位於 col1 頂部
-            const targetY = 120;
+            // 1. 核心主角 (Target: L1185) 位於 col2 (正中央)
+            const targetY = 160;
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target ${getBreedClass(targetItem.ear)}`;
-            targetDiv.style.left = col1_X + 'px'; targetDiv.style.top = targetY + 'px';
+            targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
             targetDiv.style.width = boxW + 'px'; targetDiv.style.height = (boxH + 6) + 'px';
             targetDiv.innerHTML = `<span class="sub-label">Target (核心主角)</span><b>${targetItem.ear}</b>`;
             container.appendChild(targetDiv);
 
-            // 2. 頂部父系 ➔ 連接主角
+            // 2. 左側全父系 (UNIT ONE 父親 ➔ UNIT ONE 祖父 / LADY 祖母)
             if (ancData.sireSide[2].name && ancData.sireSide[2].name !== '-') {
-                const sireY = targetY - 70;
+                // 父親 (col1)
                 const sireDiv = document.createElement('div');
                 sireDiv.className = `tree-node ${getBreedClass(ancData.sireSide[2].name, targetItem.breed)}`;
-                sireDiv.style.left = col1_X + 'px'; sireDiv.style.top = sireY + 'px';
+                sireDiv.style.left = col1_X + 'px'; sireDiv.style.top = targetY + 'px';
                 sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
                 sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire (父亲)</span><b>${cleanVal(ancData.sireSide[2].name)}</b>`;
                 container.appendChild(sireDiv);
 
-                linesToDraw.push({ x1: col1_X + boxW/2, y1: sireY + boxH, x2: col1_X + boxW/2, y2: targetY, midX: col1_X + boxW/2 });
+                // 父親 ➔ 主角 (橫向向右線)
+                linesToDraw.push({ x1: col1_X + boxW, y1: targetY + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: col1_X + boxW + colGap/2 });
 
+                // 祖父 / 祖母 (col0) ➔ 父親 (col1)
                 if (ancData.sireSide[0].name) {
                     const s1Div = document.createElement('div');
                     s1Div.className = `tree-node ${getBreedClass(ancData.sireSide[0].name)}`;
-                    s1Div.style.left = col0_X + 'px'; s1Div.style.top = (sireY - 30) + 'px';
+                    s1Div.style.left = col0_X + 'px'; s1Div.style.top = (targetY - 35) + 'px';
                     s1Div.style.width = boxW + 'px'; s1Div.style.height = boxH + 'px';
                     s1Div.innerHTML = `<span class="sub-label">${ancData.sireSide[0].label}</span><b>${cleanVal(ancData.sireSide[0].name)}</b>`;
                     container.appendChild(s1Div);
 
-                    linesToDraw.push({ x1: col0_X + boxW, y1: sireY - 30 + boxH/2, x2: col1_X, y2: sireY + boxH/2, midX: col0_X + boxW + colGap/2 });
+                    linesToDraw.push({ x1: col0_X + boxW, y1: targetY - 35 + boxH/2, x2: col1_X, y2: targetY + boxH/2, midX: col0_X + boxW + colGap/2 });
                 }
 
                 if (ancData.sireSide[1].name) {
                     const s2Div = document.createElement('div');
                     s2Div.className = `tree-node ${getBreedClass(ancData.sireSide[1].name)}`;
-                    s2Div.style.left = col0_X + 'px'; s2Div.style.top = (sireY + 30) + 'px';
+                    s2Div.style.left = col0_X + 'px'; s2Div.style.top = (targetY + 35) + 'px';
                     s2Div.style.width = boxW + 'px'; s2Div.style.height = boxH + 'px';
                     s2Div.innerHTML = `<span class="sub-label">${ancData.sireSide[1].label}</span><b>${cleanVal(ancData.sireSide[1].name)}</b>`;
                     container.appendChild(s2Div);
 
-                    linesToDraw.push({ x1: col0_X + boxW, y1: sireY + 30 + boxH/2, x2: col1_X, y2: sireY + boxH/2, midX: col0_X + boxW + colGap/2 });
+                    linesToDraw.push({ x1: col0_X + boxW, y1: targetY + 35 + boxH/2, x2: col1_X, y2: targetY + boxH/2, midX: col0_X + boxW + colGap/2 });
                 }
             }
 
-            // 3. 下方母系 (母親 LANA ➔ 外公 MAATTO K / 外婆 LANA)
+            // 3. 右側全母系 (母親 LANA ➔ 外公 MAATTO K / 外婆 LANA)
             if (ancData.damSide[0].name && ancData.damSide[0].name !== '-') {
-                const damY = targetY + 90;
+                const damY = targetY - 70;
+                // 母親 (col3)
                 const damDiv = document.createElement('div');
                 damDiv.className = `tree-node ${getBreedClass(ancData.damSide[0].name, targetItem.breed)}`;
-                damDiv.style.left = col1_X + 'px'; damDiv.style.top = damY + 'px';
+                damDiv.style.left = col3_X + 'px'; damDiv.style.top = damY + 'px';
                 damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
                 damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam (母亲)</span><b>${cleanVal(ancData.damSide[0].name)}</b>`;
                 container.appendChild(damDiv);
 
-                linesToDraw.push({ x1: col1_X + boxW/2, y1: targetY + boxH + 6, x2: col1_X + boxW/2, y2: damY, midX: col1_X + boxW/2 });
+                // 主角 ➔ 母親 (向右折線)
+                linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: damY + boxH/2, midX: col2_X + boxW + colGap/2 });
 
+                // 母親 (col3) ➔ 外公 / 外婆 (col4)
                 if (ancData.damSide[1].name) {
                     const d1Div = document.createElement('div');
                     d1Div.className = `tree-node ${getBreedClass(ancData.damSide[1].name)}`;
-                    d1Div.style.left = col0_X + 'px'; d1Div.style.top = (damY + 70) + 'px';
+                    d1Div.style.left = col4_X + 'px'; d1Div.style.top = (damY - 30) + 'px';
                     d1Div.style.width = boxW + 'px'; d1Div.style.height = boxH + 'px';
                     d1Div.innerHTML = `<span class="sub-label">${ancData.damSide[1].label}</span><b>${cleanVal(ancData.damSide[1].name)}</b>`;
                     container.appendChild(d1Div);
 
-                    linesToDraw.push({ x1: col1_X, y1: damY + boxH/2, x2: col0_X + boxW, y2: damY + 70 + boxH/2, midX: col0_X + boxW + colGap/2 });
+                    linesToDraw.push({ x1: col3_X + boxW, y1: damY + boxH/2, x2: col4_X, y2: damY - 30 + boxH/2, midX: col3_X + boxW + colGap/2 });
                 }
 
                 if (ancData.damSide[2].name) {
                     const d2Div = document.createElement('div');
                     d2Div.className = `tree-node ${getBreedClass(ancData.damSide[2].name)}`;
-                    d2Div.style.left = col0_X + 'px'; d2Div.style.top = (damY + 130) + 'px';
+                    d2Div.style.left = col4_X + 'px'; d2Div.style.top = (damY + 30) + 'px';
                     d2Div.style.width = boxW + 'px'; d2Div.style.height = boxH + 'px';
                     d2Div.innerHTML = `<span class="sub-label">${ancData.damSide[2].label}</span><b>${cleanVal(ancData.damSide[2].name)}</b>`;
                     container.appendChild(d2Div);
 
-                    linesToDraw.push({ x1: col1_X, y1: damY + boxH/2, x2: col0_X + boxW, y2: damY + 130 + boxH/2, midX: col0_X + boxW + colGap/2 });
+                    linesToDraw.push({ x1: col3_X + boxW, y1: damY + boxH/2, x2: col4_X, y2: damY + 30 + boxH/2, midX: col3_X + boxW + colGap/2 });
                 }
             }
 
-            // 4. 右側當胎配種公豬 (Y1454, L1423, Y1452...) ➔ 僅在【確實存在留種個體】時向右延伸！
+            // 4. 主角右側配種軸線（拉長獨立）➔ 當胎配種公豬 (col3 下方垂直排開: Y1454, Y1452...) ➔ 留種母豬 (col5)
             if (mateList.length > 0) {
                 const mateStartY = targetY + 20;
                 mateList.forEach((m, idx) => {
                     const mateY = mateStartY + idx * rowGap;
 
-                    // 當胎配種公
+                    // 當胎配種公 (col3 下方)
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
                     mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name)}`;
-                    mDiv.style.left = col2_X + 'px'; mDiv.style.top = mateY + 'px';
+                    mDiv.style.left = col3_X + 'px'; mDiv.style.top = mateY + 'px';
                     mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
                     const parityLabel = (m.parity && m.parity !== '-') ? ` (P${m.parity})` : '';
                     mDiv.innerHTML = `<span class="sub-label">${m.label}${parityLabel}</span><b>${cleanVal(m.name)}</b>`;
                     mDiv.onclick = () => { document.getElementById('earInput').value = m.name; searchPedigree(); };
                     container.appendChild(mDiv);
 
-                    // 主角 ➔ 配種公豬
-                    linesToDraw.push({ x1: col1_X + boxW, y1: targetY + boxH/2, x2: col2_X, y2: mateY + boxH/2, midX: col1_X + boxW + colGap/2 });
+                    // 主角 ➔ 配種公豬 (向右折線)
+                    linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
 
-                    // 🌟 核心升級：只有在 realChild 存在時，才向右產生真實留種個體方框！
+                    // 🌟 留種母豬/後代向右延伸至 col5（僅真實數據存在時無縫繪製）
                     if (m.realChild) {
                         const cDiv = document.createElement('div');
                         cDiv.className = `tree-node ${getBreedClass(m.realChild, targetItem.breed)}`;
-                        cDiv.style.left = col3_X + 'px'; cDiv.style.top = mateY + 'px';
+                        cDiv.style.left = col5_X + 'px'; cDiv.style.top = mateY + 'px';
                         cDiv.style.width = boxW + 'px'; cDiv.style.height = boxH + 'px';
-                        cDiv.innerHTML = `<span class="sub-label">👶 Progeny (留种后代)</span><b>${cleanVal(m.realChild)}</b>`;
+                        cDiv.innerHTML = `<span class="sub-label">♀ Progeny Sow (留种母猪)</span><b>${cleanVal(m.realChild)}</b>`;
                         cDiv.onclick = () => { document.getElementById('earInput').value = m.realChild; searchPedigree(); };
                         container.appendChild(cDiv);
 
-                        // 配種公豬 ➔ 留種後代 (向右橫向直線連線)
-                        linesToDraw.push({ x1: col2_X + boxW, y1: mateY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
+                        // 配種公豬 (col3) ➔ 留種母豬 (col5, 向右水平直線)
+                        linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col5_X, y2: mateY + boxH/2, midX: col3_X + boxW + colGap });
                     }
                 });
             }
