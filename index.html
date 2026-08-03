@@ -6,7 +6,7 @@
     <style>
         body { font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
         
-        /* 🔒 Login Overlay */
+        /* 🔒 System Authentication Overlay */
         #authOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999;
@@ -155,7 +155,7 @@
         <span class="color-badge breed-L">L: Landrace (蓝瑞斯)</span>
         <span class="color-badge breed-D">D: Duroc (杜洛克)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>High-DPI Export:</b> 4K PNG for PPT ｜ Auto Rightward Expansion (支持4K高清导出与多世代向右延伸)
+            <b>Authentic Topology:</b> Left Sire ➔ Target ➔ Bottom Dam ➔ Right Mating Boars (仅真实留种后代才向右延伸)
         </span>
     </div>
 
@@ -187,7 +187,7 @@
                     </tr>
                 </thead>
                 <tbody id="excelTableBody">
-                    <tr><td colspan="18" class="placeholder-text">Please enter ear tag or keyword above to search... (请在上方输入耳号或关键字搜索)</td></tr>
+                    <tr><td colspan="18" class="placeholder-text">Please enter ear tag or keyword above to search... (请在上方输入耳号搜索)</td></tr>
                 </tbody>
             </table>
         </div>
@@ -200,7 +200,7 @@
                 🌿 1. Single Lineage 3-Gen Direct Tree (单纯三代内個體直系演进图)
             </div>
             <div>
-                <button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Single_Lineage')">📸 Export High-Res PNG (导出4K高清图)</button>
+                <button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Single_Lineage')">📸 Export 4K PNG (导出4K高清图)</button>
             </div>
         </div>
         <div class="single-tree-card" id="singleTreeCard">
@@ -213,11 +213,11 @@
     <div id="macroTreePanel">
         <div class="macro-header">
             <div class="macro-title">
-                <span>🌳 2. Full Butterfly Topology Tree (双向全系谱拓扑家族树: Top Sire ➔ Target ➔ Bottom Dam ➔ Right Boars ➔ Progeny)</span>
+                <span>🌳 2. Full Pedigree Topology Tree (正统全系谱拓扑树: 左父系 ➔ 🎯Target ➔ 下母系/外公婆 ➔ 右當胎配種公)</span>
                 <span id="macroHeaderCount" style="font-size:12px; font-weight:normal; color:#475569;"></span>
             </div>
             <div>
-                <button class="btn btn-export" onclick="exportTreeAsHighResPNG('macroScrollArea', 'macroCanvas', 'GLA_Full_Family_Topology')">📸 Export High-Res PNG (导出4K高清图)</button>
+                <button class="btn btn-export" onclick="exportTreeAsHighResPNG('macroScrollArea', 'macroCanvas', 'GLA_Full_Family_Topology')">📸 Export 4K PNG (导出4K高清图)</button>
             </div>
         </div>
         <div id="macroScrollArea">
@@ -558,14 +558,14 @@
             if (isMale) {
                 items.forEach(i => {
                     if (i.ear && i.ear.toLowerCase() !== targetItem.ear.toLowerCase()) {
-                        mateList.push({ name: i.ear, label: '♀ Dam (配种母猪)', parity: cleanParityVal(i.parity) });
+                        mateList.push({ name: i.ear, label: '♀ Dam (配种母)', parity: cleanParityVal(i.parity) });
                     }
                 });
             } else {
                 items.forEach(i => {
                     const boar = getMatingBoar(i);
                     if (boar && boar !== '-' && boar !== '未記載公豬') {
-                        mateList.push({ name: boar, label: '♂ Sire (当胎配种公)', parity: cleanParityVal(i.parity) });
+                        mateList.push({ name: boar, label: '♂ Sire (配种公)', parity: cleanParityVal(i.parity) });
                     }
                 });
             }
@@ -662,7 +662,7 @@
             });
         }
 
-        // 🌟 2. Full Butterfly Topology Tree (Hand-Drawn Alignment)
+        // 🌟 2. 正统手稿拓扑樹 (完全去除無效預設後代方框，僅真實存在留種個體才延伸)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -673,51 +673,23 @@
 
             container.innerHTML = '';
             headerBar.innerHTML = '';
-            countTag.innerText = `(Target: ${targetItem.ear} | Top Sire ➔ Target ➔ Bottom Dam ➔ Right Mating Boars ➔ Rightward Progeny)`;
+            countTag.innerText = `(Hand-drawn Alignment: Top Sire ➔ Target ${targetItem.ear} ➔ Bottom Dam/Ancestors ➔ Right Mating Boars)`;
 
-            const boxW = 135, boxH = 38, colGap = 55, rowGap = 70;
+            const boxW = 135, boxH = 38, colGap = 55, rowGap = 65;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
 
             const col0_X = 25;
             const col1_X = col0_X + boxW + colGap;
             const col2_X = col1_X + boxW + colGap + 20;
-
-            let mateList = [];
-            if (isMale) {
-                items.forEach(i => {
-                    if (i.ear && i.ear.toLowerCase() !== targetItem.ear.toLowerCase()) {
-                        mateList.push({ name: i.ear, label: '♀ Dam (配种母)', parity: cleanParityVal(i.parity), gen2Sire: i.gen2Sire, gen2Dam: i.gen2Dam });
-                    }
-                });
-            } else {
-                items.forEach(i => {
-                    const boar = getMatingBoar(i);
-                    if (boar && boar !== '-' && boar !== '未記載公豬') {
-                        mateList.push({ name: boar, label: '♂ Sire (配种公)', parity: cleanParityVal(i.parity), gen2Sire: i.gen2Sire, gen2Dam: i.gen2Dam });
-                    }
-                });
-            }
-
-            let maxGenDepth = 3;
-            mateList.forEach(m => {
-                if (m.gen2Sire && m.gen2Sire !== '-') maxGenDepth = Math.max(maxGenDepth, 4);
-            });
-
-            const colCoords = [col0_X, col1_X, col2_X];
-            for (let g = 3; g <= maxGenDepth; g++) {
-                colCoords.push(col2_X + (g - 2) * (boxW + colGap));
-            }
+            const col3_X = col2_X + boxW + colGap;
 
             const headers = [
-                { text: '👈 Ancestors (祖辈)', x: colCoords[0] },
-                { text: '🎯 Direct Line (1st & Target)', x: colCoords[1] },
-                { text: isMale ? 'Mating Dam (配种母)' : 'Mating Sire (配种公)', x: colCoords[2] }
+                { text: '👈 Grandparents (祖辈)', x: col0_X },
+                { text: '🎯 Direct Line (1st & Target)', x: col1_X },
+                { text: isMale ? 'Mating Dam (配种母)' : 'Mating Sire (配种公)', x: col2_X },
+                { text: 'Progeny / Breeding Extension 👉', x: col3_X }
             ];
-
-            for (let g = 3; g <= maxGenDepth; g++) {
-                headers.push({ text: `Gen ${g} Progeny (第${g}代) 👉`, x: colCoords[g] });
-            }
 
             headers.forEach(h => {
                 const div = document.createElement('div');
@@ -726,16 +698,37 @@
                 headerBar.appendChild(div);
             });
 
+            // 抓取真實配種歷史與真實產出後代
+            let mateList = [];
+            if (isMale) {
+                items.forEach(i => {
+                    if (i.ear && i.ear.toLowerCase() !== targetItem.ear.toLowerCase()) {
+                        // 檢查是否有真實後代名稱，若無則為 null
+                        const realChild = (i.gen2Sire && i.gen2Sire !== '-' && i.gen2Sire !== i.ear) ? i.gen2Sire : null;
+                        mateList.push({ name: i.ear, label: '♀ Dam (配种母)', parity: cleanParityVal(i.parity), realChild: realChild });
+                    }
+                });
+            } else {
+                items.forEach(i => {
+                    const boar = getMatingBoar(i);
+                    if (boar && boar !== '-' && boar !== '未記載公豬') {
+                        // 僅當資料庫中寫有真實產出耳號時提取，絕不造假/不設占位符
+                        const realChild = (i.gen2Sire && i.gen2Sire !== '-' && i.gen2Sire !== boar && !i.gen2Sire.includes('胎')) ? i.gen2Sire : null;
+                        mateList.push({ name: boar, label: '♂ Sire (配种公)', parity: cleanParityVal(i.parity), realChild: realChild });
+                    }
+                });
+            }
+
             const totalMates = Math.max(mateList.length, 3);
-            const finalCanvasHeight = Math.max(totalMates * rowGap + 340, 620);
-            const totalWidth = colCoords[colCoords.length - 1] + boxW + 80;
+            const finalCanvasHeight = Math.max(totalMates * rowGap + 320, 580);
+            const totalWidth = col3_X + boxW + 80;
 
             scrollArea.style.height = finalCanvasHeight + 'px';
             container.style.height = finalCanvasHeight + 'px';
 
             const linesToDraw = [];
 
-            // Target
+            // 1. 核心主角 (Target) 位於 col1 頂部
             const targetY = 120;
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target ${getBreedClass(targetItem.ear)}`;
@@ -744,7 +737,7 @@
             targetDiv.innerHTML = `<span class="sub-label">Target (核心主角)</span><b>${targetItem.ear}</b>`;
             container.appendChild(targetDiv);
 
-            // Sire Side (Top)
+            // 2. 頂部父系 ➔ 連接主角
             if (ancData.sireSide[2].name && ancData.sireSide[2].name !== '-') {
                 const sireY = targetY - 70;
                 const sireDiv = document.createElement('div');
@@ -779,7 +772,7 @@
                 }
             }
 
-            // Dam Side (Bottom)
+            // 3. 下方母系 (母親 LANA ➔ 外公 MAATTO K / 外婆 LANA)
             if (ancData.damSide[0].name && ancData.damSide[0].name !== '-') {
                 const damY = targetY + 90;
                 const damDiv = document.createElement('div');
@@ -814,12 +807,13 @@
                 }
             }
 
-            // Rightward Mating Boars & Progeny Extension
+            // 4. 右側當胎配種公豬 (Y1454, L1423, Y1452...) ➔ 僅在【確實存在留種個體】時向右延伸！
             if (mateList.length > 0) {
                 const mateStartY = targetY + 20;
                 mateList.forEach((m, idx) => {
                     const mateY = mateStartY + idx * rowGap;
 
+                    // 當胎配種公
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
                     mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name)}`;
@@ -830,17 +824,22 @@
                     mDiv.onclick = () => { document.getElementById('earInput').value = m.name; searchPedigree(); };
                     container.appendChild(mDiv);
 
+                    // 主角 ➔ 配種公豬
                     linesToDraw.push({ x1: col1_X + boxW, y1: targetY + boxH/2, x2: col2_X, y2: mateY + boxH/2, midX: col1_X + boxW + colGap/2 });
 
-                    const childName = (m.gen2Sire && m.gen2Sire !== m.name && m.gen2Sire !== '-') ? m.gen2Sire : `${targetItem.ear}-P${m.parity}`;
-                    const childDiv = document.createElement('div');
-                    childDiv.className = `tree-node ${getBreedClass(childName, targetItem.breed)}`;
-                    childDiv.style.left = colCoords[3] + 'px'; childDiv.style.top = mateY + 'px';
-                    childDiv.style.width = boxW + 'px'; childDiv.style.height = boxH + 'px';
-                    childDiv.innerHTML = `<span class="sub-label">👶 Gen 3 Progeny (后代)</span><b>${cleanVal(childName)}</b>`;
-                    container.appendChild(childDiv);
+                    // 🌟 核心升級：只有在 realChild 存在時，才向右產生真實留種個體方框！
+                    if (m.realChild) {
+                        const cDiv = document.createElement('div');
+                        cDiv.className = `tree-node ${getBreedClass(m.realChild, targetItem.breed)}`;
+                        cDiv.style.left = col3_X + 'px'; cDiv.style.top = mateY + 'px';
+                        cDiv.style.width = boxW + 'px'; cDiv.style.height = boxH + 'px';
+                        cDiv.innerHTML = `<span class="sub-label">👶 Progeny (留种后代)</span><b>${cleanVal(m.realChild)}</b>`;
+                        cDiv.onclick = () => { document.getElementById('earInput').value = m.realChild; searchPedigree(); };
+                        container.appendChild(cDiv);
 
-                    linesToDraw.push({ x1: col2_X + boxW, y1: mateY + boxH/2, x2: colCoords[3], y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
+                        // 配種公豬 ➔ 留種後代 (向右橫向直線連線)
+                        linesToDraw.push({ x1: col2_X + boxW, y1: mateY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
+                    }
                 });
             }
 
@@ -855,7 +854,7 @@
             });
         }
 
-        // 🌟 4K High-Res PNG Export Engine (Scale = 3.0)
+        // 🌟 4K High-Res PNG Export Engine
         function exportTreeAsHighResPNG(containerId, canvasId, fileNamePrefix) {
             const container = document.getElementById(containerId);
             const canvas = document.getElementById(canvasId);
