@@ -6,7 +6,7 @@
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
         
-        /* 🔒 登入驗證遮罩 */
+        /* 🔒 系統登入驗證遮罩 */
         #authOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999;
@@ -102,7 +102,7 @@
         .breed-D  { background-color: #ffe4e6 !important; color: #9f1239 !important; border-color: #f43f5e !important; }
         .breed-DEFAULT { background-color: #ffffff !important; color: #1e293b !important; border-color: #64748b !important; }
         
-        /* 核心主角視覺凸顯 */
+        /* 核心主角發光高亮凸顯 */
         .origin-target { 
             border: 3.5px solid #f59e0b !important; 
             background-color: #1d4ed8 !important; 
@@ -163,7 +163,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>Google Sheets 對齊：</b>精準掃描全分頁欄位（DUROC / YORKSHIRE / LANDRACE）
+            <b>血統劃分校正：</b>LADY N ➔ 杜洛克(紅色) ｜ LADY ➔ 約克夏(黃色)
         </span>
     </div>
 
@@ -301,6 +301,7 @@
                 .catch(err => console.error("讀取 data.json 失敗"));
         }
 
+        // 🌟 核心分流解析器：精準區分 LADY N (杜洛克D) 與 LADY / LADY M (約克夏Y)
         function buildGlobalBreedRegistry() {
             globalBreedRegistry.clear();
 
@@ -315,39 +316,33 @@
                     }
                 }
             });
-
-            pedigreeList.forEach(item => {
-                const earClass = getBreedClass(item.ear);
-                
-                ['gen1_sire', '第一代公', '1st Sire', 'sire_sire', 'Sire美系父親名(祖父)', 'Sire美系父親名', 'sire_dam', 'Dam Name美系母親名(祖母)', 'dam_sire', 'Sire美系父親名(外公)', 'dam_dam', 'Dam Name美系母親名(外婆)'].forEach(key => {
-                    const name = getValueFromMultiKeys(item, [key]);
-                    if (name && name !== '-' && name !== '') {
-                        const cleanName = name.toUpperCase().trim();
-                        if (!globalBreedRegistry.has(cleanName) || globalBreedRegistry.get(cleanName) === 'breed-DEFAULT') {
-                            let parsed = parseBreedToClass('', cleanName);
-                            if (parsed !== 'breed-DEFAULT') {
-                                globalBreedRegistry.set(cleanName, parsed);
-                            } else if (earClass !== 'breed-DEFAULT') {
-                                globalBreedRegistry.set(cleanName, earClass);
-                            }
-                        }
-                    }
-                });
-            });
         }
 
         function parseBreedToClass(breedStr, nameStr) {
             const str = (breedStr + ' ' + nameStr).toUpperCase().trim();
+
+            // 1. LADY N 專屬杜洛克 (Duroc, D - 紅色)
+            if (str.includes('LADY N') || str.includes('LADY_N')) return 'breed-D';
+
+            // 2. LADY / LADY M 專屬約克夏 (Yorkshire, Y - 黃色)
+            if (str.includes('LADY') || str.includes('LADY M')) return 'breed-Y';
+
+            // 3. 標準耳號/品種字頭
             if (str.includes('LY') || str.includes('CROSSBREED')) return 'breed-LY';
             if (str.includes('DD') || str.startsWith('D') || str.includes('DUROC')) return 'breed-D';
             if (str.includes('YY') || str.startsWith('Y') || str.includes('YORK')) return 'breed-Y';
             if (str.includes('LL') || str.startsWith('L') || str.includes('LAND')) return 'breed-L';
+
             return 'breed-DEFAULT';
         }
 
-        function getBreedClass(nameStr, fallbackContextBreed = '') {
+        function getBreedClass(nameStr, parentBreedFallback = '') {
             if (!nameStr || nameStr === '-' || nameStr.includes('未記載') || nameStr === '') return 'breed-DEFAULT';
             const cleanName = nameStr.toUpperCase().trim();
+
+            // 特殊名詞精準優先判定
+            if (cleanName.includes('LADY N')) return 'breed-D';
+            if (cleanName.includes('LADY')) return 'breed-Y';
 
             if (globalBreedRegistry.has(cleanName) && globalBreedRegistry.get(cleanName) !== 'breed-DEFAULT') {
                 return globalBreedRegistry.get(cleanName);
@@ -361,7 +356,7 @@
                 if (fallbackParsed !== 'breed-DEFAULT') return fallbackParsed;
             }
 
-            return 'breed-D';
+            return 'breed-DEFAULT';
         }
 
         function toggleBreedFilter(breedKey) {
@@ -417,7 +412,6 @@
             return isNaN(num) ? '-' : num.toFixed(1);
         }
 
-        // 超強模糊欄位比對器，徹底對齊 Google Sheets 欄位名
         function getValueFromMultiKeys(obj, possibleKeys) {
             if (!obj) return '-';
             const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
@@ -458,7 +452,6 @@
             return false;
         }
 
-        // 精準無訛的祖代提取器
         function getHierarchyAncestors(items, targetItem) {
             let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'Sire 美系父親名(祖父)', 'Sire美系父親名', 'sire_sire', '祖父']);
             let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'Dam Name 美系母親名(祖母)', 'Dam Name美系母親名', 'sire_dam', '祖母']);
@@ -842,7 +835,7 @@
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
             container.appendChild(targetDiv);
 
-            // 4. 【col3 / col4 / col5：當胎配種公豬及其真實祖代（雙向反查 pedigreeList）】
+            // 4. 【col3 / col4 / col5：當胎配種公豬及其真實祖代】
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const mateY = targetY + (idx - (totalMates - 1) / 2) * (rowGap * 2.0);
@@ -860,7 +853,7 @@
 
                     linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
 
-                    // 動態反查該配種公豬自身的血統
+                    // 反查配種公豬血統
                     const boarItem = pedigreeList.find(it => {
                         const itEar = it.ear || getValueFromMultiKeys(it, ['耳號', 'Ear Tag']);
                         return itEar.toLowerCase() === m.name.toLowerCase();
