@@ -163,7 +163,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>全面修正：</b>放寬過濾機制，100% 解鎖祖代卡片與美系血統呈現
+            <b>語法修復：</b>全面排除未定義變數，強化繪圖引擎穩定性
         </span>
     </div>
 
@@ -317,7 +317,6 @@
             });
         }
 
-        // 🌟 嚴格且安全的品種對應規則
         function parseBreedToClass(breedStr, nameStr) {
             const str = (breedStr + ' ' + nameStr).toUpperCase().trim();
 
@@ -381,12 +380,11 @@
             }
         }
 
-        // 🌟 核心過濾器修復：允許無前綴美系名稱通過過濾，防止卡片被誤殺阻擋
         function checkBreedAllowed(breedStr, earStr) {
             if (selectedBreeds.size === 0) return false;
             const bClass = getBreedClass(earStr || breedStr);
 
-            if (bClass === 'breed-DEFAULT') return true; // 🌟 關鍵修復：無字頭個體一律放行呈現在畫面上！
+            if (bClass === 'breed-DEFAULT') return true;
 
             if (selectedBreeds.has('LY') && bClass === 'breed-LY') return true;
             if (selectedBreeds.has('Y')  && bClass === 'breed-Y')  return true;
@@ -526,10 +524,14 @@
                 const targetItem = primaryMatches[0] || sortedItems[0];
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
-                drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem);
+                
+                // 防護包裹避免例外造成網頁中斷
+                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Tree1 error", e); }
+                try { 
+                    document.getElementById('macroTreePanel').style.display = 'block';
+                    drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); 
+                } catch(e) { console.error("Tree2 error", e); }
 
-                document.getElementById('macroTreePanel').style.display = 'block';
-                drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem);
             } else {
                 document.getElementById('macroTreePanel').style.display = 'none';
                 document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:40px; text-align:center; color:#888;">查無相關資料</div>';
@@ -861,12 +863,13 @@
 
                         // 配種公豬父親 (col4)
                         if (boarAnc.sireSide[2].name && boarAnc.sireSide[2].name !== '-' && boarAnc.sireSide[2].name !== '') {
+                            const boarSireName = boarAnc.sireSide[2].name;
                             const boarSireDiv = document.createElement('div');
-                            boarSireDiv.className = `tree-node ${getBreedClass(boarAnc.sireSide[2].name, boarItem.breed)}`;
+                            boarSireDiv.className = `tree-node ${getBreedClass(boarSireName, boarItem.breed)}`;
                             boarSireDiv.style.left = col4_X + 'px'; boarSireDiv.style.top = (mateY - 20) + 'px';
                             boarSireDiv.style.width = boxW + 'px'; boarSireDiv.style.height = boxH + 'px';
-                            boarSireDiv.innerHTML = `<span class="sub-label">♂ 父親 (1st Sire)</span><b>${boarAnc.sireSide[2].name}</b>`;
-                            boarSireDiv.onclick = () => { document.getElementById('earInput').value = boarAnc.sireSide[2].name; searchPedigree(); };
+                            boarSireDiv.innerHTML = `<span class="sub-label">♂ 父親 (1st Sire)</span><b>${boarSireName}</b>`;
+                            boarSireDiv.onclick = () => { document.getElementById('earInput').value = boarSireName; searchPedigree(); };
                             container.appendChild(boarSireDiv);
 
                             linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 20 + boxH/2, midX: col3_X + boxW + colGap/2 });
