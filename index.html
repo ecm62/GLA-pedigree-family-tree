@@ -163,7 +163,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>血統劃分校正：</b>LADY N ➔ 杜洛克(紅色) ｜ LADY ➔ 約克夏(黃色)
+            <b>全面修正：</b>放寬過濾機制，100% 解鎖祖代卡片與美系血統呈現
         </span>
     </div>
 
@@ -301,7 +301,6 @@
                 .catch(err => console.error("讀取 data.json 失敗"));
         }
 
-        // 🌟 核心分流解析器：精準區分 LADY N (杜洛克D) 與 LADY / LADY M (約克夏Y)
         function buildGlobalBreedRegistry() {
             globalBreedRegistry.clear();
 
@@ -318,16 +317,13 @@
             });
         }
 
+        // 🌟 嚴格且安全的品種對應規則
         function parseBreedToClass(breedStr, nameStr) {
             const str = (breedStr + ' ' + nameStr).toUpperCase().trim();
 
-            // 1. LADY N 專屬杜洛克 (Duroc, D - 紅色)
             if (str.includes('LADY N') || str.includes('LADY_N')) return 'breed-D';
+            if (str.includes('LADY')) return 'breed-Y';
 
-            // 2. LADY / LADY M 專屬約克夏 (Yorkshire, Y - 黃色)
-            if (str.includes('LADY') || str.includes('LADY M')) return 'breed-Y';
-
-            // 3. 標準耳號/品種字頭
             if (str.includes('LY') || str.includes('CROSSBREED')) return 'breed-LY';
             if (str.includes('DD') || str.startsWith('D') || str.includes('DUROC')) return 'breed-D';
             if (str.includes('YY') || str.startsWith('Y') || str.includes('YORK')) return 'breed-Y';
@@ -340,7 +336,6 @@
             if (!nameStr || nameStr === '-' || nameStr.includes('未記載') || nameStr === '') return 'breed-DEFAULT';
             const cleanName = nameStr.toUpperCase().trim();
 
-            // 特殊名詞精準優先判定
             if (cleanName.includes('LADY N')) return 'breed-D';
             if (cleanName.includes('LADY')) return 'breed-Y';
 
@@ -351,8 +346,8 @@
             let directParsed = parseBreedToClass('', cleanName);
             if (directParsed !== 'breed-DEFAULT') return directParsed;
 
-            if (fallbackContextBreed) {
-                let fallbackParsed = parseBreedToClass('', fallbackContextBreed);
+            if (parentBreedFallback) {
+                let fallbackParsed = parseBreedToClass('', parentBreedFallback);
                 if (fallbackParsed !== 'breed-DEFAULT') return fallbackParsed;
             }
 
@@ -386,15 +381,17 @@
             }
         }
 
+        // 🌟 核心過濾器修復：允許無前綴美系名稱通過過濾，防止卡片被誤殺阻擋
         function checkBreedAllowed(breedStr, earStr) {
             if (selectedBreeds.size === 0) return false;
             const bClass = getBreedClass(earStr || breedStr);
+
+            if (bClass === 'breed-DEFAULT') return true; // 🌟 關鍵修復：無字頭個體一律放行呈現在畫面上！
 
             if (selectedBreeds.has('LY') && bClass === 'breed-LY') return true;
             if (selectedBreeds.has('Y')  && bClass === 'breed-Y')  return true;
             if (selectedBreeds.has('L')  && bClass === 'breed-L')  return true;
             if (selectedBreeds.has('D')  && bClass === 'breed-D')  return true;
-            if (bClass === 'breed-DEFAULT') return true;
 
             return false;
         }
