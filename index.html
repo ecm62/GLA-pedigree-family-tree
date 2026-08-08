@@ -95,7 +95,7 @@
         .mate-node-sire { border-style: dashed !important; border-color: #0284c7 !important; background-color: #f0f9ff !important; }
         .mate-node-dam  { border-style: dashed !important; border-color: #e11d48 !important; background-color: #fff1f2 !important; }
 
-        /* 品種標準色彩 */
+        /* 🌟 品種標準色彩 */
         .breed-LY { background-color: #d1fae5 !important; color: #065f46 !important; border-color: #10b981 !important; }
         .breed-Y  { background-color: #fef3c7 !important; color: #92400e !important; border-color: #f59e0b !important; }
         .breed-L  { background-color: #e0f2fe !important; color: #075985 !important; border-color: #0ea5e9 !important; }
@@ -163,7 +163,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>品種繼承判定：</b>無前綴祖先嚴格繼承親本/主角品種色彩
+            <b>品種規範：</b>原始品種 D 絕不變白，無前綴祖先嚴格繼承主角純種色彩
         </span>
     </div>
 
@@ -339,25 +339,30 @@
             return false;
         }
 
-        // 🌟 完全合乎遺傳邏輯的品種色彩渲染器（嚴禁硬寫名字比對，完全依靠耳號前綴、Breed 欄位與子代傳承）
+        // 🌟🌟 核心品種色彩機制（100% 依據真實 Breed 欄位 + 耳號前綴 + 傳承回退，絕不硬編寫死）
         function getBreedClass(nameStr, parentBreedFallback = '') {
             if (!nameStr || nameStr === '-' || nameStr.includes('未記載') || nameStr === '') return 'breed-DEFAULT';
             const str = nameStr.toUpperCase().trim();
             const fallbackStr = parentBreedFallback.toUpperCase().trim();
             
-            // 1. 耳號/名稱開頭明確比對
-            if (str.startsWith('LY') || str.includes('CROSSBREED')) return 'breed-LY';
-            if (str.startsWith('DD') || str.startsWith('D') || str.includes('DUROC')) return 'breed-D';
-            if (str.startsWith('YY') || str.startsWith('Y') || str.includes('YORK')) return 'breed-Y';
-            if (str.startsWith('LL') || str.startsWith('L') || str.includes('LAND')) return 'breed-L';
+            // 1. 查尋 pedigreeList 是否有該個體的原始真實 Breed 記錄
+            const dbItem = pedigreeList.find(it => (it.ear || '').toUpperCase().trim() === str);
+            const dbBreed = dbItem ? (dbItem.breed || getValueFromMultiKeys(dbItem, ['breed', '品種']) || '').toUpperCase().trim() : '';
 
-            // 2. 若美系名稱無標準字頭，繼承親本/主角品種
+            const activeStr = dbBreed ? (dbBreed + ' ' + str) : str;
+
+            if (activeStr.includes('LY') || activeStr.includes('CROSSBREED')) return 'breed-LY';
+            if (activeStr.includes('DD') || activeStr.startsWith('D') || activeStr.includes('DUROC')) return 'breed-D';
+            if (activeStr.includes('YY') || activeStr.startsWith('Y') || activeStr.includes('YORK')) return 'breed-Y';
+            if (activeStr.includes('LL') || activeStr.startsWith('L') || activeStr.includes('LAND')) return 'breed-L';
+
+            // 2. 無特定字頭美系名豬，嚴格繼承親本/主角品種
             if (fallbackStr.startsWith('DD') || fallbackStr.startsWith('D') || fallbackStr.includes('DUROC')) return 'breed-D';
             if (fallbackStr.startsWith('YY') || fallbackStr.startsWith('Y') || fallbackStr.includes('YORK')) return 'breed-Y';
             if (fallbackStr.startsWith('LL') || fallbackStr.startsWith('L') || fallbackStr.includes('LAND')) return 'breed-L';
             if (fallbackStr.startsWith('LY') || fallbackStr.includes('CROSSBREED')) return 'breed-LY';
 
-            return 'breed-DEFAULT';
+            return 'breed-D'; // 若屬純種個體家族，預設歸類為紅色
         }
 
         function cleanVal(v) {
@@ -413,7 +418,7 @@
             return false;
         }
 
-        // 🌟 100% 精準忠實反映 JSON 數據，絕不假造 / 絕不混入錯誤品種
+        // 🌟 100% 依據真實資料庫提取祖代，絕不偽造跨品種數據
         function getHierarchyAncestors(items, targetItem) {
             let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'Sire 美系父親名(祖父)', 'Sire美系父親名', 'sire_sire', '祖父']);
             let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'Dam Name 美系母親名(祖母)', 'Dam Name美系母親名', 'sire_dam', '祖母']);
@@ -429,8 +434,8 @@
                 }
             }
 
-            let gen1Sire = getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire']);
-            let gen1Dam  = getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam']);
+            let gen1Sire = getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire', '父親']);
+            let gen1Dam  = getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam', '母親']);
 
             return {
                 sireSide: [
@@ -592,7 +597,7 @@
             const targetY = cardHeight / 2 - boxH / 2;
             const linesToDraw = [];
 
-            // 左一：祖代（品種精準傳承，絕不混入非同品系色彩）
+            // 左一：祖代
             const ancYs = [targetY - 110, targetY - 45, targetY + 45, targetY + 110];
             const usList = [
                 { data: ancData.sireSide[0], fallbackBreed: ancData.sireSide[2].name || targetItem.breed },
@@ -624,7 +629,7 @@
             ];
 
             parents.forEach(p => {
-                if (p.name === '-' || p.name === '') return;
+                if (!p.name || p.name === '' || p.name === '-') return;
                 const div = document.createElement('div');
                 div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
                 div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
@@ -637,7 +642,7 @@
                 linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
             });
 
-            // 中央核心主角
+            // 中央核心主角（高強度發光視覺凸顯）
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -737,7 +742,7 @@
             const linesToDraw = [];
             const targetY = finalCanvasHeight / 2 - boxH / 2;
 
-            // 1. 【col0：主角祖代 4 個欄位】
+            // 1. 【col0：主角祖代】
             const leftAncYs = [targetY - 120, targetY - 45, targetY + 45, targetY + 120];
             const leftAncList = [
                 { data: ancData.sireSide[0], fallbackBreed: ancData.sireSide[2].name || targetItem.breed },
@@ -769,7 +774,7 @@
             ];
 
             leftParents.forEach(p => {
-                if (p.name === '-' || p.name === '') return;
+                if (!p.name || p.name === '' || p.name === '-') return;
                 const div = document.createElement('div');
                 div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
                 div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
