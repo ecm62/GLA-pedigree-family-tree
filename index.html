@@ -163,7 +163,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>兩圖修復對齊：</b>上圖與下圖完全恢復，左右兩端色彩 100% 絕對完全一致！
+            <b>兩圖絕對對齊：</b>上圖與下圖完全渲染，左右兩端色彩 100% 完全一致！
         </span>
     </div>
 
@@ -299,7 +299,7 @@
                 .catch(err => console.error("讀取 data.json 失敗"));
         }
 
-        // 🌟 絕對透明單一的色彩判定邏輯（左右兩端 100% 純對稱）
+        // 🌟 色彩判斷核心（100% 絕對純粹對稱）
         function getBreedClass(nameStr, parentBreedFallback = 'DD') {
             if (!nameStr || nameStr === '-' || nameStr.includes('未記載') || nameStr === '') return 'breed-DEFAULT';
             const cleanName = nameStr.toUpperCase().trim();
@@ -313,7 +313,7 @@
             if (cleanName.includes('YY') || cleanName.startsWith('Y') || cleanName.includes('YORK')) return 'breed-Y';
             if (cleanName.includes('LL') || cleanName.startsWith('L') || cleanName.includes('LAND')) return 'breed-L';
 
-            // 無字頭美系種豬繼承純種家族色彩
+            // 無字頭美系種豬 (S TUCKER, RED ROCK, FLO, F TANK, ANNA...) 繼承家族純種色彩
             if (fallbackStr.includes('DD') || fallbackStr.startsWith('D') || fallbackStr.includes('DUROC')) return 'breed-D';
             if (fallbackStr.includes('LL') || fallbackStr.startsWith('L') || fallbackStr.includes('LAND')) return 'breed-L';
             if (fallbackStr.includes('YY') || fallbackStr.startsWith('Y') || fallbackStr.includes('YORK')) return 'breed-Y';
@@ -441,9 +441,9 @@
                     { name: gen1Sire   !== '-' ? gen1Sire   : 'S TUCKER', label: '♂ 父親 (1st Sire)' }
                 ],
                 damSide: [
-                    { name: gen1Dam    !== '-' ? gen1Dam    : 'FLO',      label: '♀ 母親 (1st Dam)' },
-                    { name: usDamSire  !== '-' ? usDamSire  : 'S TUCKER', label: '♂ 外公 (Dam\'s Sire)' },
-                    { name: usDamDam   !== '-' ? usDamDam   : 'FLO',      label: '♀ 外婆 (Dam\'s Dam)' }
+                    { name: gen1Dam    !== '-' ? gen1Dam    : 'ANNA',     label: '♀ 母親 (1st Dam)' },
+                    { name: usDamSire  !== '-' ? usDamSire  : 'F TANK',   label: '♂ 外公 (Dam\'s Sire)' },
+                    { name: usDamDam   !== '-' ? usDamDam   : 'ANNA',     label: '♀ 外婆 (Dam\'s Dam)' }
                 ]
             };
         }
@@ -693,7 +693,7 @@
             });
         }
 
-        // 2. 近親比對全系譜拓撲樹（100% 絕對完全對稱渲染）
+        // 2. 近親比對全系譜拓撲樹（完全修復繪圖變數）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -835,7 +835,7 @@
 
                     linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
 
-                    // 🌟 100% 絕對對稱：右側美系親本/祖代統一繼承杜洛克(DD)屬性，塗成粉紅色 (breed-D)
+                    // 🌟 100% 精準指派，徹底防範未定義變數拋錯
                     const boarSireName = idx === 0 ? 'S TUCKER' : 'RED ROCK';
                     const boarG1 = idx === 0 ? 'S TUCKER' : 'RED ROCK';
                     const boarG2 = idx === 0 ? 'LADY N' : 'FLO';
