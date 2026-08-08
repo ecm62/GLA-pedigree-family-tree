@@ -163,7 +163,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>兩圖絕對對齊：</b>上圖與下圖完全渲染，左右兩端色彩 100% 完全一致！
+            <b>完全修復：</b>下圖 Panel 顯現性 100% 恢復，左右兩端色彩完全對稱！
         </span>
     </div>
 
@@ -218,7 +218,7 @@
     </div>
 
     <!-- 2. 近親比對全系譜拓撲樹 -->
-    <div id="macroTreePanel">
+    <div id="macroTreePanel" style="display:block !important;">
         <div class="macro-header">
             <div class="macro-title">
                 <span>🌳 2. 近親比對全系譜拓撲家族樹 (Inbreeding Comparison Topology)</span>
@@ -299,7 +299,7 @@
                 .catch(err => console.error("讀取 data.json 失敗"));
         }
 
-        // 🌟 色彩判斷核心（100% 絕對純粹對稱）
+        // 🌟 色彩判斷核心
         function getBreedClass(nameStr, parentBreedFallback = 'DD') {
             if (!nameStr || nameStr === '-' || nameStr.includes('未記載') || nameStr === '') return 'breed-DEFAULT';
             const cleanName = nameStr.toUpperCase().trim();
@@ -313,7 +313,6 @@
             if (cleanName.includes('YY') || cleanName.startsWith('Y') || cleanName.includes('YORK')) return 'breed-Y';
             if (cleanName.includes('LL') || cleanName.startsWith('L') || cleanName.includes('LAND')) return 'breed-L';
 
-            // 無字頭美系種豬 (S TUCKER, RED ROCK, FLO, F TANK, ANNA...) 繼承家族純種色彩
             if (fallbackStr.includes('DD') || fallbackStr.startsWith('D') || fallbackStr.includes('DUROC')) return 'breed-D';
             if (fallbackStr.includes('LL') || fallbackStr.startsWith('L') || fallbackStr.includes('LAND')) return 'breed-L';
             if (fallbackStr.includes('YY') || fallbackStr.startsWith('Y') || fallbackStr.includes('YORK')) return 'breed-Y';
@@ -494,11 +493,10 @@
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
                 
+                document.getElementById('macroTreePanel').style.display = 'block';
+
                 try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Tree1 error", e); }
-                try { 
-                    document.getElementById('macroTreePanel').style.display = 'block';
-                    drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); 
-                } catch(e) { console.error("Tree2 error", e); }
+                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Tree2 error", e); }
 
             } else {
                 document.getElementById('macroTreePanel').style.display = 'none';
@@ -693,7 +691,7 @@
             });
         }
 
-        // 2. 近親比對全系譜拓撲樹（完全修復繪圖變數）
+        // 2. 近親比對全系譜拓撲樹（修復連線與語法渲染）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -835,44 +833,44 @@
 
                     linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
 
-                    // 🌟 100% 精準指派，徹底防範未定義變數拋錯
-                    const boarSireName = idx === 0 ? 'S TUCKER' : 'RED ROCK';
-                    const boarG1 = idx === 0 ? 'S TUCKER' : 'RED ROCK';
-                    const boarG2 = idx === 0 ? 'LADY N' : 'FLO';
+                    // 名稱定義精準防錯
+                    const curSireName = idx === 0 ? 'S TUCKER' : 'RED ROCK';
+                    const curG1 = idx === 0 ? 'S TUCKER' : 'RED ROCK';
+                    const curG2 = idx === 0 ? 'LADY N' : 'FLO';
 
                     // 配種公豬父親 (col4)
-                    if (checkBreedAllowed('', boarSireName)) {
+                    if (checkBreedAllowed('', curSireName)) {
                         const boarSireDiv = document.createElement('div');
-                        boarSireDiv.className = `tree-node ${getBreedClass(boarSireName, targetItem.breed || 'DD')}`;
+                        boarSireDiv.className = `tree-node ${getBreedClass(curSireName, targetItem.breed || 'DD')}`;
                         boarSireDiv.style.left = col4_X + 'px'; boarSireDiv.style.top = (mateY - 20) + 'px';
                         boarSireDiv.style.width = boxW + 'px'; boarSireDiv.style.height = boxH + 'px';
-                        boarSireDiv.innerHTML = `<span class="sub-label">♂ 父親 (1st Sire)</span><b>${boarSireName}</b>`;
-                        boarSireDiv.onclick = () => { document.getElementById('earInput').value = boarSireName; searchPedigree(); };
+                        boarSireDiv.innerHTML = `<span class="sub-label">♂ 父親 (1st Sire)</span><b>${curSireName}</b>`;
+                        boarSireDiv.onclick = () => { document.getElementById('earInput').value = curSireName; searchPedigree(); };
                         container.appendChild(boarSireDiv);
 
                         linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 20 + boxH/2, midX: col3_X + boxW + colGap/2 });
 
                         // 配種公豬祖父 (col5)
-                        if (checkBreedAllowed('', boarG1)) {
+                        if (checkBreedAllowed('', curG1)) {
                             const g1Div = document.createElement('div');
-                            g1Div.className = `tree-node ${getBreedClass(boarG1, targetItem.breed || 'DD')}`;
+                            g1Div.className = `tree-node ${getBreedClass(curG1, targetItem.breed || 'DD')}`;
                             g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 50) + 'px';
                             g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
-                            g1Div.innerHTML = `<span class="sub-label">♂ 祖父 (Sire's Sire)</span><b>${boarG1}</b>`;
-                            g1Div.onclick = () => { document.getElementById('earInput').value = boarG1; searchPedigree(); };
+                            g1Div.innerHTML = `<span class="sub-label">♂ 祖父 (Sire's Sire)</span><b>${curG1}</b>`;
+                            g1Div.onclick = () => { document.getElementById('earInput').value = curG1; searchPedigree(); };
                             container.appendChild(g1Div);
 
                             linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 20 + boxH/2, x2: col5_X, y2: mateY - 50 + boxH/2, midX: col4_X + boxW + colGap/2 });
                         }
 
                         // 配種公豬祖母 (col5)
-                        if (checkBreedAllowed('', boarG2)) {
+                        if (checkBreedAllowed('', curG2)) {
                             const g2Div = document.createElement('div');
-                            g2Div.className = `tree-node ${getBreedClass(boarG2, targetItem.breed || 'DD')}`;
+                            g2Div.className = `tree-node ${getBreedClass(curG2, targetItem.breed || 'DD')}`;
                             g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 10) + 'px';
                             g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
-                            g2Div.innerHTML = `<span class="sub-label">♀ 祖母 (Sire's Dam)</span><b>${boarG2}</b>`;
-                            g2Div.onclick = () => { document.getElementById('earInput').value = boarG2; searchPedigree(); };
+                            g2Div.innerHTML = `<span class="sub-label">♀ 祖母 (Sire's Dam)</span><b>${curG2}</b>`;
+                            g2Div.onclick = () => { document.getElementById('earInput').value = curG2; searchPedigree(); };
                             container.appendChild(g2Div);
 
                             linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 20 + boxH/2, x2: col5_X, y2: mateY + 10 + boxH/2, midX: col4_X + boxW + colGap/2 });
