@@ -8,7 +8,7 @@ GID_TREE = "0"
 URL_TREE = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID_TREE}"
 
 def fetch_and_parse():
-    print("🚀 開始從 Google Sheet 下載完整世代軸線數據...")
+    print("🚀 開始從 Google Sheet 下載完整世代軸線與配種日期數據...")
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
     
     try:
@@ -58,7 +58,7 @@ def fetch_and_parse():
     col_dam_sire  = find_col(['Sire 美系父親名(外公)', '外公'])
     col_dam_dam   = find_col(['Dam Name美系母親名(外婆)', '外婆'])
 
-    # 🌟 世代軸線演進欄位 (第一代公/第一代母/第二代公/第二代母/第三代)
+    # 🌟 世代軸線演進欄位
     col_gen1_sire = find_col(['第一代公'])
     col_gen1_dam  = find_col(['第一代母'])
     col_gen2_sire = find_col(['第二代公'])
@@ -110,9 +110,17 @@ def fetch_and_parse():
             "gen3_sire": get_v(col_gen3_sire),
             "details": {str(k).strip(): (str(v).strip() if pd.notna(v) else "") for k, v in row.items()}
         }
+
+        # 🌟 關鍵新增：自動將所有「配種日期」欄位（如 配種日期_1(Mating Date_1) 等）萃取並寫入 entry
+        for col in df.columns:
+            if '配種日期' in str(col) or 'mating date' in str(col).lower():
+                val = str(row.get(col, '')).replace('🔴', '').strip()
+                if val and val.lower() not in ['nan', 'none', '', '-']:
+                    entry[col] = val
+
         pedigree_data.append(entry)
 
-    print(f"🎉 成功轉換！共處理 {len(pedigree_data)} 筆包含全世代演進軸線之數據！")
+    print(f"🎉 成功轉換！共處理 {len(pedigree_data)} 筆包含全世代軸線與配種日期之數據！")
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
