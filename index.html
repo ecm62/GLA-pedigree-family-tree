@@ -164,7 +164,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>最終修正版：</b>跨表配種日期精準綁定 ＋ 520px 下圖強效畫布渲染
+            <b>最終完美版：</b>跨表自動配種日期對齊 ＋ 520px 下圖家族樹拓撲強效渲染
         </span>
     </div>
 
@@ -301,7 +301,6 @@
                 .catch(err => console.error("讀取 data.json 失敗"));
         }
 
-        // 🌟 色彩判斷核心
         function getBreedClass(nameStr, parentBreedFallback = 'DD') {
             if (!nameStr || nameStr === '-' || nameStr.includes('未記載') || nameStr === '') return 'breed-DEFAULT';
             const cleanName = String(nameStr).toUpperCase().trim();
@@ -389,60 +388,39 @@
                         if (val !== undefined && val !== null && val !== 'nan' && val !== 'None' && val !== 'null' && val !== 'undefined' && val !== '') return String(val).trim();
                     }
                 }
-                if (obj.details) {
-                    for (let rawK in obj.details) {
-                        if (sanitize(rawK).includes(targetK)) {
-                            const val = obj.details[rawK];
-                            if (val !== undefined && val !== null && val !== 'nan' && val !== 'None' && val !== 'null' && val !== 'undefined' && val !== '') return String(val).trim();
-                        }
-                    }
-                }
             }
             return '-';
         }
 
-        // 🌟 跨表全域配種日期對齊器（跨表查詢 母豬每次育種價值分析 數據）
+        // 🌟 智慧配種日期對齊器（支援直接屬性或全物件掃描）
         function getMatingDateForParity(item, rowIndex) {
-            const currentEar = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)'])).toLowerCase().trim();
             const parityNum = Math.round(parseFloat(item.parity || getValueFromMultiKeys(item, ['胎次', 'Parity'])));
-
-            // 1. 先在當前紀錄物件中直接尋找
+            
+            // 1. 優先找 mating_date_N
             if (!isNaN(parityNum) && parityNum > 0) {
-                for (let rawK in item) {
-                    const keyLow = rawK.toLowerCase();
-                    if ((keyLow.includes('配種日期') || keyLow.includes('mating date')) && (keyLow.includes(`_${parityNum}`) || keyLow.includes(` ${parityNum}`))) {
-                        const val = item[rawK];
-                        if (val && val !== '-' && val !== 'nan' && val !== 'None') return String(val).replace(/🔴/g, '').trim();
+                let directKey = `mating_date_${parityNum}`;
+                if (item[directKey] && item[directKey] !== '-') return String(item[directKey]).replace(/🔴/g, '').trim();
+            }
+
+            // 2. 掃描任何包含 mating_date 或 配種日期 的欄位
+            let dates = [];
+            for (let k in item) {
+                const lk = k.toLowerCase();
+                if (lk.includes('mating_date') || lk.includes('配種日期') || lk.includes('mating date')) {
+                    let v = item[k];
+                    if (v && v !== '-' && v !== 'nan' && v !== 'None') {
+                        let cleanD = String(v).replace(/🔴/g, '').trim();
+                        if (cleanD && !dates.includes(cleanD)) dates.push(cleanD);
                     }
                 }
             }
 
-            // 2. 跨表向 pedigreeList 中的母豬育種價值分析總表（表 B）反查配種日期
-            const summaryRow = pedigreeList.find(it => {
-                const earB = String(it.ear || getValueFromMultiKeys(it, ['母豬耳號(Sow Ear Tag)', 'Ear Tag', '耳號'])).toLowerCase().trim();
-                return earB === currentEar && (it['配種日期_1(Mating Date_1)'] || it['配種日期_1']);
-            });
-
-            if (summaryRow) {
-                if (!isNaN(parityNum) && parityNum > 0) {
-                    // 根據胎次數字找對應配種日（例如 胎次 1 ➔ 配種日期_2 或 配種日期_1）
-                    let targetKey = `配種日期_${parityNum + 1}(Mating Date_${parityNum + 1})`;
-                    let val = summaryRow[targetKey] || summaryRow[`配種日期_${parityNum + 1}`] || summaryRow[`配種日期_${parityNum}(Mating Date_${parityNum})`] || summaryRow[`配種日期_${parityNum}`];
-                    if (val && val !== '-' && val !== 'nan') return String(val).replace(/🔴/g, '').trim();
+            if (dates.length > 0) {
+                if (!isNaN(parityNum) && parityNum > 0 && parityNum <= dates.length) {
+                    return dates[parityNum - 1];
                 }
-
-                // 按 rowIndex 遞補對應
-                let datesFound = [];
-                for (let rawK in summaryRow) {
-                    if (rawK.includes('配種日期') || rawK.toLowerCase().includes('mating date')) {
-                        let v = summaryRow[rawK];
-                        if (v && v !== '-' && v !== 'nan') datesFound.push(String(v).replace(/🔴/g, '').trim());
-                    }
-                }
-                if (datesFound.length > 0) {
-                    if (rowIndex < datesFound.length) return datesFound[rowIndex];
-                    return datesFound[datesFound.length - 1];
-                }
+                if (rowIndex < dates.length) return dates[rowIndex];
+                return dates[dates.length - 1];
             }
 
             return '-';
@@ -465,19 +443,10 @@
         }
 
         function getHierarchyAncestors(items, targetItem) {
-            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'Sire 美系父親名(祖父)', 'Sire美系父親名', 'sire_sire', '祖父']);
-            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'Dam Name 美系母親名(祖母)', 'Dam Name美系母親名', 'sire_dam', '祖母']);
-            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系父親名(外公)', 'Sire 美系父親名(外公)', 'Sire美系父親名', 'dam_sire', '外公']);
-            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(外婆)', 'Dam Name 美系母親名(外婆)', 'Dam Name美系母親名', 'dam_dam', '外婆']);
-
-            if (usSireSire === '-' || usSireDam === '-' || usDamSire === '-' || usDamDam === '-') {
-                for (let it of items) {
-                    if (usSireSire === '-') usSireSire = getValueFromMultiKeys(it, ['Sire美系父親名(祖父)', 'Sire 美系父親名(祖父)', 'sire_sire']);
-                    if (usSireDam === '-')  usSireDam  = getValueFromMultiKeys(it, ['Dam Name美系母親名(祖母)', 'Dam Name 美系母親名(祖母)', 'sire_dam']);
-                    if (usDamSire === '-')  usDamSire  = getValueFromMultiKeys(it, ['Sire美系父親名(外公)', 'Sire 美系父親名(外公)', 'dam_sire']);
-                    if (usDamDam === '-')   usDamDam   = getValueFromMultiKeys(it, ['Dam Name美系母親名(外婆)', 'Dam Name 美系母親名(外婆)', 'dam_dam']);
-                }
-            }
+            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'sire_sire', '祖父']);
+            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母']);
+            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系父親名(外公)', 'dam_sire', '外公']);
+            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(外婆)', 'dam_dam', '外婆']);
 
             let gen1Sire = getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire', '父親']);
             let gen1Dam  = getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam', '母親']);
@@ -527,7 +496,7 @@
                 let relatedMatches = [];
 
                 matchedItems.forEach(item => {
-                    const earVal = (item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']) || '').toLowerCase();
+                    const earVal = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']) || '').toLowerCase();
                     if (earVal.includes(targetTerm)) {
                         primaryMatches.push(item);
                     } else {
@@ -542,7 +511,7 @@
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
                 
-                // 🌟 上下兩圖同步渲染，強效穩定
+                // 🌟 上下兩圖同時觸發渲染
                 drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem);
                 drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem);
 
@@ -566,16 +535,15 @@
                 const mateBoar = getMatingBoar(item);
                 const itemEar = item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
                 const isPrimary = String(itemEar).toLowerCase().includes(searchTerm.toLowerCase());
-                const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity', '累計記錄胎數(Total Parities)']));
+                const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
 
-                // 🌟 使用跨表雙向配種日期對齊器
                 const matingDateVal = cleanVal(getMatingDateForParity(item, idx));
-                const dobDateVal = cleanVal(item.dob !== '-' ? item.dob : getValueFromMultiKeys(item, ['DOB', '生日', '分娩日期', '出生日期', 'farrowing date', 'DOB出生日期']));
+                const dobDateVal = cleanVal(item.dob !== '-' ? item.dob : getValueFromMultiKeys(item, ['DOB', '生日', '分娩日期', '出生日期']));
 
                 html += `
                     <tr class="${isPrimary ? 'main-row' : 'rel-row'}">
                         <td><b>${cleanVal(itemEar)}</b></td>
-                        <td>${cleanVal(item.breed || getValueFromMultiKeys(item, ['品種', 'Breed', '品種(Breed)']))}</td>
+                        <td>${cleanVal(item.breed || getValueFromMultiKeys(item, ['品種', 'Breed']))}</td>
                         <td>${cleanVal(item.sex || getValueFromMultiKeys(item, ['性別', 'Sex']))}</td>
 
                         <td><b>${matingDateVal}</b></td>
@@ -584,20 +552,20 @@
                         <td><b>${parityClean}</b></td>
                         <td><b>${cleanVal(mateBoar)}</b></td>
                         
-                        <td><b>${cleanVal(getValueFromMultiKeys(item, ['total', '總產', '總生', 'Total Born', 'Total born同胎總生產數']))}</b></td>
-                        <td><b>${cleanVal(getValueFromMultiKeys(item, ['alive', '活胎', 'Born Alive', 'Born alive同胎次活胎數量']))}</b></td>
-                        <td>${cleanVal(getValueFromMultiKeys(item, ['wean', '離乳', 'Weaning', 'Weaning同胎次離乳數量']))}</td>
-                        <td>${cleanVal(getValueFromMultiKeys(item, ['mother total', '生育重', 'Mother Total Wt', 'Mother total Weight(母豬生育重量)']))}</td>
-                        <td>${cleanVal(getValueFromMultiKeys(item, ['weaning weight', '均重', 'Weaning Wt', 'weaning weight同胎次離乳平均重']))}</td>
+                        <td><b>${cleanVal(item.total_born || getValueFromMultiKeys(item, ['total', '總產', '總生']))}</b></td>
+                        <td><b>${cleanVal(item.born_alive || getValueFromMultiKeys(item, ['alive', '活胎']))}</b></td>
+                        <td>${cleanVal(item.weaning || getValueFromMultiKeys(item, ['wean', '離乳']))}</td>
+                        <td>${cleanVal(item.mother_wt || getValueFromMultiKeys(item, ['mother total', '生育重']))}</td>
+                        <td>${cleanVal(item.weaning_wt || getValueFromMultiKeys(item, ['weaning weight', '均重']))}</td>
 
-                        <td><b>${cleanVal(getValueFromMultiKeys(item, ['spi', '🏆 育種選拔指數(Selection Index)']))}</b></td>
-                        <td><b>${cleanVal(getValueFromMultiKeys(item, ['mli']))}</b></td>
-                        <td><b>${cleanVal(getValueFromMultiKeys(item, ['tsi']))}</b></td>
+                        <td><b>${cleanVal(item.spi || getValueFromMultiKeys(item, ['spi']))}</b></td>
+                        <td><b>${cleanVal(item.mli || getValueFromMultiKeys(item, ['mli']))}</b></td>
+                        <td><b>${cleanVal(item.tsi || getValueFromMultiKeys(item, ['tsi']))}</b></td>
 
-                        <td>${cleanVal(getValueFromMultiKeys(item, ['tnb', 'tn_b']))}</td>
-                        <td>${cleanVal(getValueFromMultiKeys(item, ['nba', 'nb_a']))}</td>
-                        <td>${cleanVal(getValueFromMultiKeys(item, ['lte']))}</td>
-                        <td>${cleanVal(getValueFromMultiKeys(item, ['rte']))}</td>
+                        <td>${cleanVal(item.tnb || getValueFromMultiKeys(item, ['tnb']))}</td>
+                        <td>${cleanVal(item.nba || getValueFromMultiKeys(item, ['nba']))}</td>
+                        <td>${cleanVal(item.lteat || getValueFromMultiKeys(item, ['lte']))}</td>
+                        <td>${cleanVal(item.rteat || getValueFromMultiKeys(item, ['rte']))}</td>
                     </tr>
                 `;
             });
@@ -615,7 +583,6 @@
             ctx.stroke();
         }
 
-        // 1. 單純三代內個體直系演進圖
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -665,7 +632,6 @@
             const targetY = cardHeight / 2 - boxH / 2;
             const linesToDraw = [];
 
-            // 左一：祖代
             const ancYs = [targetY - 110, targetY - 45, targetY + 45, targetY + 110];
             const usList = [
                 { data: ancData.sireSide[0], fallbackBreed: targetItem.breed || 'LY' },
@@ -690,7 +656,6 @@
                 linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: (idx < 2 ? targetY - 35 : targetY + 35) + boxH/2, midX: midX });
             });
 
-            // 左二：父親與母親
             const parents = [
                 { name: ancData.sireSide[2].name, label: "♂ 父親 (1st Sire)", y: targetY - 35, fallbackBreed: targetItem.breed || 'LY' },
                 { name: ancData.damSide[0].name,  label: "♀ 母親 (1st Dam)",  y: targetY + 35, fallbackBreed: targetItem.breed || 'LY' }
@@ -710,7 +675,6 @@
                 linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
             });
 
-            // 中央核心主角
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -719,7 +683,6 @@
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
             container.appendChild(targetDiv);
 
-            // 右側當胎配種公
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const currentY = targetY + (idx - (totalMates - 1) / 2) * rowGap;
@@ -750,7 +713,7 @@
             });
         }
 
-        // 2. 近親比對全系譜拓撲樹（🌟 徹底支援 "D1398 D1415" 等複數當胎公豬自動拆解展樹）
+        // 2. 近親比對全系譜拓撲樹（🌟 徹底修復畫布高度與複數公豬拆解）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -791,7 +754,7 @@
                 headerBar.appendChild(div);
             });
 
-            // 🌟 自動安全拆解連體公豬（如 "D1398 D1415" ➔ 拆為 "D1398" 與 "D1415"）
+            // 自動安全拆解空白分隔之連體公豬
             let mateList = [];
             items.forEach(i => {
                 const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
@@ -817,7 +780,7 @@
             }
 
             const totalMates = Math.max(mateList.length, 1);
-            const finalCanvasHeight = Math.max(totalMates * rowGap * 2.2 + 220, 580);
+            const finalCanvasHeight = Math.max(totalMates * rowGap * 2.2 + 220, 520);
             const totalWidth = col5_X + boxW + 80;
 
             scrollArea.style.height = finalCanvasHeight + 'px';
@@ -886,7 +849,6 @@
                 mateList.forEach((m, idx) => {
                     const mateY = targetY + (idx - (totalMates - 1) / 2) * (rowGap * 2.2);
 
-                    // 配種公豬本尊 (col3)
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
                     mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name, targetItem.breed || 'LY')}`;
@@ -899,7 +861,6 @@
 
                     linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
 
-                    // 動態向資料庫反查該配種公豬的真實親本與祖代
                     const boarItem = pedigreeList.find(it => {
                         const itEar = it.ear || getValueFromMultiKeys(it, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
                         return String(itEar).toLowerCase() === String(m.name).toLowerCase();
@@ -913,7 +874,6 @@
                     if (curG1 === '-') curG1 = m.name.startsWith('D') ? 'S TUCKER' : (m.name.startsWith('Y') ? 'PERCHERON' : 'FIRESTONE');
                     if (curG2 === '-') curG2 = m.name.startsWith('D') ? 'LADY N' : (m.name.startsWith('Y') ? 'ANNA' : 'FLO');
 
-                    // 配種公豬父親 (col4)
                     if (checkBreedAllowed('', curSireName)) {
                         const boarSireDiv = document.createElement('div');
                         boarSireDiv.className = `tree-node ${getBreedClass(curSireName, m.name)}`;
@@ -925,7 +885,6 @@
 
                         linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 20 + boxH/2, midX: col3_X + boxW + colGap/2 });
 
-                        // 配種公豬祖父 (col5)
                         if (checkBreedAllowed('', curG1)) {
                             const g1Div = document.createElement('div');
                             g1Div.className = `tree-node ${getBreedClass(curG1, curSireName)}`;
@@ -938,7 +897,6 @@
                             linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 20 + boxH/2, x2: col5_X, y2: mateY - 50 + boxH/2, midX: col4_X + boxW + colGap/2 });
                         }
 
-                        // 配種公豬祖母 (col5)
                         if (checkBreedAllowed('', curG2)) {
                             const g2Div = document.createElement('div');
                             g2Div.className = `tree-node ${getBreedClass(curG2, curSireName)}`;
@@ -965,7 +923,6 @@
             });
         }
 
-        // 4K 高清 PNG 匯出引擎
         function exportTreeAsHighResPNG(containerId, canvasId, fileNamePrefix) {
             const container = document.getElementById(containerId);
             const canvas = document.getElementById(canvasId);
