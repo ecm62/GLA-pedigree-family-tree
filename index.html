@@ -163,7 +163,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>表格數據強化：</b>新增「配種日期」與「分娩日期」對照，完整掌握受胎與生產績效
+            <b>配種日期修復：</b>精準對齊「配種日期_1(Mating Date_1)」等跨胎次複合欄位
         </span>
     </div>
 
@@ -376,6 +376,7 @@
             return isNaN(num) ? '-' : num.toFixed(1);
         }
 
+        // 🌟 多功能欄位提取器 (相容「配種日期_1(Mating Date_1)」等試算表欄位)
         function getValueFromMultiKeys(obj, possibleKeys) {
             if (!obj) return '-';
             const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
@@ -397,6 +398,35 @@
                     }
                 }
             }
+            return '-';
+        }
+
+        // 🌟 專屬多胎次「配種日期」精準抓取器
+        function getMatingDateForParity(item) {
+            const parityNum = parseInt(item.parity || getValueFromMultiKeys(item, ['胎次', 'Parity']), 10);
+            
+            // 1. 若有特定胎次編號（例如 胎次 1 ➔ 找 配種日期_1 或 Mating Date_1）
+            if (!isNaN(parityNum) && parityNum > 0) {
+                const specificKeys = [
+                    `配種日期_${parityNum}`, `mating date_${parityNum}`, `matingdate_${parityNum}`, `mate date_${parityNum}`,
+                    `配種日期_${parityNum}(mating date_${parityNum})`, `配種日_${parityNum}`
+                ];
+                const specificVal = getValueFromMultiKeys(item, specificKeys);
+                if (specificVal !== '-') return specificVal;
+            }
+
+            // 2. 通用配種日期欄位備用搜尋
+            const generalVal = getValueFromMultiKeys(item, ['配種日期', 'mating date', 'matingdate', '配種日', 'mate date']);
+            if (generalVal !== '-') return generalVal;
+
+            // 3. 全物件掃描尋找任何包含 mating date 的數值
+            for (let rawK in item) {
+                if (rawK.toLowerCase().includes('mating date') || rawK.includes('配種日期')) {
+                    const v = item[rawK];
+                    if (v && v !== 'nan' && v !== '' && v !== '-') return String(v).trim();
+                }
+            }
+
             return '-';
         }
 
@@ -505,7 +535,7 @@
             }
         }
 
-        // 🌟 新增「配種日期 Mating Date」與「分娩日期 DOB」渲染邏輯
+        // 🌟 表格渲染器（對齊「配種日期_1(Mating Date_1)」複合欄位）
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
@@ -522,8 +552,8 @@
                 const isPrimary = itemEar.toLowerCase() === searchTerm.toLowerCase();
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
 
-                // 🌟 動態掃描提取「配種日期」與「分娩/出生日期」
-                const matingDateVal = cleanVal(getValueFromMultiKeys(item, ['配種日期', 'mating date', 'matingdate', '配種日', 'mate date']));
+                // 🌟 使用專屬多胎次配種日期解析器
+                const matingDateVal = cleanVal(getMatingDateForParity(item));
                 const dobDateVal = cleanVal(item.dob !== '-' ? item.dob : getValueFromMultiKeys(item, ['DOB', '生日', '分娩日期', '出生日期', 'farrowing date']));
 
                 html += `
@@ -840,12 +870,6 @@
                     container.appendChild(mDiv);
 
                     linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
-
-                    // 反查配種公豬血統
-                    const boarItem = pedigreeList.find(it => {
-                        const itEar = it.ear || getValueFromMultiKeys(it, ['耳號', 'Ear Tag']);
-                        return itEar.toLowerCase() === m.name.toLowerCase();
-                    });
 
                     const boarSireName = idx === 0 ? 'S TUCKER' : 'RED ROCK';
                     const boarG1 = idx === 0 ? 'S TUCKER' : 'RED ROCK';
