@@ -164,7 +164,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>最終完美版：</b>跨表自動配種日期對齊 ＋ 520px 下圖家族樹拓撲強效渲染
+            <b>最終完美版：</b>萬用配種日期強制解析 ＋ 520px 下圖家族樹拓撲完美渲染
         </span>
     </div>
 
@@ -392,22 +392,32 @@
             return '-';
         }
 
-        // 🌟 智慧配種日期對齊器（支援直接屬性或全物件掃描）
+        // 🌟 萬用強制抓取配種日期器（直接從 details 原始資料或全域物件撈取）
         function getMatingDateForParity(item, rowIndex) {
             const parityNum = Math.round(parseFloat(item.parity || getValueFromMultiKeys(item, ['胎次', 'Parity'])));
             
-            // 1. 優先找 mating_date_N
-            if (!isNaN(parityNum) && parityNum > 0) {
-                let directKey = `mating_date_${parityNum}`;
-                if (item[directKey] && item[directKey] !== '-') return String(item[directKey]).replace(/🔴/g, '').trim();
+            // 1. 檢查 item.details 裡面有沒有對應胎次的配種日期
+            if (item.details) {
+                for (let k in item.details) {
+                    const lk = k.toLowerCase();
+                    if (lk.includes('配種日期') || lk.includes('mating date') || lk.includes('mating_date')) {
+                        if (!isNaN(parityNum) && parityNum > 0 && (lk.includes(`_${parityNum}`) || lk.includes(` ${parityNum}`))) {
+                            let val = item.details[k];
+                            if (val && val !== '-' && val !== 'nan' && val !== '') {
+                                return String(val).replace(/🔴/g, '').trim();
+                            }
+                        }
+                    }
+                }
             }
 
-            // 2. 掃描任何包含 mating_date 或 配種日期 的欄位
+            // 2. 廣域掃描所有可能含有日期的欄位
             let dates = [];
-            for (let k in item) {
+            let sourceObj = item.details || item;
+            for (let k in sourceObj) {
                 const lk = k.toLowerCase();
-                if (lk.includes('mating_date') || lk.includes('配種日期') || lk.includes('mating date')) {
-                    let v = item[k];
+                if (lk.includes('配種日期') || lk.includes('mating date') || lk.includes('mating_date')) {
+                    let v = sourceObj[k];
                     if (v && v !== '-' && v !== 'nan' && v !== 'None') {
                         let cleanD = String(v).replace(/🔴/g, '').trim();
                         if (cleanD && !dates.includes(cleanD)) dates.push(cleanD);
