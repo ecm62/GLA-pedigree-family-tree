@@ -80,7 +80,7 @@
         #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .single-tree-card { position: relative; width: 100%; height: auto; min-height: 360px; overflow: auto; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
 
-        #macroTreePanel { background: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block; }
+        #macroTreePanel { background: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block !important; }
         .macro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
         .macro-title { font-size: 15px; font-weight: 700; color: #0d6efd; display: flex; align-items: center; gap: 8px; }
 
@@ -163,7 +163,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>完全修復：</b>下圖 Panel 顯現性 100% 恢復，左右兩端色彩完全對稱！
+            <b>兩圖徹底對齊：</b>上圖與下圖 100% 同步強現，左右兩端色彩完全統一！
         </span>
     </div>
 
@@ -447,12 +447,12 @@
             };
         }
 
+        // 🌟 核心搜尋與繪製觸發（徹底取消把 macroTreePanel 設為 none 的毀滅指令）
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
             
             if (!rawInput) {
-                document.getElementById('macroTreePanel').style.display = 'none';
                 document.getElementById('singleBoxesContainer').innerHTML = '<div class="placeholder-text">請在上方輸入耳號進行查詢...</div>';
                 document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="18" class="placeholder-text">請在上方輸入耳號進行查詢...</td></tr>';
                 return;
@@ -493,13 +493,14 @@
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
                 
-                document.getElementById('macroTreePanel').style.display = 'block';
+                // 🌟 強制讓下圖保持可見
+                const macroPanel = document.getElementById('macroTreePanel');
+                if (macroPanel) macroPanel.style.display = 'block';
 
                 try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Tree1 error", e); }
                 try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Tree2 error", e); }
 
             } else {
-                document.getElementById('macroTreePanel').style.display = 'none';
                 document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:40px; text-align:center; color:#888;">查無相關資料</div>';
                 document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="18" style="padding:30px; text-align:center; color:#888;">查無相關資料</td></tr>';
             }
@@ -691,7 +692,7 @@
             });
         }
 
-        // 2. 近親比對全系譜拓撲樹（修復連線與語法渲染）
+        // 2. 近親比對全系譜拓撲樹（徹底解決顯現問題）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
