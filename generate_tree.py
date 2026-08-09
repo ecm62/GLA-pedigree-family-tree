@@ -8,7 +8,7 @@ GID_TREE = "0"
 URL_TREE = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID_TREE}"
 
 def fetch_and_parse():
-    print("🚀 開始從 Google Sheet 下載完整世代軸線與配種日期數據...")
+    print("🚀 開始從 Google Sheet 下載完整世代軸線、出生日期與配種日期數據...")
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
     
     try:
@@ -41,13 +41,16 @@ def fetch_and_parse():
     col_sex = find_col(['Sex', '性別'])
     col_parity = find_col(['胎次', 'Parity'])
     col_mate = find_col(['當胎', '配種公'])
-    col_dob = find_col(['DOB', '生日', '出生日期'])
+    
+    # 🌟 確保精準抓取 DOB / 生日 / 出生日期 / 產房日期
+    col_dob = find_col(['DOB', '生日', '出生日期', 'farrowing date', '分娩日期'])
+    
     col_breed = find_col(['Breed', '品'])
     
     col_spi = find_col(['SPI'])
     col_mli = find_col(['MLI'])
     col_tsi = find_col(['TSI'])
-    col_total_born = find_col(['Total', '總生產'])
+    col_total_born = find_col(['Total', '總生產', '總生'])
     col_born_alive = find_col(['Born', '活胎'])
     col_weaning = find_col(['Weaning', '離乳'])
     col_weaning_wt = find_col(['均重', 'weight'])
@@ -83,13 +86,16 @@ def fetch_and_parse():
                 return val if val.lower() not in ['nan', 'none', ''] else '-'
             return '-'
 
+        # 🌟 強制抓取 DOB 數值
+        dob_val = get_v(col_dob)
+
         entry = {
             "ear": ear,
             "breed": breed,
             "sex": get_v(col_sex),
             "parity": get_v(col_parity),
             "mate": get_v(col_mate),
-            "dob": get_v(col_dob),
+            "dob": dob_val,
             "spi": get_v(col_spi),
             "mli": get_v(col_mli),
             "tsi": get_v(col_tsi),
@@ -111,7 +117,7 @@ def fetch_and_parse():
             "details": {str(k).strip(): (str(v).strip() if pd.notna(v) else "") for k, v in row.items()}
         }
 
-        # 🌟 關鍵新增：自動將所有「配種日期」欄位（如 配種日期_1(Mating Date_1) 等）萃取並寫入 entry
+        # 🌟 自動將所有「配種日期」欄位萃取並寫入 entry
         for col in df.columns:
             if '配種日期' in str(col) or 'mating date' in str(col).lower():
                 val = str(row.get(col, '')).replace('🔴', '').strip()
@@ -120,7 +126,7 @@ def fetch_and_parse():
 
         pedigree_data.append(entry)
 
-    print(f"🎉 成功轉換！共處理 {len(pedigree_data)} 筆包含全世代軸線與配種日期之數據！")
+    print(f"🎉 成功轉換！共處理 {len(pedigree_data)} 筆包含 DOB、世代與配種日期之數據！")
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
