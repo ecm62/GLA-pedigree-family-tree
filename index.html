@@ -84,7 +84,8 @@
         .macro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
         .macro-title { font-size: 15px; font-weight: 700; color: #0d6efd; display: flex; align-items: center; gap: 8px; }
 
-        #macroScrollArea { width: 100%; height: auto; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; min-height: 380px; }
+        #macroScrollArea { width: 100%; min-height: 520px; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; }
+        #macroBoxesContainer { position: relative; width: 100%; min-height: 520px; }
         .gen-header-bar { position: absolute; top: 10px; left: 0; right: 0; height: 28px; display: flex; pointer-events: none; z-index: 3; }
         .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
@@ -163,7 +164,7 @@
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
         <span style="margin-left:auto; color:#64748b;">
-            <b>核心修正版：</b>配種日期全智對齊＋複數當胎公豬（如 D1398 D1415）自動拆解繪製
+            <b>最終修正版：</b>跨表配種日期精準綁定 ＋ 520px 下圖強效畫布渲染
         </span>
     </div>
 
@@ -400,41 +401,48 @@
             return '-';
         }
 
-        // 🌟 智慧動態對齊配種日期（針對母豬每次育種價值分析中 配種日期_1, 配種日期_2... 進行對比）
-        function getMatingDateForParity(item, indexInMatchedList) {
-            const rawParity = item.parity || getValueFromMultiKeys(item, ['胎次', 'Parity', '累計記錄胎數(Total Parities)']);
-            const parityNum = Math.round(parseFloat(rawParity));
+        // 🌟 跨表全域配種日期對齊器（跨表查詢 母豬每次育種價值分析 數據）
+        function getMatingDateForParity(item, rowIndex) {
+            const currentEar = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)'])).toLowerCase().trim();
+            const parityNum = Math.round(parseFloat(item.parity || getValueFromMultiKeys(item, ['胎次', 'Parity'])));
 
-            // 先蒐集該物件所有包含配種日期的有效值
-            let allMatingDates = [];
-            for (let rawK in item) {
-                const keyLow = rawK.toLowerCase();
-                if (keyLow.includes('配種日期') || keyLow.includes('mating date') || keyLow.includes('matingdate')) {
-                    const v = item[rawK];
-                    if (v && v !== '-' && v !== 'nan' && v !== 'None' && v !== 'null') {
-                        const cleanDate = String(v).replace(/🔴/g, '').trim();
-                        if (cleanDate && !allMatingDates.includes(cleanDate)) {
-                            allMatingDates.push({ key: rawK, val: cleanDate });
-                        }
-                    }
-                }
-            }
-
-            // 1. 若有特定胎次數字（例如 胎次 1 ➔ 優先拿 配種日期_1，胎次 2 ➔ 拿 配種日期_2 或 配種日期_3...）
+            // 1. 先在當前紀錄物件中直接尋找
             if (!isNaN(parityNum) && parityNum > 0) {
-                for (let entry of allMatingDates) {
-                    if (entry.key.includes(`_${parityNum}`) || entry.key.includes(`_${parityNum + 1}`)) {
-                        return entry.val;
+                for (let rawK in item) {
+                    const keyLow = rawK.toLowerCase();
+                    if ((keyLow.includes('配種日期') || keyLow.includes('mating date')) && (keyLow.includes(`_${parityNum}`) || keyLow.includes(` ${parityNum}`))) {
+                        const val = item[rawK];
+                        if (val && val !== '-' && val !== 'nan' && val !== 'None') return String(val).replace(/🔴/g, '').trim();
                     }
                 }
             }
 
-            // 2. 依照列索引順序動態指派 (Index fallback)
-            if (allMatingDates.length > 0) {
-                if (indexInMatchedList < allMatingDates.length) {
-                    return allMatingDates[indexInMatchedList].val;
+            // 2. 跨表向 pedigreeList 中的母豬育種價值分析總表（表 B）反查配種日期
+            const summaryRow = pedigreeList.find(it => {
+                const earB = String(it.ear || getValueFromMultiKeys(it, ['母豬耳號(Sow Ear Tag)', 'Ear Tag', '耳號'])).toLowerCase().trim();
+                return earB === currentEar && (it['配種日期_1(Mating Date_1)'] || it['配種日期_1']);
+            });
+
+            if (summaryRow) {
+                if (!isNaN(parityNum) && parityNum > 0) {
+                    // 根據胎次數字找對應配種日（例如 胎次 1 ➔ 配種日期_2 或 配種日期_1）
+                    let targetKey = `配種日期_${parityNum + 1}(Mating Date_${parityNum + 1})`;
+                    let val = summaryRow[targetKey] || summaryRow[`配種日期_${parityNum + 1}`] || summaryRow[`配種日期_${parityNum}(Mating Date_${parityNum})`] || summaryRow[`配種日期_${parityNum}`];
+                    if (val && val !== '-' && val !== 'nan') return String(val).replace(/🔴/g, '').trim();
                 }
-                return allMatingDates[allMatingDates.length - 1].val;
+
+                // 按 rowIndex 遞補對應
+                let datesFound = [];
+                for (let rawK in summaryRow) {
+                    if (rawK.includes('配種日期') || rawK.toLowerCase().includes('mating date')) {
+                        let v = summaryRow[rawK];
+                        if (v && v !== '-' && v !== 'nan') datesFound.push(String(v).replace(/🔴/g, '').trim());
+                    }
+                }
+                if (datesFound.length > 0) {
+                    if (rowIndex < datesFound.length) return datesFound[rowIndex];
+                    return datesFound[datesFound.length - 1];
+                }
             }
 
             return '-';
@@ -534,8 +542,9 @@
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
                 
-                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Tree1 error", e); }
-                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Tree2 error", e); }
+                // 🌟 上下兩圖同步渲染，強效穩定
+                drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem);
+                drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem);
 
             } else {
                 document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:40px; text-align:center; color:#888;">查無相關資料</div>';
@@ -559,7 +568,7 @@
                 const isPrimary = String(itemEar).toLowerCase().includes(searchTerm.toLowerCase());
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity', '累計記錄胎數(Total Parities)']));
 
-                // 🌟 使用動態對齊配種日期解析器
+                // 🌟 使用跨表雙向配種日期對齊器
                 const matingDateVal = cleanVal(getMatingDateForParity(item, idx));
                 const dobDateVal = cleanVal(item.dob !== '-' ? item.dob : getValueFromMultiKeys(item, ['DOB', '生日', '分娩日期', '出生日期', 'farrowing date', 'DOB出生日期']));
 
@@ -630,8 +639,7 @@
                 const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
                 const boar = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i);
                 if (boar && boar !== '-' && boar !== '未記載公豬' && checkBreedAllowed('', boar)) {
-                    // 自動拆分如 "D1398 D1415" 複合名稱
-                    const subBoars = boar.split(' ');
+                    const subBoars = String(boar).split(' ');
                     subBoars.forEach(sb => {
                         if (sb.trim() && !mateList.some(m => m.name === sb.trim())) {
                             mateList.push({ name: sb.trim(), label: isMale ? '♀ 配種母豬' : '♂ 當胎配種公', parity: cleanParityVal(i.parity) });
@@ -693,7 +701,7 @@
                 const div = document.createElement('div');
                 div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
                 div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
-                div.style.width = boxW + 'px'; div.style.height = p.boxH || boxH + 'px';
+                div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                 div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
                 div.onclick = () => { document.getElementById('earInput').value = p.name; searchPedigree(); };
                 container.appendChild(div);
@@ -891,7 +899,7 @@
 
                     linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
 
-                    // 反查配種公豬血統
+                    // 動態向資料庫反查該配種公豬的真實親本與祖代
                     const boarItem = pedigreeList.find(it => {
                         const itEar = it.ear || getValueFromMultiKeys(it, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
                         return String(itEar).toLowerCase() === String(m.name).toLowerCase();
