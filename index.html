@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>GLA Pedigree Family Tree Searching System</title>
-    <!-- 引入 html2canvas 以支援表格精準截圖 -->
+    <!-- 引入 html2canvas 支援表格截圖 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
@@ -19,7 +19,7 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; max-width: 380px; width: 90%;
         }
         .auth-card h2 { margin-top: 0; color: #1e293b; font-size: 20px; }
-        .auth-card p { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+        .auth-card p { font-size: 13px; color: #64748b; margin-bottom: 16px; }
         .auth-input {
             width: 100%; padding: 10px 14px; font-size: 15px; border: 1.5px solid #cbd5e1;
             border-radius: 6px; box-sizing: border-box; margin-bottom: 16px; text-align: center; outline: none;
@@ -66,7 +66,7 @@
         .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 14px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; font-weight: bold; }
 
-        /* Dashboard (🌟 已修改為全表直接展開無內部捲軸) */
+        /* Dashboard */
         #permanentCard { background: #ffffff; border: 1px solid #e0e6ed; border-left: 4px solid #0d6efd; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .card-title { font-size: 16px; color: #1e293b; font-weight: 700; margin: 0; }
@@ -93,7 +93,7 @@
         .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
         /* 節點樣式 */
-        .tree-node { position: absolute; border: 2px solid #334155; border-radius: 6px; text-align: center; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; cursor: pointer; transition: all 0.15s ease; line-height: 1.25; white-space: nowrap; }
+        .tree-node { position: absolute; border: 2px solid #334155; border-radius: 6px; text-align: center; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; transition: all 0.15s ease; line-height: 1.25; white-space: nowrap; }
         .tree-node:hover { transform: scale(1.06); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-width: 2.5px; }
 
         .mate-node-sire { border-style: dashed !important; border-color: #0284c7 !important; background-color: #f0f9ff !important; }
@@ -166,12 +166,9 @@
         <span class="color-badge breed-Y">Y：約克夏 (Yorkshire - 黃色)</span>
         <span class="color-badge breed-L">L：藍瑞斯 (Landrace - 藍色)</span>
         <span class="color-badge breed-D">D：杜洛克 (Duroc - 紅色)</span>
-        <span style="margin-left:auto; color:#64748b;">
-            <b>手機現場最佳化：</b>數據表格直接完整展開 ＋ 支援一鍵輸出高清圖片分享
-        </span>
     </div>
 
-    <!-- Dashboard (🌟 已新增 📸 匯出數據表 PNG 按鈕) -->
+    <!-- Dashboard -->
     <div id="permanentCard">
         <div class="card-header-bar">
             <div class="card-title" id="cardTitle">📌 育種成績與指數完整數據評估表 Dashboard</div>
@@ -195,9 +192,9 @@
                         <th>Weaning<br>(同胎離乳數)</th>
                         <th>Mother Total Wt<br>(母豬生育重)</th>
                         <th>Weaning Wt<br>(離乳均重)</th>
-                        <th>SPI</th>
-                        <th>MLI</th>
-                        <th>TSI</th>
+                        <th class="col-index">SPI</th>
+                        <th class="col-index">MLI</th>
+                        <th class="col-index">TSI</th>
                         <th>TNB</th>
                         <th>NBA</th>
                         <th>Lteat</th>
@@ -252,6 +249,7 @@
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
         let userIP = 'Unknown';
         let isAuthorized = false;
+        let userRole = 'B'; // 預設權限 'A':主管全權限, 'B':現場操作員
 
         window.addEventListener('DOMContentLoaded', () => {
             fetch('https://api.ipify.org?format=json')
@@ -260,27 +258,38 @@
                 .catch(err => { userIP = 'Unknown (Blocked)'; });
         });
 
+        // 🔒 A 級 / B 級 雙重密碼驗證
         function verifyPassword() {
             const pwdInput = document.getElementById('authPassword').value.trim();
             const errorDiv = document.getElementById('authError');
 
             if (!pwdInput) return;
 
-            fetch(AUDIT_LOG_API_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'login',
-                    password: pwdInput,
-                    username: 'Authorized User',
-                    ip: userIP
-                })
-            }).catch(err => console.error("Audit log error", err));
-
+            let authSuccess = false;
             if (pwdInput === 'gnay') {
+                userRole = 'A'; // A 級密碼：主管全權限
+                authSuccess = true;
+            } else if (pwdInput === 'yang') {
+                userRole = 'B'; // B 級密碼：現場工人權限
+                authSuccess = true;
+            }
+
+            if (authSuccess) {
                 isAuthorized = true;
                 document.getElementById('authOverlay').style.display = 'none';
+
+                fetch(AUDIT_LOG_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'login',
+                        password: pwdInput,
+                        username: userRole === 'A' ? 'A-Level Admin' : 'B-Level Worker',
+                        ip: userIP
+                    })
+                }).catch(err => console.error("Audit log error", err));
+
                 loadPedigreeData();
             } else {
                 errorDiv.style.display = 'block';
@@ -293,7 +302,7 @@
             if (isAuthorized) {
                 navigator.sendBeacon(AUDIT_LOG_API_URL, JSON.stringify({
                     action: 'logout',
-                    username: 'Authorized User',
+                    username: userRole === 'A' ? 'A-Level Admin' : 'B-Level Worker',
                     ip: userIP
                 }));
             }
@@ -400,7 +409,6 @@
             return '-';
         }
 
-        // 🌟 萬用強制抓取配種日期器（直接從 details 原始資料或全域物件撈取）
         function getMatingDateForParity(item, rowIndex) {
             const parityNum = Math.round(parseFloat(item.parity || getValueFromMultiKeys(item, ['胎次', 'Parity'])));
             
@@ -481,6 +489,24 @@
             };
         }
 
+        // 判斷耳號是否為母豬（允許 B 級點擊交叉查詢）
+        function isFemaleEar(earName) {
+            if (!earName || earName === '-') return false;
+            const name = String(earName).toUpperCase();
+            if (name.startsWith('L') || name.startsWith('Y') || name.includes('ANNA') || name.includes('FLO') || name.includes('LADY')) return true;
+            return false;
+        }
+
+        // 綁定節點點擊事件（A 級可點全部 ｜ B 級僅限點擊母豬耳號）
+        function attachNodeClick(divNode, earName) {
+            if (userRole === 'A' || (userRole === 'B' && isFemaleEar(earName))) {
+                divNode.style.cursor = 'pointer';
+                divNode.onclick = () => { document.getElementById('earInput').value = earName; searchPedigree(); };
+            } else {
+                divNode.style.cursor = 'default';
+            }
+        }
+
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
@@ -527,7 +553,6 @@
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
                 
-                // 🌟 上下兩圖防護觸發
                 try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Single Tree Error:", e); }
                 try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Macro Tree Error:", e); }
 
@@ -556,6 +581,11 @@
                 const matingDateVal = cleanVal(getMatingDateForParity(item, idx));
                 const dobDateVal = cleanVal(item.dob !== '-' ? item.dob : getValueFromMultiKeys(item, ['DOB', '生日', '分娩日期', '出生日期']));
 
+                // B 級權限：選拔指數直接呈現空白 '-'，不顯示保密鎖符號
+                const spiVal = userRole === 'A' ? cleanVal(item.spi || getValueFromMultiKeys(item, ['spi'])) : '-';
+                const mliVal = userRole === 'A' ? cleanVal(item.mli || getValueFromMultiKeys(item, ['mli'])) : '-';
+                const tsiVal = userRole === 'A' ? cleanVal(item.tsi || getValueFromMultiKeys(item, ['tsi'])) : '-';
+
                 html += `
                     <tr class="${isPrimary ? 'main-row' : 'rel-row'}">
                         <td><b>${cleanVal(itemEar)}</b></td>
@@ -574,9 +604,9 @@
                         <td>${cleanVal(item.mother_wt || getValueFromMultiKeys(item, ['mother total', '生育重']))}</td>
                         <td>${cleanVal(item.weaning_wt || getValueFromMultiKeys(item, ['weaning weight', '均重']))}</td>
 
-                        <td><b>${cleanVal(item.spi || getValueFromMultiKeys(item, ['spi']))}</b></td>
-                        <td><b>${cleanVal(item.mli || getValueFromMultiKeys(item, ['mli']))}</b></td>
-                        <td><b>${cleanVal(item.tsi || getValueFromMultiKeys(item, ['tsi']))}</b></td>
+                        <td><b>${spiVal}</b></td>
+                        <td><b>${mliVal}</b></td>
+                        <td><b>${tsiVal}</b></td>
 
                         <td>${cleanVal(item.tnb || getValueFromMultiKeys(item, ['tnb']))}</td>
                         <td>${cleanVal(item.nba || getValueFromMultiKeys(item, ['nba']))}</td>
@@ -588,14 +618,12 @@
             tbody.innerHTML = html;
         }
 
-        // 🌟 數據評估表高解析度 PNG 圖片輸出引擎 (完整展開全表繪製)
         function exportTableAsPNG() {
             const targetElem = document.getElementById('permanentCard');
             const rawQuery = document.getElementById('earInput').value.trim() || 'Dashboard';
             
             if (!targetElem) return;
 
-            // 使用 html2canvas 將完整展開的表格轉渲染為 3K 超高清圖片
             html2canvas(targetElem, {
                 scale: 2.5,
                 useCORS: true,
@@ -690,7 +718,7 @@
                 div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                 div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                 div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
-                div.onclick = () => { document.getElementById('earInput').value = a.name; searchPedigree(); };
+                attachNodeClick(div, a.name);
                 container.appendChild(div);
 
                 const midX = col0_X + boxW + colGap / 2;
@@ -709,7 +737,7 @@
                 div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
                 div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                 div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                div.onclick = () => { document.getElementById('earInput').value = p.name; searchPedigree(); };
+                attachNodeClick(div, p.name);
                 container.appendChild(div);
 
                 const midX = col1_X + boxW + colGap / 2;
@@ -735,7 +763,7 @@
                     mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (胎次 ${m.parity})` : '';
                     mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>`;
-                    mDiv.onclick = () => { document.getElementById('earInput').value = m.name; searchPedigree(); };
+                    attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
                     const midXRight = col2_X + boxW + colGap / 2;
@@ -754,7 +782,6 @@
             });
         }
 
-        // 2. 近親比對全系譜拓撲樹（100% 修復變數引用的完整渲染函數）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -795,7 +822,6 @@
                 headerBar.appendChild(div);
             });
 
-            // 自動安全拆解空白分隔之連體公豬
             let mateList = [];
             items.forEach(i => {
                 const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
@@ -830,7 +856,6 @@
             const linesToDraw = [];
             const targetY = finalCanvasHeight / 2 - boxH / 2;
 
-            // 1. 【col0：主角祖代】
             const leftAncYs = [targetY - 120, targetY - 45, targetY + 45, targetY + 120];
             const leftAncList = [
                 { data: ancData.sireSide[0], fallbackBreed: targetItem.breed || 'LY' },
@@ -848,7 +873,7 @@
                 div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                 div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                 div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
-                div.onclick = () => { document.getElementById('earInput').value = a.name; searchPedigree(); };
+                attachNodeClick(div, a.name);
                 container.appendChild(div);
 
                 const midX = col0_X + boxW + colGap / 2;
@@ -856,7 +881,6 @@
                 linesToDraw.push({ x1: col0_X + boxW, y1: leftAncYs[idx] + boxH/2, x2: col1_X, y2: parentY + boxH/2, midX: midX });
             });
 
-            // 2. 【col1：主角父母】
             const leftParents = [
                 { name: ancData.sireSide[2].name, label: "♂ 父親 (1st Sire)", y: targetY - 40, fallbackBreed: targetItem.breed || 'LY' },
                 { name: ancData.damSide[0].name,  label: "♀ 母親 (1st Dam)",  y: targetY + 40, fallbackBreed: targetItem.breed || 'LY' }
@@ -869,14 +893,13 @@
                 div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
                 div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                 div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                div.onclick = () => { document.getElementById('earInput').value = p.name; searchPedigree(); };
+                attachNodeClick(div, p.name);
                 container.appendChild(div);
 
                 const midX = col1_X + boxW + colGap / 2;
                 linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
             });
 
-            // 3. 【col2：核心主角】
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -885,7 +908,6 @@
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
             container.appendChild(targetDiv);
 
-            // 4. 【col3 / col4 / col5：多筆當胎配種公豬及其真實祖代】
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const mateY = targetY + (idx - (totalMates - 1) / 2) * (rowGap * 2.2);
@@ -897,7 +919,7 @@
                     mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (胎次 ${m.parity})` : '';
                     mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>`;
-                    mDiv.onclick = () => { document.getElementById('earInput').value = m.name; searchPedigree(); };
+                    attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
                     linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
@@ -921,7 +943,7 @@
                         boarSireDiv.style.left = col4_X + 'px'; boarSireDiv.style.top = (mateY - 20) + 'px';
                         boarSireDiv.style.width = boxW + 'px'; boarSireDiv.style.height = boxH + 'px';
                         boarSireDiv.innerHTML = `<span class="sub-label">♂ 父親 (1st Sire)</span><b>${curSireName}</b>`;
-                        boarSireDiv.onclick = () => { document.getElementById('earInput').value = curSireName; searchPedigree(); };
+                        attachNodeClick(boarSireDiv, curSireName);
                         container.appendChild(boarSireDiv);
 
                         linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 20 + boxH/2, midX: col3_X + boxW + colGap/2 });
@@ -932,7 +954,7 @@
                             g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 50) + 'px';
                             g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
                             g1Div.innerHTML = `<span class="sub-label">♂ 祖父 (Sire's Sire)</span><b>${curG1}</b>`;
-                            g1Div.onclick = () => { document.getElementById('earInput').value = curG1; searchPedigree(); };
+                            attachNodeClick(g1Div, curG1);
                             container.appendChild(g1Div);
 
                             linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 20 + boxH/2, x2: col5_X, y2: mateY - 50 + boxH/2, midX: col4_X + boxW + colGap/2 });
@@ -944,7 +966,7 @@
                             g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 10) + 'px';
                             g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
                             g2Div.innerHTML = `<span class="sub-label">♀ 祖母 (Sire's Dam)</span><b>${curG2}</b>`;
-                            g2Div.onclick = () => { document.getElementById('earInput').value = curG2; searchPedigree(); };
+                            attachNodeClick(g2Div, curG2);
                             container.appendChild(g2Div);
 
                             linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 20 + boxH/2, x2: col5_X, y2: mateY + 10 + boxH/2, midX: col4_X + boxW + colGap/2 });
