@@ -8,7 +8,7 @@ GID_TREE = "0"
 URL_TREE = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID_TREE}"
 
 def fetch_and_parse():
-    print("🚀 開始從 Google Sheet 下載完整世代軸線、出生日期與配種日期數據...")
+    print("🚀 開始從 Google Sheet 下載數據並對齊母豬出生日期與日齡...")
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
     
     try:
@@ -26,10 +26,8 @@ def fetch_and_parse():
     if df.empty:
         return
 
-    # 清理欄位名稱 Spaces & Newlines
     df.columns = [str(c).replace('\n', '').replace('\r', '').strip() for c in df.columns]
 
-    # 🎯 對齊試算表的精確欄位名稱
     def find_col(keywords):
         for kw in keywords:
             for col in df.columns:
@@ -42,11 +40,11 @@ def fetch_and_parse():
     col_parity = find_col(['胎次', 'Parity'])
     col_mate = find_col(['當胎', '配種公'])
     
-    # 🌟 確保精準抓取 DOB / 生日 / 出生日期 / 產房日期
-    col_dob = find_col(['DOB', '生日', '出生日期', 'farrowing date', '分娩日期'])
+    # 🌟 劃分「母豬出生日期」與「當胎分娩日期」
+    col_birth_date = find_col(['DOB', '出生日期', '生日'])
+    col_farrow_date = find_col(['farrowing date', '分娩日期', '產房日期'])
     
     col_breed = find_col(['Breed', '品'])
-    
     col_spi = find_col(['SPI'])
     col_mli = find_col(['MLI'])
     col_tsi = find_col(['TSI'])
@@ -55,13 +53,11 @@ def fetch_and_parse():
     col_weaning = find_col(['Weaning', '離乳'])
     col_weaning_wt = find_col(['均重', 'weight'])
 
-    # 祖輩欄位
     col_sire_sire = find_col(['Sire 美系父親名(祖父)', 'Sire 美系父親名', '祖父'])
     col_sire_dam  = find_col(['Dam Name美系母親名(祖母)', 'Dam Name美系母親名', '祖母'])
     col_dam_sire  = find_col(['Sire 美系父親名(外公)', '外公'])
     col_dam_dam   = find_col(['Dam Name美系母親名(外婆)', '外婆'])
 
-    # 🌟 世代軸線演進欄位
     col_gen1_sire = find_col(['第一代公'])
     col_gen1_dam  = find_col(['第一代母'])
     col_gen2_sire = find_col(['第二代公'])
@@ -86,16 +82,14 @@ def fetch_and_parse():
                 return val if val.lower() not in ['nan', 'none', ''] else '-'
             return '-'
 
-        # 🌟 強制抓取 DOB 數值
-        dob_val = get_v(col_dob)
-
         entry = {
             "ear": ear,
             "breed": breed,
             "sex": get_v(col_sex),
             "parity": get_v(col_parity),
             "mate": get_v(col_mate),
-            "dob": dob_val,
+            "birth_date": get_v(col_birth_date),  # 🌟 個體出生日期
+            "dob": get_v(col_farrow_date),        # 🌟 當胎分娩日期
             "spi": get_v(col_spi),
             "mli": get_v(col_mli),
             "tsi": get_v(col_tsi),
@@ -103,12 +97,10 @@ def fetch_and_parse():
             "born_alive": get_v(col_born_alive),
             "weaning": get_v(col_weaning),
             "weaning_wt": get_v(col_weaning_wt),
-            # 祖輩
             "sire_sire": get_v(col_sire_sire),
             "sire_dam": get_v(col_sire_dam),
             "dam_sire": get_v(col_dam_sire),
             "dam_dam": get_v(col_dam_dam),
-            # 🌟 完整世代演進鏈
             "gen1_sire": get_v(col_gen1_sire),
             "gen1_dam":  get_v(col_gen1_dam),
             "gen2_sire": get_v(col_gen2_sire),
@@ -117,7 +109,6 @@ def fetch_and_parse():
             "details": {str(k).strip(): (str(v).strip() if pd.notna(v) else "") for k, v in row.items()}
         }
 
-        # 🌟 自動將所有「配種日期」欄位萃取並寫入 entry
         for col in df.columns:
             if '配種日期' in str(col) or 'mating date' in str(col).lower():
                 val = str(row.get(col, '')).replace('🔴', '').strip()
@@ -126,7 +117,7 @@ def fetch_and_parse():
 
         pedigree_data.append(entry)
 
-    print(f"🎉 成功轉換！共處理 {len(pedigree_data)} 筆包含 DOB、世代與配種日期之數據！")
+    print(f"🎉 成功轉換！共處理 {len(pedigree_data)} 筆資料！")
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
