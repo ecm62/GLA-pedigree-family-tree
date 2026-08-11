@@ -81,7 +81,6 @@
         .gen-header-bar { position: absolute; top: 10px; left: 0; right: 0; height: 28px; display: flex; pointer-events: none; z-index: 3; }
         .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; }
 
-        /* 🌟 緊密化節點樣式 */
         .tree-node { position: absolute; border: 2px solid #334155; border-radius: 6px; text-align: center; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; transition: all 0.15s ease; line-height: 1.2; white-space: nowrap; }
         .tree-node:hover { transform: scale(1.05); z-index: 10; border-width: 2.5px; }
 
@@ -206,7 +205,7 @@
     <div id="singleTreeArea">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
             <div style="font-weight:bold; font-size:14px; color:#0d6efd;">
-                🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖 - 父上母下、左親右配)
+                🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖)
             </div>
             <div>
                 <button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Direct_Tree')">📸 Export PNG</button>
@@ -257,7 +256,6 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // 🌟 嚴格防呆計算日齡：若出生日晚於分娩/配種日，視為無效不計算
         function calculateAgeInDays(birthDateStr, endDateStr) {
             if (!birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
             try {
@@ -341,19 +339,15 @@
             return String(v).replace(/\n/g, ' ').replace(/🔴/g, '').trim();
         }
 
-        // 🌟 核心簡化名稱函數：只保留關鍵字（如 TUCKER, LADY, ANNA, RED ROCK, FLO）
+        // 🌟 嚴格精簡名稱：只留簡短關鍵字（如 TUCKER, LADY, ANNA, RED ROCK）
         function shortenAncestorName(nameStr) {
             if (!nameStr || nameStr === '-' || nameStr === '未記載' || nameStr === '') return '-';
             let s = String(nameStr).trim();
-            // 排除編號代碼，抓取核心英文字母關鍵字
             const parts = s.split(' ');
             let keywords = parts.filter(p => !/^\d+[\-\d]*$/.test(p) && !['1CR1', '1CR2', 'CR1', 'CR2'].includes(p.toUpperCase()));
             if (keywords.length > 0) {
-                // 如果最後一段是編號（例如 279-6），去掉它
                 let last = keywords[keywords.length - 1];
-                if (/\d/.test(last) && keywords.length > 1) {
-                    keywords.pop();
-                }
+                if (/\d/.test(last) && keywords.length > 1) keywords.pop();
                 return keywords.join(' ');
             }
             return s;
@@ -429,8 +423,19 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 嚴格實事求是：無資料即留空，不亂填亂接
+        // 🌟 嚴格防錯祖代提取：若為 LY 母豬，絕對不亂抓跨胎次欄位，保持空白 '-'
         function getHierarchyAncestors(items, targetItem) {
+            const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
+            const ear = String(targetItem.ear || '').toUpperCase();
+            
+            // 如果是二元雜交母豬 LY，沒有親代系譜，強制全部回傳空白 '-'
+            if (breed.includes('LY') || ear.startsWith('LY')) {
+                return {
+                    sireSide: [ { name: '-', label: '♂ Sire\'s Sire' }, { name: '-', label: '♀ Sire\'s Dam' }, { name: '-', label: '♂ 1st Sire' } ],
+                    damSide: [ { name: '-', label: '♀ 1st Dam' }, { name: '-', label: '♂ Dam\'s Sire' }, { name: '-', label: '♀ Dam\'s Dam' } ]
+                };
+            }
+
             let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'sire_sire', '祖父']);
             let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母']);
             let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系父親名(外公)', 'dam_sire', '外公']);
@@ -443,10 +448,10 @@
                 sireSide: [
                     { name: shortenAncestorName(usSireSire), label: '♂ Sire\'s Sire (祖父)' },
                     { name: shortenAncestorName(usSireDam),  label: '♀ Sire\'s Dam (祖母)' },
-                    { name: shortenAncestorName(gen1Sire),   label: '♂ 1st Sire (父親 - Sire)' }
+                    { name: shortenAncestorName(gen1Sire),   label: '♂ 1st Sire (父親)' }
                 ],
                 damSide: [
-                    { name: shortenAncestorName(gen1Dam),    label: '♀ 1st Dam (母親 - Dam)' },
+                    { name: shortenAncestorName(gen1Dam),    label: '♀ 1st Dam (母親)' },
                     { name: shortenAncestorName(usDamSire),  label: '♂ Dam\'s Sire (外公)' },
                     { name: shortenAncestorName(usDamDam),   label: '♀ Dam\'s Dam (外婆)' }
                 ]
@@ -518,7 +523,7 @@
                 const farrowDateVal = cleanVal(item.dob);
                 const matingDateVal = cleanVal(getMatingDateForParity(item, idx));
                 
-                // 🌟 嚴格防呆計算日齡：若出生日無效或大於分娩/配種日，顯示 '-'
+                // 🌟 嚴格防呆計算日齡：若出生日晚於分娩/配種日，顯示 '-'
                 let compareDate = farrowDateVal !== '-' ? farrowDateVal : matingDateVal;
                 const ageDaysVal = calculateAgeInDays(birthDateVal !== '-' ? birthDateVal : null, compareDate);
 
@@ -713,7 +718,7 @@
             });
         }
 
-        // 🌳 拓撲家族樹 (🌟 修復右側祖代標籤錯亂，父上母下)
+        // 🌳 拓撲家族樹 (🌟 精簡名稱、正確標籤、父上母下)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -724,7 +729,7 @@
 
             container.innerHTML = '';
             headerBar.innerHTML = '';
-            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
+            const targetEar = targetItem.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']);
             countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ Mating Sires ➔ Sire Ancestors)`;
 
             const boxW = 120, boxH = 32, colGap = 45, rowGap = 55;
@@ -870,7 +875,7 @@
                             sireDiv.className = `tree-node ${getBreedClass(curSireName, m.name)}`;
                             sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = (mateY - 22) + 'px';
                             sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
-                            sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire (父親)</span><b>${curSireName}</b>`;
+                            sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire</span><b>${curSireName}</b>`;
                             attachNodeClick(sireDiv, curSireName);
                             container.appendChild(sireDiv);
                             linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 22 + boxH/2, midX: col3_X + boxW + colGap/2 });
@@ -882,19 +887,19 @@
                             damDiv.className = `tree-node ${getBreedClass(curDamName, m.name)}`;
                             damDiv.style.left = col4_X + 'px'; damDiv.style.top = (mateY + 22) + 'px';
                             damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
-                            damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam (母親)</span><b>${curDamName}</b>`;
+                            damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam</span><b>${curDamName}</b>`;
                             attachNodeClick(damDiv, curDamName);
                             container.appendChild(damDiv);
                             linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY + 22 + boxH/2, midX: col3_X + boxW + colGap/2 });
                         }
 
-                        // 公豬祖父 (Sire's Sire) 擺最右上
+                        // 公豬祖父 (Sire's Sire) 擺右上
                         if (curG1 && curG1 !== '-') {
                             const g1Div = document.createElement('div');
                             g1Div.className = `tree-node ${getBreedClass(curG1, curSireName)}`;
                             g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 45) + 'px';
                             g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
-                            g1Div.innerHTML = `<span class="sub-label">♂ Sire\'s Sire (祖父)</span><b>${curG1}</b>`;
+                            g1Div.innerHTML = `<span class="sub-label">♂ Sire\'s Sire</span><b>${curG1}</b>`;
                             attachNodeClick(g1Div, curG1);
                             container.appendChild(g1Div);
                             linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 22 + boxH/2, x2: col5_X, y2: mateY - 45 + boxH/2, midX: col4_X + boxW + colGap/2 });
@@ -904,12 +909,12 @@
                         if (curG2 && curG2 !== '-') {
                             const g2Div = document.createElement('div');
                             g2Div.className = `tree-node ${getBreedClass(curG2, curSireName)}`;
-                            g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 22) + 'px';
+                            g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 9) + 'px';
                             g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
-                            g2Div.innerHTML = `<span class="sub-label">♀ Sire\'s Dam (祖母)</span><b>${curG2}</b>`;
+                            g2Div.innerHTML = `<span class="sub-label">♀ Sire\'s Dam</span><b>${curG2}</b>`;
                             attachNodeClick(g2Div, curG2);
                             container.appendChild(g2Div);
-                            linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 22 + boxH/2, x2: col5_X, y2: mateY + 22 + boxH/2, midX: col4_X + boxW + colGap/2 });
+                            linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 22 + boxH/2, x2: col5_X, y2: mateY + 9 + boxH/2, midX: col4_X + boxW + colGap/2 });
                         }
                     }
                 });
