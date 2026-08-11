@@ -2,6 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <!-- 📱 關鍵視口設定：讓手機開啟時自動縮放至 100% 寬度，不擠壓變形 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GLA Pedigree Family Tree Searching System</title>
     <!-- 引入 html2canvas 支援表格截圖 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -106,7 +108,6 @@
         .breed-D  { background-color: #ffe4e6 !important; color: #9f1239 !important; border-color: #f43f5e !important; }
         .breed-DEFAULT { background-color: #ffffff !important; color: #1e293b !important; border-color: #64748b !important; }
         
-        /* 核心主角發光高亮凸顯 */
         .origin-target { 
             border: 3.5px solid #f59e0b !important; 
             background-color: #1d4ed8 !important; 
@@ -120,6 +121,28 @@
         canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         .sub-label { font-size: 9px; opacity: 0.85; margin-bottom: 1px; font-weight: 600; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 60px 20px; font-size: 14px; font-weight: 500; }
+
+        /* 📱 手機與平板響應式介面優化 (RWD) */
+        @media screen and (max-width: 768px) {
+            body { padding: 6px; }
+            .system-header-banner { padding: 10px 12px; }
+            .system-header-banner h1 { font-size: 15px; }
+            .system-header-banner p { font-size: 10px; }
+            
+            .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; }
+            .control-bar > div { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+            input[type="text"] { width: 100% !important; box-sizing: border-box; font-size: 16px; padding: 8px 12px; }
+            .btn { width: 100%; padding: 10px; font-size: 15px; margin: 0; }
+            .btn-export { margin-left: 0; margin-top: 4px; }
+            
+            .card-header-bar, .macro-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+            .card-header-bar div, .macro-header div { width: 100%; }
+
+            /* 手指左右平滑滑動 */
+            .data-table-wrapper, .single-tree-card, #macroScrollArea {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
     </style>
 </head>
 <body>
@@ -151,11 +174,13 @@
 
         <div>
             <strong>品種篩選 Breed Filter：</strong>
-            <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">全部 All</button>
-            <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY (綠)</button>
-            <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y (黃)</button>
-            <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L (藍)</button>
-            <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D (紅)</button>
+            <div>
+                <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">全部 All</button>
+                <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY (綠)</button>
+                <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y (黃)</button>
+                <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L (藍)</button>
+                <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D (紅)</button>
+            </div>
         </div>
     </div>
 
@@ -210,7 +235,7 @@
 
     <!-- 1. 單純三代內個體直系演進圖 -->
     <div id="singleTreeArea">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
             <div style="font-weight:bold; font-size:14px; color:#0d6efd;">
                 🌿 1. 單純三代內個體直系演進圖 (Single Lineage 3-Gen Direct Tree)
             </div>
@@ -466,6 +491,7 @@
             return false;
         }
 
+        // 🌟 實事求是祖代提取器：絕不硬塞虛構數據
         function getHierarchyAncestors(items, targetItem) {
             let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'sire_sire', '祖父']);
             let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母']);
@@ -477,28 +503,27 @@
 
             return {
                 sireSide: [
-                    { name: usSireSire !== '-' ? usSireSire : 'TRIPLE H', label: '♂ 祖父 (Sire\'s Sire)' },
-                    { name: usSireDam  !== '-' ? usSireDam  : 'FLO',      label: '♀ 祖母 (Sire\'s Dam)' },
-                    { name: gen1Sire   !== '-' ? gen1Sire   : 'S TUCKER', label: '♂ 父親 (1st Sire)' }
+                    { name: usSireSire, label: '♂ 祖父 (Sire\'s Sire)' },
+                    { name: usSireDam,  label: '♀ 祖母 (Sire\'s Dam)' },
+                    { name: gen1Sire,   label: '♂ 父親 (1st Sire)' }
                 ],
                 damSide: [
-                    { name: gen1Dam    !== '-' ? gen1Dam    : 'ANNA',     label: '♀ 母親 (1st Dam)' },
-                    { name: usDamSire  !== '-' ? usDamSire  : 'TRIPLE H', label: '♂ 外公 (Dam\'s Sire)' },
-                    { name: usDamDam   !== '-' ? usDamDam   : 'FLO',      label: '♀ 外婆 (Dam\'s Dam)' }
+                    { name: gen1Dam,    label: '♀ 母親 (1st Dam)' },
+                    { name: usDamSire,  label: '♂ 外公 (Dam\'s Sire)' },
+                    { name: usDamDam,   label: '♀ 外婆 (Dam\'s Dam)' }
                 ]
             };
         }
 
-        // 判斷耳號是否為母豬（允許 B 級點擊交叉查詢）
         function isFemaleEar(earName) {
-            if (!earName || earName === '-') return false;
+            if (!earName || earName === '-' || earName === '') return false;
             const name = String(earName).toUpperCase();
             if (name.startsWith('L') || name.startsWith('Y') || name.includes('ANNA') || name.includes('FLO') || name.includes('LADY')) return true;
             return false;
         }
 
-        // 綁定節點點擊事件（A 級可點全部 ｜ B 級僅限點擊母豬耳號）
         function attachNodeClick(divNode, earName) {
+            if (!earName || earName === '-' || earName === '未記載' || earName === '') return;
             if (userRole === 'A' || (userRole === 'B' && isFemaleEar(earName))) {
                 divNode.style.cursor = 'pointer';
                 divNode.onclick = () => { document.getElementById('earInput').value = earName; searchPedigree(); };
@@ -684,13 +709,6 @@
                 }
             });
 
-            if (mateList.length === 0) {
-                mateList = [
-                    { name: 'D1415', label: '♂ 當胎配種公', parity: '1.0' },
-                    { name: 'D1421', label: '♂ 當胎配種公', parity: '2.0' }
-                ];
-            }
-
             const totalMates = Math.max(mateList.length, 1);
             const cardHeight = Math.max(totalMates * rowGap + 120, 360);
             const totalWidth = Math.max(col3_X + boxW + 60, 900);
@@ -839,13 +857,6 @@
                 }
             });
 
-            if (mateList.length === 0) {
-                mateList = [
-                    { name: 'D1415', label: '♂ 當胎配種公', parity: '1.0' },
-                    { name: 'D1421', label: '♂ 當胎配種公', parity: '2.0' }
-                ];
-            }
-
             const totalMates = Math.max(mateList.length, 1);
             const finalCanvasHeight = Math.max(totalMates * rowGap * 2.2 + 220, 520);
             const totalWidth = col5_X + boxW + 80;
@@ -933,11 +944,7 @@
                     let curG1 = boarItem ? getValueFromMultiKeys(boarItem, ['Sire美系父親名(祖父)', 'sire_sire', '祖父']) : '-';
                     let curG2 = boarItem ? getValueFromMultiKeys(boarItem, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母']) : '-';
 
-                    if (curSireName === '-') curSireName = m.name.startsWith('D') ? 'S TUCKER' : (m.name.startsWith('Y') ? 'CHRIS' : 'LEPO');
-                    if (curG1 === '-') curG1 = m.name.startsWith('D') ? 'S TUCKER' : (m.name.startsWith('Y') ? 'PERCHERON' : 'FIRESTONE');
-                    if (curG2 === '-') curG2 = m.name.startsWith('D') ? 'LADY N' : (m.name.startsWith('Y') ? 'ANNA' : 'FLO');
-
-                    if (checkBreedAllowed('', curSireName)) {
+                    if (checkBreedAllowed('', curSireName) && curSireName !== '-') {
                         const boarSireDiv = document.createElement('div');
                         boarSireDiv.className = `tree-node ${getBreedClass(curSireName, m.name)}`;
                         boarSireDiv.style.left = col4_X + 'px'; boarSireDiv.style.top = (mateY - 20) + 'px';
@@ -948,7 +955,7 @@
 
                         linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 20 + boxH/2, midX: col3_X + boxW + colGap/2 });
 
-                        if (checkBreedAllowed('', curG1)) {
+                        if (checkBreedAllowed('', curG1) && curG1 !== '-') {
                             const g1Div = document.createElement('div');
                             g1Div.className = `tree-node ${getBreedClass(curG1, curSireName)}`;
                             g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 50) + 'px';
@@ -960,7 +967,7 @@
                             linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 20 + boxH/2, x2: col5_X, y2: mateY - 50 + boxH/2, midX: col4_X + boxW + colGap/2 });
                         }
 
-                        if (checkBreedAllowed('', curG2)) {
+                        if (checkBreedAllowed('', curG2) && curG2 !== '-') {
                             const g2Div = document.createElement('div');
                             g2Div.className = `tree-node ${getBreedClass(curG2, curSireName)}`;
                             g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 10) + 'px';
