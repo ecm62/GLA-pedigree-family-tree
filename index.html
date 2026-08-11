@@ -8,7 +8,6 @@
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
         
-        /* 🔒 Security Auth Overlay */
         #authOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999;
@@ -32,7 +31,6 @@
         .auth-btn:hover { background: #0b5ed7; }
         .auth-error { color: #dc2626; font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
 
-        /* Banner */
         .system-header-banner {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #ffffff;
             padding: 14px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
@@ -41,7 +39,6 @@
         .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
         .system-header-banner p { margin: 3px 0 0 0; font-size: 12px; opacity: 0.85; }
 
-        /* Control Bar */
         .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         input[type="text"] { padding: 6px 12px; font-size: 14px; border: 1px solid #ced4da; border-radius: 6px; width: 320px; outline: none; }
         input[type="text"]:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
@@ -62,11 +59,9 @@
         .btn-breed-l.active   { background-color: #0ea5e9 !important; color: white !important; }
         .btn-breed-d.active   { background-color: #f43f5e !important; color: white !important; }
 
-        /* Legend Bar */
         .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 14px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; font-weight: bold; }
 
-        /* Dashboard Table */
         #permanentCard { background: #ffffff; border: 1px solid #e0e6ed; border-left: 4px solid #0d6efd; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .card-title { font-size: 16px; color: #1e293b; font-weight: 700; margin: 0; }
@@ -79,7 +74,6 @@
         .excel-data-table tr.rel-row { background-color: #f8fafc; color: #64748b; }
         .excel-data-table tr:hover { background-color: #e0f2fe !important; }
 
-        /* Cards & Tree Containers */
         #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .single-tree-card { position: relative; width: 100%; height: auto; min-height: 380px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
 
@@ -92,7 +86,6 @@
         .gen-header-bar { position: absolute; top: 10px; left: 0; right: 0; height: 28px; display: flex; pointer-events: none; z-index: 3; }
         .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
-        /* Tree Node Styles */
         .tree-node { position: absolute; border: 2px solid #334155; border-radius: 6px; text-align: center; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; transition: all 0.15s ease; line-height: 1.2; white-space: nowrap; }
         .tree-node:hover { transform: scale(1.05); z-index: 10; border-width: 2.5px; }
 
@@ -130,7 +123,6 @@
 </head>
 <body>
 
-    <!-- 🔒 Security Auth Overlay -->
     <div id="authOverlay">
         <div class="auth-card">
             <h2>🔒 System Authentication (安全身分驗證)</h2>
@@ -141,13 +133,11 @@
         </div>
     </div>
 
-    <!-- Banner -->
     <div class="system-header-banner">
         <h1>GLA Pedigree Family Tree Searching System</h1>
         <p>Professional Architecture for Breeding Pedigree & Lineage Chain Analysis (育種血統樹與世代鏈分析系統)</p>
     </div>
 
-    <!-- Control Bar -->
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
@@ -167,7 +157,6 @@
         </div>
     </div>
 
-    <!-- Legend Bar -->
     <div class="legend-bar">
         <strong>Breed Legend:</strong>
         <span class="color-badge breed-LY">LY (Green)</span>
@@ -176,7 +165,6 @@
         <span class="color-badge breed-D">D (Red)</span>
     </div>
 
-    <!-- Performance Evaluation Table -->
     <div id="permanentCard">
         <div class="card-header-bar">
             <div class="card-title" id="cardTitle">📌 Breeding Performance & Index Data Evaluation Table (育種成績與評估表)</div>
@@ -218,11 +206,10 @@
         </div>
     </div>
 
-    <!-- 1. Single Lineage Direct Tree -->
     <div id="singleTreeArea">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
             <div style="font-weight:bold; font-size:14px; color:#0d6efd;">
-                🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖 - 父上母下、左親右配)
+                🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖)
             </div>
             <div>
                 <button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Direct_Tree')">📸 Export PNG</button>
@@ -234,7 +221,6 @@
         </div>
     </div>
 
-    <!-- 2. Topology Butterfly Tree -->
     <div id="macroTreePanel" style="display:block !important;">
         <div class="macro-header">
             <div class="macro-title">
@@ -273,7 +259,6 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // 🌟 鐵血防呆日齡計算：LY 品種或未來日期一律強制回傳 '-'
         function calculateAgeInDays(breed, birthDateStr, endDateStr) {
             const bClean = String(breed || '').toUpperCase();
             if (bClean.includes('LY') || !birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
@@ -354,7 +339,6 @@
             return String(v).replace(/\n/g, ' ').replace(/🔴/g, '').trim();
         }
 
-        // 🌟 精簡名稱提取器：只取核心單字 (如 TUCKER, LADY, ANNA)
         function shortenAncestorName(nameStr) {
             if (!nameStr || nameStr === '-' || nameStr === '未記載' || nameStr === '') return '-';
             let s = String(nameStr).trim();
@@ -438,7 +422,6 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 鐵血防呆祖代提取：LY 母豬強制回傳空白，不允許亂抓跨胎次欄位
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -484,7 +467,6 @@
             divNode.onclick = () => { document.getElementById('earInput').value = earName; searchPedigree(); };
         }
 
-        // 🌟 寬鬆模糊搜尋邏輯：核心修正——輸入 3773 可以精準包含匹配到 LY3773
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
