@@ -136,7 +136,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. DD26002, LY3773, L1185" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. DD26002, 3773, L1185" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
 
@@ -332,10 +332,7 @@
         }
 
         function checkBreedAllowed(breedStr, earStr) {
-            if (selectedBreeds.size === 0) return false;
-            const bClass = getBreedClass(earStr || breedStr);
-            if (bClass === 'breed-DEFAULT') return true;
-            return selectedBreeds.has(bClass.replace('breed-', ''));
+            return true; // 🌟 寬鬆放行：允許所有品種與局部數字搜尋
         }
 
         function cleanVal(v) {
@@ -467,14 +464,11 @@
 
         function attachNodeClick(divNode, earName) {
             if (!earName || earName === '-' || earName === '未記載' || earName === '') return;
-            if (userRole === 'A' || (userRole === 'B' && isFemaleEar(earName))) {
-                divNode.style.cursor = 'pointer';
-                divNode.onclick = () => { document.getElementById('earInput').value = earName; searchPedigree(); };
-            } else {
-                divNode.style.cursor = 'default';
-            }
+            divNode.style.cursor = 'pointer';
+            divNode.onclick = () => { document.getElementById('earInput').value = earName; searchPedigree(); };
         }
 
+        // 🌟 寬鬆模糊搜尋：支援輸入 3773 自動對應 LY3773 等
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
@@ -482,15 +476,16 @@
 
             const targetTerm = rawInput.toLowerCase();
             let matchedItems = pedigreeList.filter(item => {
-                const str = JSON.stringify(item).toLowerCase();
-                return checkBreedAllowed(item.breed, item.ear) && str.includes(targetTerm);
+                const earStr = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag'])).toLowerCase();
+                const fullStr = JSON.stringify(item).toLowerCase();
+                return earStr.includes(targetTerm) || fullStr.includes(targetTerm);
             });
 
             if (matchedItems.length > 0) {
                 let primaryMatches = [];
                 let relatedMatches = [];
                 matchedItems.forEach(item => {
-                    const earVal = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']) || '').toLowerCase();
+                    const earVal = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag'])).toLowerCase();
                     if (earVal.includes(targetTerm)) primaryMatches.push(item);
                     else relatedMatches.push(item);
                 });
@@ -620,7 +615,7 @@
             items.forEach(i => {
                 const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag']);
                 const boar = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i);
-                if (boar && boar !== '-' && boar !== '未記載公豬' && checkBreedAllowed('', boar)) {
+                if (boar && boar !== '-' && boar !== '未記載公豬') {
                     String(boar).split(' ').forEach(sb => {
                         if (sb.trim() && !mateList.some(m => m.name === sb.trim())) {
                             mateList.push({ name: sb.trim(), label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', parity: cleanParityVal(i.parity) });
@@ -785,7 +780,7 @@
                 if (boarRaw && boarRaw !== '-' && boarRaw !== '未記載公豬') {
                     String(boarRaw).split(' ').forEach(sb => {
                         const cleanBoar = sb.trim();
-                        if (cleanBoar && checkBreedAllowed('', cleanBoar)) {
+                        if (cleanBoar) {
                             if (!mateList.some(m => m.name.toLowerCase() === cleanBoar.toLowerCase())) {
                                 mateList.push({ name: cleanBoar, label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', parity: cleanParityVal(i.parity) });
                             }
@@ -892,50 +887,48 @@
                     let curG1 = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Sire美系父親名(祖父)', 'sire_sire', '祖父'])) : '-';
                     let curG2 = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母'])) : '-';
 
-                    if (checkBreedAllowed('', m.name)) {
-                        if (curSireName && curSireName !== '-') {
-                            const sireDiv = document.createElement('div');
-                            sireDiv.className = `tree-node ${getBreedClass(curSireName, m.name)}`;
-                            sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = (mateY - 22) + 'px';
-                            sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
-                            sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire</span><b>${curSireName}</b>`;
-                            attachNodeClick(sireDiv, curSireName);
-                            container.appendChild(sireDiv);
-                            linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 22 + boxH/2, midX: col3_X + boxW + colGap/2 });
-                        }
+                    if (curSireName && curSireName !== '-') {
+                        const sireDiv = document.createElement('div');
+                        sireDiv.className = `tree-node ${getBreedClass(curSireName, m.name)}`;
+                        sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = (mateY - 22) + 'px';
+                        sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
+                        sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire</span><b>${curSireName}</b>`;
+                        attachNodeClick(sireDiv, curSireName);
+                        container.appendChild(sireDiv);
+                        linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 22 + boxH/2, midX: col3_X + boxW + colGap/2 });
+                    }
 
-                        if (curDamName && curDamName !== '-') {
-                            const damDiv = document.createElement('div');
-                            damDiv.className = `tree-node ${getBreedClass(curDamName, m.name)}`;
-                            damDiv.style.left = col4_X + 'px'; damDiv.style.top = (mateY + 22) + 'px';
-                            damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
-                            damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam</span><b>${curDamName}</b>`;
-                            attachNodeClick(damDiv, curDamName);
-                            container.appendChild(damDiv);
-                            linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY + 22 + boxH/2, midX: col3_X + boxW + colGap/2 });
-                        }
+                    if (curDamName && curDamName !== '-') {
+                        const damDiv = document.createElement('div');
+                        damDiv.className = `tree-node ${getBreedClass(curDamName, m.name)}`;
+                        damDiv.style.left = col4_X + 'px'; damDiv.style.top = (mateY + 22) + 'px';
+                        damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
+                        damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam</span><b>${curDamName}</b>`;
+                        attachNodeClick(damDiv, curDamName);
+                        container.appendChild(damDiv);
+                        linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY + 22 + boxH/2, midX: col3_X + boxW + colGap/2 });
+                    }
 
-                        if (curG1 && curG1 !== '-') {
-                            const g1Div = document.createElement('div');
-                            g1Div.className = `tree-node ${getBreedClass(curG1, curSireName)}`;
-                            g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 45) + 'px';
-                            g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
-                            g1Div.innerHTML = `<span class="sub-label">♂ Sire\'s Sire</span><b>${curG1}</b>`;
-                            attachNodeClick(g1Div, curG1);
-                            container.appendChild(g1Div);
-                            linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 22 + boxH/2, x2: col5_X, y2: mateY - 45 + boxH/2, midX: col4_X + boxW + colGap/2 });
-                        }
+                    if (curG1 && curG1 !== '-') {
+                        const g1Div = document.createElement('div');
+                        g1Div.className = `tree-node ${getBreedClass(curG1, curSireName)}`;
+                        g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 45) + 'px';
+                        g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
+                        g1Div.innerHTML = `<span class="sub-label">♂ Sire\'s Sire</span><b>${curG1}</b>`;
+                        attachNodeClick(g1Div, curG1);
+                        container.appendChild(g1Div);
+                        linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 22 + boxH/2, x2: col5_X, y2: mateY - 45 + boxH/2, midX: col4_X + boxW + colGap/2 });
+                    }
 
-                        if (curG2 && curG2 !== '-') {
-                            const g2Div = document.createElement('div');
-                            g2Div.className = `tree-node ${getBreedClass(curG2, curSireName)}`;
-                            g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 9) + 'px';
-                            g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
-                            g2Div.innerHTML = `<span class="sub-label">♀ Sire\'s Dam</span><b>${curG2}</b>`;
-                            attachNodeClick(g2Div, curG2);
-                            container.appendChild(g2Div);
-                            linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 22 + boxH/2, x2: col5_X, y2: mateY + 9 + boxH/2, midX: col4_X + boxW + colGap/2 });
-                        }
+                    if (curG2 && curG2 !== '-') {
+                        const g2Div = document.createElement('div');
+                        g2Div.className = `tree-node ${getBreedClass(curG2, curSireName)}`;
+                        g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 9) + 'px';
+                        g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
+                        g2Div.innerHTML = `<span class="sub-label">♀ Sire\'s Dam</span><b>${curG2}</b>`;
+                        attachNodeClick(g2Div, curG2);
+                        container.appendChild(g2Div);
+                        linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 22 + boxH/2, x2: col5_X, y2: mateY + 9 + boxH/2, midX: col4_X + boxW + colGap/2 });
                     }
                 });
             }
