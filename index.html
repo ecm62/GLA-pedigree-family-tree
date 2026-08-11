@@ -10,7 +10,7 @@
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
         
-        /* 🔒 System Auth Overlay */
+        /* 🔒 Security Auth Overlay */
         #authOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999;
@@ -81,16 +81,16 @@
         .excel-data-table tr.rel-row { background-color: #f8fafc; color: #64748b; }
         .excel-data-table tr:hover { background-color: #e0f2fe !important; }
 
-        /* Cards & Tree Area */
+        /* 🌟 Cards & Tree Area (右側無限擴展佈局，保證母系不切割) */
         #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .single-tree-card { position: relative; width: 100%; height: auto; min-height: 360px; overflow: auto; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .single-tree-card { position: relative; width: 100%; height: auto; min-height: 380px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
 
         #macroTreePanel { background: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block !important; }
         .macro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
         .macro-title { font-size: 15px; font-weight: 700; color: #0d6efd; display: flex; align-items: center; gap: 8px; }
 
-        #macroScrollArea { width: 100%; min-height: 520px; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; }
-        #macroBoxesContainer { position: relative; width: 100%; min-height: 520px; }
+        #macroScrollArea { width: 100%; min-height: 540px; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; overflow-y: hidden; }
+        #macroBoxesContainer { position: relative; width: 100%; min-height: 540px; }
         .gen-header-bar { position: absolute; top: 10px; left: 0; right: 0; height: 28px; display: flex; pointer-events: none; z-index: 3; }
         .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
@@ -497,6 +497,7 @@
             return false;
         }
 
+        // 🌟 父親固定在上、母親固定在下的親本提取器
         function getHierarchyAncestors(items, targetItem) {
             let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'sire_sire', '祖父']);
             let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母']);
@@ -510,10 +511,10 @@
                 sireSide: [
                     { name: usSireSire, label: '♂ Sire\'s Sire (祖父)' },
                     { name: usSireDam,  label: '♀ Sire\'s Dam (祖母)' },
-                    { name: gen1Sire,   label: '♂ 1st Sire (父親)' }
+                    { name: gen1Sire,   label: '♂ 1st Sire (父親 - Sire)' }
                 ],
                 damSide: [
-                    { name: gen1Dam,    label: '♀ 1st Dam (母親)' },
+                    { name: gen1Dam,    label: '♀ 1st Dam (母親 - Dam)' },
                     { name: usDamSire,  label: '♂ Dam\'s Sire (外公)' },
                     { name: usDamDam,   label: '♀ Dam\'s Dam (外婆)' }
                 ]
@@ -689,6 +690,7 @@
             ctx.stroke();
         }
 
+        // 🌿 單純三代直系演進圖 (🌟 父集中在上，母集中在下，右側動態無限展開)
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -722,15 +724,45 @@
             });
 
             const totalMates = Math.max(mateList.length, 1);
-            const cardHeight = Math.max(totalMates * rowGap + 120, 360);
-            const totalWidth = Math.max(col3_X + boxW + 60, 900);
+            const cardHeight = Math.max(totalMates * rowGap + 120, 380);
+            
+            // 🌟 動態擴展右側總寬度，確保母系後代延伸不切割
+            const maxRightX = col3_X + boxW + 80;
+            const totalWidth = Math.max(maxRightX, cardContainer.clientWidth || 900);
 
             cardContainer.style.height = cardHeight + 'px';
             container.style.height = cardHeight + 'px';
+            container.style.width = totalWidth + 'px';
 
             const targetY = cardHeight / 2 - boxH / 2;
             const linesToDraw = [];
 
+            // 父集中在上 (parentY_Sire)，母集中在下 (parentY_Dam)
+            const parentY_Sire = targetY - 45;
+            const parentY_Dam  = targetY + 45;
+
+            const parents = [
+                { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親 - Sire)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', exists: false },
+                { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親 - Dam)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', exists: false }
+            ];
+
+            parents.forEach(p => {
+                if (p.name && p.name !== '' && p.name !== '-') {
+                    p.exists = true;
+                    const div = document.createElement('div');
+                    div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
+                    div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
+                    div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                    div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
+                    attachNodeClick(div, p.name);
+                    container.appendChild(div);
+
+                    const midX = col1_X + boxW + colGap / 2;
+                    linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
+                }
+            });
+
+            // 左一：祖代 (父系在上，母系在下)
             const ancYs = [targetY - 110, targetY - 45, targetY + 45, targetY + 110];
             const usList = [
                 { data: ancData.sireSide[0], fallbackBreed: targetItem.breed || 'LY' },
@@ -752,28 +784,14 @@
                 container.appendChild(div);
 
                 const midX = col0_X + boxW + colGap / 2;
-                linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: (idx < 2 ? targetY - 35 : targetY + 35) + boxH/2, midX: midX });
+                let targetDestY = (idx < 2) 
+                    ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + boxH/2)
+                    : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + boxH/2);
+
+                linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: targetDestY, midX: midX });
             });
 
-            const parents = [
-                { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: targetY - 35, fallbackBreed: targetItem.breed || 'LY' },
-                { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: targetY + 35, fallbackBreed: targetItem.breed || 'LY' }
-            ];
-
-            parents.forEach(p => {
-                if (!p.name || p.name === '' || p.name === '-') return;
-                const div = document.createElement('div');
-                div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
-                div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
-                div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                attachNodeClick(div, p.name);
-                container.appendChild(div);
-
-                const midX = col1_X + boxW + colGap / 2;
-                linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
-            });
-
+            // 中央核心主角
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -782,6 +800,7 @@
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
             container.appendChild(targetDiv);
 
+            // 右側當胎配種 / 母系延伸軌道
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const currentY = targetY + (idx - (totalMates - 1) / 2) * rowGap;
@@ -802,7 +821,7 @@
             }
 
             requestAnimationFrame(() => {
-                canvas.width = cardContainer.clientWidth || totalWidth;
+                canvas.width = totalWidth;
                 canvas.height = cardHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -812,6 +831,7 @@
             });
         }
 
+        // 🌳 拓撲近親比對家族樹 (🌟 父集中在上，母集中在下，右側無邊界延伸)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -870,14 +890,42 @@
             });
 
             const totalMates = Math.max(mateList.length, 1);
-            const finalCanvasHeight = Math.max(totalMates * rowGap * 2.2 + 220, 520);
-            const totalWidth = col5_X + boxW + 80;
+            const finalCanvasHeight = Math.max(totalMates * rowGap * 2.2 + 220, 540);
+            
+            // 🌟 保證右側動態無限畫布寬度
+            const maxRightWidth = col5_X + boxW + 100;
+            const totalWidth = Math.max(maxRightWidth, scrollArea.clientWidth || 1100);
 
             scrollArea.style.height = finalCanvasHeight + 'px';
             container.style.height = finalCanvasHeight + 'px';
+            container.style.width = totalWidth + 'px';
 
             const linesToDraw = [];
             const targetY = finalCanvasHeight / 2 - boxH / 2;
+
+            const parentY_Sire = targetY - 45;
+            const parentY_Dam  = targetY + 45;
+
+            const leftParents = [
+                { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親 - Sire)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', exists: false },
+                { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親 - Dam)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', exists: false }
+            ];
+
+            leftParents.forEach(p => {
+                if (p.name && p.name !== '' && p.name !== '-') {
+                    p.exists = true;
+                    const div = document.createElement('div');
+                    div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
+                    div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
+                    div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                    div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
+                    attachNodeClick(div, p.name);
+                    container.appendChild(div);
+
+                    const midX = col1_X + boxW + colGap / 2;
+                    linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
+                }
+            });
 
             const leftAncYs = [targetY - 120, targetY - 45, targetY + 45, targetY + 120];
             const leftAncList = [
@@ -900,27 +948,11 @@
                 container.appendChild(div);
 
                 const midX = col0_X + boxW + colGap / 2;
-                const parentY = idx < 2 ? targetY - 40 : targetY + 40;
-                linesToDraw.push({ x1: col0_X + boxW, y1: leftAncYs[idx] + boxH/2, x2: col1_X, y2: parentY + boxH/2, midX: midX });
-            });
+                let targetDestY = (idx < 2) 
+                    ? (leftParents[0].exists ? parentY_Sire + boxH/2 : targetY + boxH/2)
+                    : (leftParents[1].exists ? parentY_Dam + boxH/2  : targetY + boxH/2);
 
-            const leftParents = [
-                { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: targetY - 40, fallbackBreed: targetItem.breed || 'LY' },
-                { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: targetY + 40, fallbackBreed: targetItem.breed || 'LY' }
-            ];
-
-            leftParents.forEach(p => {
-                if (!p.name || p.name === '' || p.name === '-') return;
-                const div = document.createElement('div');
-                div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
-                div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
-                div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                attachNodeClick(div, p.name);
-                container.appendChild(div);
-
-                const midX = col1_X + boxW + colGap / 2;
-                linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
+                linesToDraw.push({ x1: col0_X + boxW, y1: leftAncYs[idx] + boxH/2, x2: col1_X, y2: targetDestY, midX: midX });
             });
 
             const targetDiv = document.createElement('div');
@@ -995,7 +1027,7 @@
             }
 
             requestAnimationFrame(() => {
-                canvas.width = scrollArea.clientWidth || totalWidth;
+                canvas.width = totalWidth;
                 canvas.height = finalCanvasHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
