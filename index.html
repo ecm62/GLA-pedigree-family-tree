@@ -3,49 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GLA Pedigree System</title>
+    <title>GLA Pedigree Family Tree Searching System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body { font-family: sans-serif; font-size: 12px; background: #f4f6f9; padding: 10px; }
-        .tree-node { position: absolute; border: 1.5px solid #334155; border-radius: 4px; padding: 3px; background: #fff; text-align: center; font-size: 10px; }
-        .origin-target { border: 3px solid #f59e0b; background: #1d4ed8; color: white; }
-        .lineCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
-        .container { position: relative; overflow-x: auto; min-height: 400px; background: #fff; border: 1px solid #ccc; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
+        .system-header-banner { background: #1e3c72; color: #fff; padding: 14px; border-radius: 8px; text-align: center; margin-bottom: 12px; }
+        .system-header-banner h1 { margin: 0; font-size: 18px; }
+        .control-bar { background: #fff; padding: 12px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 12px; }
+        input[type="text"] { padding: 8px; font-size: 14px; width: 260px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn { padding: 8px 16px; font-size: 14px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .data-table-wrapper { overflow-x: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 14px; }
+        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; white-space: nowrap; }
+        .excel-data-table th { background: #1e293b; color: #fff; padding: 8px; border: 1px solid #475569; }
+        .excel-data-table td { padding: 6px; border: 1px solid #e2e8f0; }
+        .tree-container { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 16px; min-height: 200px; position: relative; }
     </style>
 </head>
 <body>
-    <input type="text" id="earInput" placeholder="Enter Ear Tag">
-    <button onclick="search()">Search</button>
-    <div id="singleTreeCard" class="container"><canvas id="singleCanvas" class="lineCanvas"></canvas><div id="nodes"></div></div>
+
+    <div class="system-header-banner">
+        <h1>GLA Pedigree Family Tree Searching System</h1>
+    </div>
+
+    <div class="control-bar">
+        <label for="earInput"><b>Pedigree Search (全血統搜尋): </b></label>
+        <input type="text" id="earInput" placeholder="e.g. LY3773, 3773" onkeydown="if(event.key==='Enter') searchPedigree()">
+        <button class="btn" onclick="searchPedigree()">🔍 Expand Tree</button>
+    </div>
+
+    <div class="data-table-wrapper">
+        <table class="excel-data-table">
+            <thead>
+                <tr>
+                    <th>Ear Tag (耳號)</th>
+                    <th>Breed (品種)</th>
+                    <th>Sex (性別)</th>
+                    <th>Parity (胎次)</th>
+                    <th>Sire / Mate (當胎配種公)</th>
+                    <th>Total Born (總產)</th>
+                    <th>Born Alive (活胎)</th>
+                </tr>
+            </thead>
+            <tbody id="excelTableBody">
+                <tr><td colspan="7" style="padding:20px; color:#888;">Please enter ear tag above to search...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tree-container" id="treeContainer">
+        <div id="treeContent" style="color:#888; text-align:center; padding-top:40px;">Search results will display here.</div>
+    </div>
 
     <script>
         let pedigreeList = [];
-        fetch('data.json').then(r => r.json()).then(d => pedigreeList = d);
 
-        // 🌟 核心簡化名稱函數：只取最後一個非數字關鍵字
-        function getShortName(s) {
-            if (!s || s === '-') return '-';
-            let parts = String(s).toUpperCase().replace(/1CR1|1CR2|CR1|CR2/g, '').split(' ');
-            let filtered = parts.filter(p => p.length > 0 && !/^\d+$/.test(p));
-            return filtered.length > 0 ? filtered[filtered.length - 1] : s;
-        }
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch('data.json?nocache=' + new Date().getTime())
+                .then(res => res.json())
+                .then(data => {
+                    pedigreeList = Array.isArray(data) ? data : Object.values(data || {});
+                    console.log("Database Loaded: " + pedigreeList.length + " records.");
+                })
+                .catch(err => console.error("Database connection error:", err));
+        });
 
-        function search() {
-            const input = document.getElementById('earInput').value.trim().toUpperCase();
-            const target = pedigreeList.find(i => i.ear.toUpperCase() === input);
-            if (!target) return alert('Not found');
-            
-            const nodes = document.getElementById('nodes');
-            nodes.innerHTML = '';
-            
-            // 🌟 嚴格邏輯：若為 LY，左側不繪製任何親代框框與線條
-            if (!(target.breed === 'LY' || target.ear.includes('LY'))) {
-                // 這裡放入繪製父母祖代的邏輯...
-                // 確保若無資料，就直接跳過繪製，不產生殘線
+        function searchPedigree() {
+            const rawInput = document.getElementById('earInput').value.trim().toLowerCase();
+            if (!rawInput) return;
+
+            if (!pedigreeList || pedigreeList.length === 0) {
+                alert("Database is loading or connection failed. Please refresh the page.");
+                return;
             }
-            
-            // 繪製右側公豬 (Sire upper, Dam lower)
-            // 呼叫繪圖函數...
+
+            const matched = pedigreeList.filter(item => {
+                const earStr = String(item.ear || '').toLowerCase();
+                const jsonStr = JSON.stringify(item).toLowerCase();
+                return earStr.includes(rawInput) || jsonStr.includes(rawInput);
+            });
+
+            const tbody = document.getElementById('excelTableBody');
+            const treeContent = document.getElementById('treeContent');
+
+            if (matched.length > 0) {
+                let html = '';
+                matched.forEach(item => {
+                    html += `<tr>
+                        <td><b>${item.ear || '-'}</b></td>
+                        <td>${item.breed || '-'}</td>
+                        <td>${item.sex || '-'}</td>
+                        <td>${item.parity || '-'}</td>
+                        <td><b>${item.mate || '-'}</b></td>
+                        <td>${item.total_born || item.tnb || '-'}</td>
+                        <td>${item.born_alive || item.nba || '-'}</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+                treeContent.innerHTML = `<b style="color:#0d6efd;">Found ${matched.length} record(s) for query "${rawInput}".</b>`;
+            } else {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding:20px; color:#888;">No data found</td></tr>';
+                treeContent.innerHTML = '<span style="color:#888;">No data found</span>';
+            }
         }
     </script>
 </body>
