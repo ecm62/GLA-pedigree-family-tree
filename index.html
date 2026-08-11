@@ -2,106 +2,91 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- 📱 Responsive Viewport for Mobile Devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GLA Pedigree Family Tree Searching System</title>
-    <!-- html2canvas Library for Image Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
+        body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 8px; background-color: #f4f6f9; color: #333; }
         
-        /* 🔒 Security Auth Overlay */
         #authOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999;
             display: flex; align-items: center; justify-content: center;
         }
         .auth-card {
-            background: #ffffff; padding: 32px 40px; border-radius: 12px;
+            background: #ffffff; padding: 28px 36px; border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; max-width: 380px; width: 90%;
         }
-        .auth-card h2 { margin-top: 0; color: #1e293b; font-size: 20px; }
-        .auth-card p { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+        .auth-card h2 { margin-top: 0; color: #1e293b; font-size: 18px; }
+        .auth-card p { font-size: 12px; color: #64748b; margin-bottom: 14px; }
         .auth-input {
-            width: 100%; padding: 10px 14px; font-size: 15px; border: 1.5px solid #cbd5e1;
-            border-radius: 6px; box-sizing: border-box; margin-bottom: 16px; text-align: center; outline: none;
+            width: 100%; padding: 8px 12px; font-size: 14px; border: 1.5px solid #cbd5e1;
+            border-radius: 6px; box-sizing: border-box; margin-bottom: 14px; text-align: center; outline: none;
         }
-        .auth-input:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
         .auth-btn {
-            width: 100%; padding: 10px; font-size: 15px; font-weight: bold;
+            width: 100%; padding: 8px; font-size: 14px; font-weight: bold;
             background: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer;
         }
-        .auth-btn:hover { background: #0b5ed7; }
-        .auth-error { color: #dc2626; font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
+        .auth-error { color: #dc2626; font-size: 12px; margin-top: 8px; display: none; font-weight: bold; }
 
-        /* Banner */
         .system-header-banner {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #ffffff;
-            padding: 14px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-            margin-bottom: 12px; text-align: center;
+            padding: 10px 16px; border-radius: 6px; margin-bottom: 10px; text-align: center;
         }
-        .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
-        .system-header-banner p { margin: 3px 0 0 0; font-size: 12px; opacity: 0.85; }
+        .system-header-banner h1 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: 1px; }
+        .system-header-banner p { margin: 2px 0 0 0; font-size: 11px; opacity: 0.85; }
 
-        /* Control Bar */
-        .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        input[type="text"] { padding: 6px 12px; font-size: 14px; border: 1px solid #ced4da; border-radius: 6px; width: 320px; outline: none; }
-        input[type="text"]:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
+        .control-bar { background: #ffffff; padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); margin-bottom: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        input[type="text"] { padding: 5px 10px; font-size: 13px; border: 1px solid #ced4da; border-radius: 4px; width: 280px; outline: none; }
 
-        .btn { padding: 6px 16px; font-size: 14px; background-color: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn { padding: 5px 12px; font-size: 13px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
         .btn:hover { background-color: #0b5ed7; }
-        .btn-export { background-color: #10b981; margin-left: 8px; }
-        .btn-export:hover { background-color: #059669; }
+        .btn-export { background-color: #10b981; margin-left: 6px; }
 
         .btn-breed { 
-            background-color: #e2e8f0; color: #64748b; margin-right: 4px; padding: 5px 12px; font-size: 13px; 
-            border: 2px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;
+            background-color: #e2e8f0; color: #64748b; margin-right: 3px; padding: 4px 10px; font-size: 12px; 
+            border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 600; 
         }
-        .btn-breed.active { box-shadow: 0 2px 6px rgba(0,0,0,0.15); border-color: #1e293b; }
+        .btn-breed.active { border-color: #1e293b; }
         .btn-breed-all.active { background-color: #334155 !important; color: white !important; }
         .btn-breed-ly.active  { background-color: #10b981 !important; color: white !important; }
         .btn-breed-y.active   { background-color: #f59e0b !important; color: white !important; }
         .btn-breed-l.active   { background-color: #0ea5e9 !important; color: white !important; }
         .btn-breed-d.active   { background-color: #f43f5e !important; color: white !important; }
 
-        /* Legend Bar */
-        .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 14px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
-        .color-badge { padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; font-weight: bold; }
+        .legend-bar { display: flex; gap: 8px; font-size: 11px; background: #fff; padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+        .color-badge { padding: 1px 6px; border-radius: 3px; border: 1px solid #ddd; font-weight: bold; }
 
-        /* Dashboard */
-        #permanentCard { background: #ffffff; border: 1px solid #e0e6ed; border-left: 4px solid #0d6efd; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .card-title { font-size: 16px; color: #1e293b; font-weight: 700; margin: 0; }
+        #permanentCard { background: #ffffff; border: 1px solid #e0e6ed; border-left: 4px solid #0d6efd; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; }
+        .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .card-title { font-size: 14px; color: #1e293b; font-weight: 700; margin: 0; }
 
-        .data-table-wrapper { width: 100%; overflow-x: auto; max-height: none; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; }
-        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 12px; background-color: #fff; white-space: nowrap; text-align: center; }
-        .excel-data-table th { background-color: #1e293b; color: #ffffff; font-weight: 600; padding: 8px 10px; border: 1px solid #475569; position: sticky; top: 0; z-index: 5; }
-        .excel-data-table td { padding: 6px 10px; border: 1px solid #e2e8f0; color: #1e293b; }
+        .data-table-wrapper { width: 100%; overflow-x: auto; max-height: none; border: 1px solid #cbd5e1; border-radius: 4px; background: #ffffff; }
+        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11px; background-color: #fff; white-space: nowrap; text-align: center; }
+        .excel-data-table th { background-color: #1e293b; color: #ffffff; font-weight: 600; padding: 6px 8px; border: 1px solid #475569; position: sticky; top: 0; z-index: 5; }
+        .excel-data-table td { padding: 5px 8px; border: 1px solid #e2e8f0; color: #1e293b; }
         .excel-data-table tr.main-row { background-color: #ffffff; font-weight: 600; }
         .excel-data-table tr.rel-row { background-color: #f8fafc; color: #64748b; }
-        .excel-data-table tr:hover { background-color: #e0f2fe !important; }
 
-        /* Cards & Tree Area */
-        #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .single-tree-card { position: relative; width: 100%; height: auto; min-height: 380px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
+        .single-tree-card { position: relative; width: 100%; height: auto; min-height: 320px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 4px; border: 1px solid #e2e8f0; }
 
-        #macroTreePanel { background: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block !important; }
-        .macro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
-        .macro-title { font-size: 15px; font-weight: 700; color: #0d6efd; display: flex; align-items: center; gap: 8px; }
+        #macroTreePanel { background: #ffffff; border: 2px solid #0d6efd; border-radius: 6px; padding: 10px; margin-bottom: 10px; display: block !important; }
+        .macro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
+        .macro-title { font-size: 13px; font-weight: 700; color: #0d6efd; display: flex; align-items: center; gap: 6px; }
 
-        #macroScrollArea { width: 100%; min-height: 540px; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; overflow-y: hidden; }
-        #macroBoxesContainer { position: relative; width: 100%; min-height: 540px; }
-        .gen-header-bar { position: absolute; top: 10px; left: 0; right: 0; height: 28px; display: flex; pointer-events: none; z-index: 3; }
-        .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        #macroScrollArea { width: 100%; min-height: 480px; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; overflow-x: auto; overflow-y: hidden; }
+        #macroBoxesContainer { position: relative; width: 100%; min-height: 480px; }
+        .gen-header-bar { position: absolute; top: 6px; left: 0; right: 0; height: 24px; display: flex; pointer-events: none; z-index: 3; }
+        .gen-header-title { position: absolute; font-size: 10px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 2px 6px; border-radius: 3px; border: 1px solid #cbd5e1; text-align: center; }
 
-        /* Node Styles */
-        .tree-node { position: absolute; border: 2px solid #334155; border-radius: 6px; text-align: center; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; transition: all 0.15s ease; line-height: 1.25; white-space: nowrap; }
-        .tree-node:hover { transform: scale(1.06); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border-width: 2.5px; }
+        /* 🌟 緊密化節點樣式 (字體縮小、高度 32px 確保緊湊) */
+        .tree-node { position: absolute; border: 1.5px solid #334155; border-radius: 4px; text-align: center; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06); z-index: 2; padding: 2px; box-sizing: border-box; transition: all 0.15s ease; line-height: 1.15; white-space: nowrap; }
+        .tree-node:hover { transform: scale(1.04); z-index: 10; border-width: 2px; }
 
         .mate-node-sire { border-style: dashed !important; border-color: #0284c7 !important; background-color: #f0f9ff !important; }
         .mate-node-dam  { border-style: dashed !important; border-color: #e11d48 !important; background-color: #fff1f2 !important; }
 
-        /* Breed Colors */
         .breed-LY { background-color: #d1fae5 !important; color: #065f46 !important; border-color: #10b981 !important; }
         .breed-Y  { background-color: #fef3c7 !important; color: #92400e !important; border-color: #f59e0b !important; }
         .breed-L  { background-color: #e0f2fe !important; color: #075985 !important; border-color: #0ea5e9 !important; }
@@ -109,95 +94,77 @@
         .breed-DEFAULT { background-color: #ffffff !important; color: #1e293b !important; border-color: #64748b !important; }
         
         .origin-target { 
-            border: 3.5px solid #f59e0b !important; 
+            border: 2.5px solid #f59e0b !important; 
             background-color: #1d4ed8 !important; 
             color: #ffffff !important; 
-            font-size: 13px !important; 
+            font-size: 11px !important; 
             font-weight: 800 !important; 
-            box-shadow: 0 0 14px rgba(245, 158, 11, 0.65) !important;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5) !important;
             z-index: 20 !important;
         }
 
         canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-        .sub-label { font-size: 9px; opacity: 0.85; margin-bottom: 1px; font-weight: 600; }
-        .placeholder-text { text-align: center; color: #94a3b8; padding: 60px 20px; font-size: 14px; font-weight: 500; }
+        .sub-label { font-size: 8px; opacity: 0.85; margin-bottom: 0px; font-weight: 600; }
+        .placeholder-text { text-align: center; color: #94a3b8; padding: 40px 10px; font-size: 12px; font-weight: 500; }
 
-        /* 📱 Mobile RWD */
         @media screen and (max-width: 768px) {
-            body { padding: 6px; }
-            .system-header-banner { padding: 10px 12px; }
-            .system-header-banner h1 { font-size: 15px; }
-            .system-header-banner p { font-size: 10px; }
-            
-            .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; }
-            .control-bar > div { width: 100%; display: flex; flex-direction: column; gap: 6px; }
-            input[type="text"] { width: 100% !important; box-sizing: border-box; font-size: 16px; padding: 8px 12px; }
-            .btn { width: 100%; padding: 10px; font-size: 15px; margin: 0; }
-            .btn-export { margin-left: 0; margin-top: 4px; }
-            
-            .card-header-bar, .macro-header { flex-direction: column; align-items: flex-start; gap: 6px; }
-            .card-header-bar div, .macro-header div { width: 100%; }
-
-            .data-table-wrapper, .single-tree-card, #macroScrollArea {
-                -webkit-overflow-scrolling: touch;
-            }
+            body { padding: 4px; }
+            .control-bar { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px; }
+            input[type="text"] { width: 100% !important; font-size: 14px; padding: 6px 10px; }
+            .btn { width: 100%; padding: 8px; font-size: 13px; margin: 0; }
+            .btn-export { margin-left: 0; margin-top: 3px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- 🔒 Security Auth Overlay -->
     <div id="authOverlay">
         <div class="auth-card">
             <h2>🔒 System Authentication (安全身分驗證)</h2>
-            <p>Please enter password to access breeding database<br>(請輸入授權密碼以存取育種資料庫)</p>
+            <p>Please enter password to access breeding database</p>
             <input type="password" id="authPassword" class="auth-input" placeholder="Password (密碼)" onkeydown="if(event.key==='Enter') verifyPassword()">
             <button class="auth-btn" onclick="verifyPassword()">Login (登入)</button>
-            <div id="authError" class="auth-error">⚠️ Incorrect password! (密碼不正確)</div>
+            <div id="authError" class="auth-error">⚠️ Incorrect password!</div>
         </div>
     </div>
 
-    <!-- Banner -->
     <div class="system-header-banner">
         <h1>GLA Pedigree Family Tree Searching System</h1>
         <p>Professional Architecture for Breeding Pedigree & Lineage Chain Analysis (育種血統樹與世代鏈分析系統)</p>
     </div>
 
-    <!-- Control Bar -->
     <div class="control-bar">
         <div>
-            <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar / Lineage Chain (全血統搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. DD26002, D1415, L1185 (例如: DD26002)" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
+            <input type="text" id="earInput" placeholder="e.g. LY3773, D1415, L1185" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
 
         <div>
             <strong>Breed Filter (品種篩選):</strong>
             <div>
-                <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">All (全部)</button>
-                <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY (二元母)</button>
-                <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y (約克夏)</button>
-                <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L (藍瑞斯)</button>
-                <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D (杜洛克)</button>
+                <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">All</button>
+                <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY</button>
+                <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y</button>
+                <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L</button>
+                <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D</button>
             </div>
         </div>
     </div>
 
-    <!-- Legend Bar -->
     <div class="legend-bar">
-        <strong>Breed Legend (品種圖例):</strong>
-        <span class="color-badge breed-LY">LY: Crossbreed (二元母 - Green)</span>
-        <span class="color-badge breed-Y">Y: Yorkshire (約克夏 - Yellow)</span>
-        <span class="color-badge breed-L">L: Landrace (藍瑞斯 - Blue)</span>
-        <span class="color-badge breed-D">D: Duroc (杜洛克 - Red)</span>
+        <strong>Breed Legend:</strong>
+        <span class="color-badge breed-LY">LY (Green)</span>
+        <span class="color-badge breed-Y">Y (Yellow)</span>
+        <span class="color-badge breed-L">L (Blue)</span>
+        <span class="color-badge breed-D">D (Red)</span>
     </div>
 
-    <!-- Dashboard (🌟 已新增 Birth Date 出生日期 與 Age 日齡 欄位) -->
     <div id="permanentCard">
         <div class="card-header-bar">
-            <div class="card-title" id="cardTitle">📌 Breeding Performance & Index Data Evaluation Table (育種成績與指數評估表)</div>
+            <div class="card-title" id="cardTitle">📌 Breeding Performance & Index Data Evaluation Table</div>
             <div>
-                <button class="btn btn-export" onclick="exportTableAsPNG()">📸 Export Table PNG (匯出數據表 PNG)</button>
+                <button class="btn btn-export" onclick="exportTableAsPNG()">📸 Export Table PNG</button>
             </div>
         </div>
         <div class="data-table-wrapper" id="dataTableContainer">
@@ -207,28 +174,28 @@
                         <th>Ear Tag<br>(耳號)</th>
                         <th>Breed<br>(品種)</th>
                         <th>Sex<br>(性別)</th>
-                        <th>Birth Date<br>(個體出生日)</th>
+                        <th>Birth Date<br>(出生日)</th>
                         <th>Age (Days)<br>(日齡)</th>
-                        <th>Mating Date<br>(配種日期)</th>
-                        <th>Farrow Date<br>(當胎分娩日)</th>
+                        <th>Mating Date<br>(配種日)</th>
+                        <th>Farrow Date<br>(分娩日)</th>
                         <th>Parity<br>(胎次)</th>
                         <th>Sire / Mate<br>(當胎配種公)</th>
-                        <th>Total Born<br>(同胎總產數)</th>
-                        <th>Born Alive<br>(同胎活仔數)</th>
-                        <th>Weaning<br>(同胎離乳數)</th>
-                        <th>Mother Total Wt<br>(母豬生育重)</th>
-                        <th>Weaning Wt<br>(離乳均重)</th>
+                        <th>Total Born<br>(總產)</th>
+                        <th>Born Alive<br>(活胎)</th>
+                        <th>Weaning<br>(離乳)</th>
+                        <th>Mother Wt<br>(生育重)</th>
+                        <th>Wean Wt<br>(均重)</th>
                         <th class="col-index">SPI</th>
                         <th class="col-index">MLI</th>
                         <th class="col-index">TSI</th>
                         <th>TNB</th>
                         <th>NBA</th>
-                        <th>L-Teat<br>(左乳頭)</th>
-                        <th>R-Teat<br>(右乳頭)</th>
+                        <th>L-Teat</th>
+                        <th>R-Teat</th>
                     </tr>
                 </thead>
                 <tbody id="excelTableBody">
-                    <tr><td colspan="21" class="placeholder-text">Please enter ear tag or keyword above to search... (請輸入耳號查詢)</td></tr>
+                    <tr><td colspan="21" class="placeholder-text">Please enter ear tag above to search...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -236,17 +203,17 @@
 
     <!-- 1. Single Lineage Direct Tree -->
     <div id="singleTreeArea">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
-            <div style="font-weight:bold; font-size:14px; color:#0d6efd;">
-                🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖)
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;" class="card-header-bar">
+            <div style="font-weight:bold; font-size:13px; color:#0d6efd;">
+                🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖 - 父上母下、左親右配)
             </div>
             <div>
-                <button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Direct_Tree')">📸 Export PNG (匯出圖片)</button>
+                <button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Direct_Tree')">📸 Export PNG</button>
             </div>
         </div>
         <div class="single-tree-card" id="singleTreeCard">
             <canvas class="lineCanvas" id="singleCanvas"></canvas>
-            <div id="singleBoxesContainer"><div class="placeholder-text">Waiting for search data... (等待查詢)</div></div>
+            <div id="singleBoxesContainer"><div class="placeholder-text">Waiting for search data...</div></div>
         </div>
     </div>
 
@@ -255,10 +222,10 @@
         <div class="macro-header">
             <div class="macro-title">
                 <span>🌳 2. Inbreeding Comparison Topology Family Tree (近親比對全系譜拓撲家族樹)</span>
-                <span id="macroHeaderCount" style="font-size:12px; font-weight:normal; color:#475569;"></span>
+                <span id="macroHeaderCount" style="font-size:11px; font-weight:normal; color:#475569;"></span>
             </div>
             <div>
-                <button class="btn btn-export" onclick="exportTreeAsHighResPNG('macroScrollArea', 'macroCanvas', 'GLA_Topology_Tree')">📸 Export PNG (匯出圖片)</button>
+                <button class="btn btn-export" onclick="exportTreeAsHighResPNG('macroScrollArea', 'macroCanvas', 'GLA_Topology_Tree')">📸 Export PNG</button>
             </div>
         </div>
         <div id="macroScrollArea">
@@ -275,75 +242,47 @@
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
         let userIP = 'Unknown';
         let isAuthorized = false;
-        let userRole = 'B'; // 'A': Admin, 'B': Worker
+        let userRole = 'B';
 
         window.addEventListener('DOMContentLoaded', () => {
             fetch('https://api.ipify.org?format=json')
                 .then(res => res.json())
                 .then(data => { userIP = data.ip || 'Unknown'; })
-                .catch(err => { userIP = 'Unknown (Blocked)'; });
+                .catch(err => { userIP = 'Unknown'; });
         });
 
         function getTodayDateStr() {
             const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}${month}${day}`;
+            return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // 🌟 自動精算母豬日齡 (Age in Days Calculation)
         function calculateAgeInDays(birthDateStr, endDateStr) {
             if (!birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
             try {
                 const bDate = new Date(birthDateStr.replace(/-/g, '/'));
                 if (isNaN(bDate.getTime())) return '-';
-                
                 let targetDate = new Date();
                 if (endDateStr && endDateStr !== '-' && endDateStr !== '未記載') {
                     const eDate = new Date(endDateStr.replace(/-/g, '/'));
                     if (!isNaN(eDate.getTime())) targetDate = eDate;
                 }
-                
-                const diffTime = targetDate.getTime() - bDate.getTime();
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays > 0 ? `${diffDays} days` : '-';
-            } catch(e) {
-                return '-';
-            }
+                const diffDays = Math.floor((targetDate.getTime() - bDate.getTime()) / (1000 * 60 * 60 * 24));
+                return diffDays > 0 ? `${diffDays}d` : '-';
+            } catch(e) { return '-'; }
         }
 
         function verifyPassword() {
             const pwdInput = document.getElementById('authPassword').value.trim();
             const errorDiv = document.getElementById('authError');
-
             if (!pwdInput) return;
 
             let authSuccess = false;
-            if (pwdInput === 'gnay') {
-                userRole = 'A'; // Admin
-                authSuccess = true;
-            } else if (pwdInput === 'yang') {
-                userRole = 'B'; // Worker
-                authSuccess = true;
-            }
+            if (pwdInput === 'gnay') { userRole = 'A'; authSuccess = true; }
+            else if (pwdInput === 'yang') { userRole = 'B'; authSuccess = true; }
 
             if (authSuccess) {
                 isAuthorized = true;
                 document.getElementById('authOverlay').style.display = 'none';
-
-                fetch(AUDIT_LOG_API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'login',
-                        password: pwdInput,
-                        username: userRole === 'A' ? 'A-Level Admin' : 'B-Level Worker',
-                        ip: userIP
-                    })
-                }).catch(err => console.error("Audit log error", err));
-
                 loadPedigreeData();
             } else {
                 errorDiv.style.display = 'block';
@@ -352,24 +291,11 @@
             }
         }
 
-        window.addEventListener('beforeunload', () => {
-            if (isAuthorized) {
-                navigator.sendBeacon(AUDIT_LOG_API_URL, JSON.stringify({
-                    action: 'logout',
-                    username: userRole === 'A' ? 'A-Level Admin' : 'B-Level Worker',
-                    ip: userIP
-                }));
-            }
-        });
-
         function loadPedigreeData() {
-            const cacheBuster = 'data.json?nocache=' + new Date().getTime();
-            fetch(cacheBuster)
+            fetch('data.json?nocache=' + new Date().getTime())
                 .then(res => res.json())
-                .then(data => {
-                    pedigreeList = Array.isArray(data) ? data : Object.values(data || {});
-                })
-                .catch(err => console.error("Load data.json failed"));
+                .then(data => { pedigreeList = Array.isArray(data) ? data : Object.values(data || {}); })
+                .catch(err => console.error("Load failed"));
         }
 
         function getBreedClass(nameStr, parentBreedFallback = 'DD') {
@@ -377,61 +303,35 @@
             const cleanName = String(nameStr).toUpperCase().trim();
             const fallbackStr = String(parentBreedFallback || 'DD').toUpperCase().trim();
 
-            if (cleanName.includes('LADY N')) return 'breed-D';
-            if (cleanName.includes('LADY'))   return 'breed-Y';
-
             if (cleanName.includes('LY') || cleanName.includes('CROSSBREED')) return 'breed-LY';
             if (cleanName.includes('DD') || cleanName.startsWith('D') || cleanName.includes('DUROC')) return 'breed-D';
             if (cleanName.includes('YY') || cleanName.startsWith('Y') || cleanName.includes('YORK')) return 'breed-Y';
             if (cleanName.includes('LL') || cleanName.startsWith('L') || cleanName.includes('LAND')) return 'breed-L';
-
-            if (fallbackStr.includes('DD') || fallbackStr.startsWith('D') || fallbackStr.includes('DUROC')) return 'breed-D';
-            if (fallbackStr.includes('LL') || fallbackStr.startsWith('L') || fallbackStr.includes('LAND')) return 'breed-L';
-            if (fallbackStr.includes('YY') || fallbackStr.startsWith('Y') || fallbackStr.includes('YORK')) return 'breed-Y';
-            if (fallbackStr.includes('LY') || fallbackStr.includes('CROSSBREED')) return 'breed-LY';
-
-            return 'breed-D';
+            return 'breed-DEFAULT';
         }
 
         function toggleBreedFilter(breedKey) {
             if (!isAuthorized) return;
             if (breedKey === 'ALL') {
-                if (selectedBreeds.size === 4) {
-                    selectedBreeds.clear();
-                } else {
-                    selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
-                }
+                selectedBreeds = selectedBreeds.size === 4 ? new Set() : new Set(['LY', 'Y', 'L', 'D']);
             } else {
-                if (selectedBreeds.has(breedKey)) {
-                    selectedBreeds.delete(breedKey);
-                } else {
-                    selectedBreeds.add(breedKey);
-                }
+                if (selectedBreeds.has(breedKey)) selectedBreeds.delete(breedKey);
+                else selectedBreeds.add(breedKey);
             }
-
             document.getElementById('btnBreedLY').classList.toggle('active', selectedBreeds.has('LY'));
             document.getElementById('btnBreedY').classList.toggle('active', selectedBreeds.has('Y'));
             document.getElementById('btnBreedL').classList.toggle('active', selectedBreeds.has('L'));
             document.getElementById('btnBreedD').classList.toggle('active', selectedBreeds.has('D'));
             document.getElementById('btnBreedALL').classList.toggle('active', selectedBreeds.size === 4);
 
-            if (document.getElementById('earInput').value.trim() !== '') {
-                searchPedigree();
-            }
+            if (document.getElementById('earInput').value.trim() !== '') searchPedigree();
         }
 
         function checkBreedAllowed(breedStr, earStr) {
             if (selectedBreeds.size === 0) return false;
             const bClass = getBreedClass(earStr || breedStr);
-
             if (bClass === 'breed-DEFAULT') return true;
-
-            if (selectedBreeds.has('LY') && bClass === 'breed-LY') return true;
-            if (selectedBreeds.has('Y')  && bClass === 'breed-Y')  return true;
-            if (selectedBreeds.has('L')  && bClass === 'breed-L')  return true;
-            if (selectedBreeds.has('D')  && bClass === 'breed-D')  return true;
-
-            return false;
+            return selectedBreeds.has(bClass.replace('breed-', ''));
         }
 
         function cleanVal(v) {
@@ -440,23 +340,22 @@
         }
 
         function cleanParityVal(v) {
-            if (!v || v === '-' || v === 'undefined' || v === 'NaN' || v === 'nan') return '-';
-            const str = String(v).trim();
-            if (str.includes('-') || str.length > 5) return '-';
-            const num = parseFloat(str);
+            if (!v || v === '-' || v === 'undefined' || v === 'NaN') return '-';
+            const num = parseFloat(v);
             return isNaN(num) ? '-' : num.toFixed(1);
         }
 
         function getValueFromMultiKeys(obj, possibleKeys) {
             if (!obj) return '-';
             const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
-
             for (let kCandidate of possibleKeys) {
                 const targetK = sanitize(kCandidate);
                 for (let rawK in obj) {
                     if (sanitize(rawK).includes(targetK)) {
                         const val = obj[rawK];
-                        if (val !== undefined && val !== null && val !== 'nan' && val !== 'None' && val !== 'null' && val !== 'undefined' && val !== '') return String(val).trim();
+                        if (val !== undefined && val !== null && !['nan', 'none', '', 'undefined'].includes(String(val).toLowerCase())) {
+                            return String(val).trim();
+                        }
                     }
                 }
             }
@@ -465,49 +364,40 @@
 
         function getMatingDateForParity(item, rowIndex) {
             const parityNum = Math.round(parseFloat(item.parity || getValueFromMultiKeys(item, ['胎次', 'Parity'])));
-            
             if (item.details) {
                 for (let k in item.details) {
                     const lk = k.toLowerCase();
-                    if (lk.includes('配種日期') || lk.includes('mating date') || lk.includes('mating_date')) {
+                    if (lk.includes('配種日期') || lk.includes('mating date')) {
                         if (!isNaN(parityNum) && parityNum > 0 && (lk.includes(`_${parityNum}`) || lk.includes(` ${parityNum}`))) {
                             let val = item.details[k];
-                            if (val && val !== '-' && val !== 'nan' && val !== '') {
-                                return String(val).replace(/🔴/g, '').trim();
-                            }
+                            if (val && val !== '-' && val !== 'nan') return cleanVal(val);
                         }
                     }
                 }
             }
-
             let dates = [];
             let sourceObj = item.details || item;
             for (let k in sourceObj) {
                 const lk = k.toLowerCase();
-                if (lk.includes('配種日期') || lk.includes('mating date') || lk.includes('mating_date')) {
+                if (lk.includes('配種日期') || lk.includes('mating date')) {
                     let v = sourceObj[k];
-                    if (v && v !== '-' && v !== 'nan' && v !== 'None') {
-                        let cleanD = String(v).replace(/🔴/g, '').trim();
-                        if (cleanD && !dates.includes(cleanD)) dates.push(cleanD);
+                    if (v && v !== '-' && v !== 'nan') {
+                        let cleanD = cleanVal(v);
+                        if (cleanD !== '-' && !dates.includes(cleanD)) dates.push(cleanD);
                     }
                 }
             }
-
             if (dates.length > 0) {
-                if (!isNaN(parityNum) && parityNum > 0 && parityNum <= dates.length) {
-                    return dates[parityNum - 1];
-                }
-                if (rowIndex < dates.length) return dates[rowIndex];
-                return dates[dates.length - 1];
+                if (!isNaN(parityNum) && parityNum > 0 && parityNum <= dates.length) return dates[parityNum - 1];
+                return dates[rowIndex < dates.length ? rowIndex : dates.length - 1];
             }
-
             return '-';
         }
 
         function getMatingBoar(item) {
             if (item.mate && item.mate !== '-') return item.mate;
             if (item.matingBoar && item.matingBoar !== '-') return item.matingBoar;
-            return getValueFromMultiKeys(item, ['當胎配種', 'mate', 'matingBoar', 'Sire', '當胎配種公豬']);
+            return getValueFromMultiKeys(item, ['當胎配種', 'mate', 'matingBoar', 'Sire']);
         }
 
         function checkIsMale(item) {
@@ -516,10 +406,10 @@
             if (sexStr.includes('FEMALE')) return false;
             if (sexStr.includes('MALE') || sexStr.includes('公')) return true;
             const earStr = (item.ear || '').toUpperCase();
-            if (earStr.startsWith('D') && !earStr.startsWith('DD') && !sexStr.includes('FEMALE')) return true;
-            return false;
+            return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
+        // 🌟 嚴格實事求是：絕對不盲目亂填亂接祖代
         function getHierarchyAncestors(items, targetItem) {
             let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'sire_sire', '祖父']);
             let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母']);
@@ -529,16 +419,17 @@
             let gen1Sire = getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire', '父親']);
             let gen1Dam  = getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam', '母親']);
 
+            // 若為 LY 且無父無母，明確留空 '-'
             return {
                 sireSide: [
-                    { name: usSireSire, label: '♂ Sire\'s Sire (祖父)' },
-                    { name: usSireDam,  label: '♀ Sire\'s Dam (祖母)' },
-                    { name: gen1Sire,   label: '♂ 1st Sire (父親 - Sire)' }
+                    { name: usSireSire !== '-' ? usSireSire : '-', label: '♂ Sire\'s Sire (祖父)' },
+                    { name: usSireDam !== '-' ? usSireDam : '-',  label: '♀ Sire\'s Dam (祖母)' },
+                    { name: gen1Sire !== '-' ? gen1Sire : '-',   label: '♂ 1st Sire (父親 - Sire)' }
                 ],
                 damSide: [
-                    { name: gen1Dam,    label: '♀ 1st Dam (母親 - Dam)' },
-                    { name: usDamSire,  label: '♂ Dam\'s Sire (外公)' },
-                    { name: usDamDam,   label: '♀ Dam\'s Dam (外婆)' }
+                    { name: gen1Dam !== '-' ? gen1Dam : '-',    label: '♀ 1st Dam (母親 - Dam)' },
+                    { name: usDamSire !== '-' ? usDamSire : '-',  label: '♂ Dam\'s Sire (外公)' },
+                    { name: usDamDam !== '-' ? usDamDam : '-',   label: '♀ Dam\'s Dam (外婆)' }
                 ]
             };
         }
@@ -546,8 +437,7 @@
         function isFemaleEar(earName) {
             if (!earName || earName === '-' || earName === '') return false;
             const name = String(earName).toUpperCase();
-            if (name.startsWith('L') || name.startsWith('Y') || name.includes('ANNA') || name.includes('FLO') || name.includes('LADY')) return true;
-            return false;
+            return (name.startsWith('L') || name.startsWith('Y') || name.includes('ANNA') || name.includes('FLO') || name.includes('LADY'));
         }
 
         function attachNodeClick(divNode, earName) {
@@ -563,80 +453,51 @@
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
-            
-            if (!rawInput) {
-                document.getElementById('singleBoxesContainer').innerHTML = '<div class="placeholder-text">Please enter ear tag above to search... (請輸入耳號)</div>';
-                document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" class="placeholder-text">Please enter ear tag above to search... (請輸入耳號)</td></tr>';
-                return;
-            }
+            if (!rawInput) return;
 
             const targetTerm = rawInput.toLowerCase();
-            let matchedItems = [];
-
-            if (rawInput.includes('+')) {
-                const andTerms = rawInput.split('+').map(s => s.trim().toLowerCase()).filter(s => s !== '');
-                matchedItems = pedigreeList.filter(item => {
-                    const str = JSON.stringify(item).toLowerCase();
-                    return checkBreedAllowed(item.breed, item.ear) && andTerms.every(term => str.includes(term));
-                });
-            } else {
-                matchedItems = pedigreeList.filter(item => {
-                    const str = JSON.stringify(item).toLowerCase();
-                    return checkBreedAllowed(item.breed, item.ear) && str.includes(targetTerm);
-                });
-            }
+            let matchedItems = pedigreeList.filter(item => {
+                const str = JSON.stringify(item).toLowerCase();
+                return checkBreedAllowed(item.breed, item.ear) && str.includes(targetTerm);
+            });
 
             if (matchedItems.length > 0) {
                 let primaryMatches = [];
                 let relatedMatches = [];
-
                 matchedItems.forEach(item => {
-                    const earVal = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']) || '').toLowerCase();
-                    if (earVal.includes(targetTerm)) {
-                        primaryMatches.push(item);
-                    } else {
-                        relatedMatches.push(item);
-                    }
+                    const earVal = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']) || '').toLowerCase();
+                    if (earVal.includes(targetTerm)) primaryMatches.push(item);
+                    else relatedMatches.push(item);
                 });
-
                 primaryMatches.sort((a, b) => (parseFloat(a.parity) || 0) - (parseFloat(b.parity) || 0));
 
                 const sortedItems = [...primaryMatches, ...relatedMatches];
                 const targetItem = primaryMatches[0] || sortedItems[0];
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
-                
-                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Single Tree Error:", e); }
-                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error("Macro Tree Error:", e); }
-
+                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
+                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
             } else {
-                document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:40px; text-align:center; color:#888;">No data found (查無相關資料)</div>';
-                document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:30px; text-align:center; color:#888;">No data found (查無相關資料)</div>';
+                document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:30px; text-align:center; color:#888;">No data found</div>';
+                document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:20px; text-align:center; color:#888;">No data found</td></tr>';
             }
         }
 
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
-            const titleTerm = searchTerm ? `Query: 「${searchTerm}」` : 'Current View';
-            
-            const mainCount = primaryItems.length;
-            const relCount = allSortedItems.length - mainCount;
-            title.innerHTML = `📌 Performance & Index Data Table (育種成績與評估表): <span style="color:#0d6efd;">${titleTerm}</span> (Target: ${mainCount}, Related: ${relCount})`;
+            title.innerHTML = `📌 Performance & Index Data Table: <span style="color:#0d6efd;">Query: "${searchTerm}"</span> (Target: ${primaryItems.length})`;
 
             let html = '';
             allSortedItems.forEach((item, idx) => {
                 const mateBoar = getMatingBoar(item);
-                const itemEar = item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
+                const itemEar = item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']);
                 const isPrimary = String(itemEar).toLowerCase().includes(searchTerm.toLowerCase());
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
 
-                // 🌟 母豬出生日期與分娩日期精準抓取
-                const birthDateVal = cleanVal(item.birth_date || getValueFromMultiKeys(item, ['birth_date', 'DOB', '出生日期', '生日']));
-                const farrowDateVal = cleanVal(item.dob || getValueFromMultiKeys(item, ['farrowing date', '分娩日期', '產房日期']));
+                const birthDateVal = cleanVal(item.birth_date || getValueFromMultiKeys(item, ['birth_date', 'DOB', '出生日期']));
+                const farrowDateVal = cleanVal(item.dob || getValueFromMultiKeys(item, ['farrowing date', '分娩日期']));
                 const matingDateVal = cleanVal(getMatingDateForParity(item, idx));
-
-                // 🌟 自動試算日齡
                 const ageDaysVal = calculateAgeInDays(birthDateVal, farrowDateVal);
 
                 const spiVal = userRole === 'A' ? cleanVal(item.spi || getValueFromMultiKeys(item, ['spi'])) : '-';
@@ -646,32 +507,26 @@
                 html += `
                     <tr class="${isPrimary ? 'main-row' : 'rel-row'}">
                         <td><b>${cleanVal(itemEar)}</b></td>
-                        <td>${cleanVal(item.breed || getValueFromMultiKeys(item, ['品種', 'Breed']))}</td>
-                        <td>${cleanVal(item.sex || getValueFromMultiKeys(item, ['性別', 'Sex']))}</td>
-
+                        <td>${cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']))}</td>
+                        <td>${cleanVal(item.sex || getValueFromMultiKeys(item, ['性別']))}</td>
                         <td><b>${birthDateVal}</b></td>
                         <td><b style="color:#0284c7;">${ageDaysVal}</b></td>
-
                         <td><b>${matingDateVal}</b></td>
                         <td><b>${farrowDateVal}</b></td>
-
                         <td><b>${parityClean}</b></td>
                         <td><b>${cleanVal(mateBoar)}</b></td>
-                        
-                        <td><b>${cleanVal(item.total_born || getValueFromMultiKeys(item, ['total', '總產', '總生']))}</b></td>
-                        <td><b>${cleanVal(item.born_alive || getValueFromMultiKeys(item, ['alive', '活胎']))}</b></td>
-                        <td>${cleanVal(item.weaning || getValueFromMultiKeys(item, ['wean', '離乳']))}</td>
-                        <td>${cleanVal(item.mother_wt || getValueFromMultiKeys(item, ['mother total', '生育重']))}</td>
-                        <td>${cleanVal(item.weaning_wt || getValueFromMultiKeys(item, ['weaning weight', '均重']))}</td>
-
+                        <td><b>${cleanVal(item.total_born)}</b></td>
+                        <td><b>${cleanVal(item.born_alive)}</b></td>
+                        <td>${cleanVal(item.weaning)}</td>
+                        <td>${cleanVal(item.mother_wt)}</td>
+                        <td>${cleanVal(item.weaning_wt)}</td>
                         <td><b>${spiVal}</b></td>
                         <td><b>${mliVal}</b></td>
                         <td><b>${tsiVal}</b></td>
-
-                        <td>${cleanVal(item.tnb || getValueFromMultiKeys(item, ['tnb']))}</td>
-                        <td>${cleanVal(item.nba || getValueFromMultiKeys(item, ['nba']))}</td>
-                        <td>${cleanVal(item.lteat || getValueFromMultiKeys(item, ['lte']))}</td>
-                        <td>${cleanVal(item.rteat || getValueFromMultiKeys(item, ['rte']))}</td>
+                        <td>${cleanVal(item.tnb)}</td>
+                        <td>${cleanVal(item.nba)}</td>
+                        <td>${cleanVal(item.lteat)}</td>
+                        <td>${cleanVal(item.rteat)}</td>
                     </tr>
                 `;
             });
@@ -681,31 +536,17 @@
         function exportTableAsPNG() {
             const targetElem = document.getElementById('permanentCard');
             const rawQuery = document.getElementById('earInput').value.trim() || 'ALL';
-            const todayStr = getTodayDateStr();
-            
             if (!targetElem) return;
 
-            html2canvas(targetElem, {
-                scale: 2.0,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: 0
-            }).then(canvas => {
+            html2canvas(targetElem, { scale: 2.0, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
                 canvas.toBlob(blob => {
-                    if (!blob) return;
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
-                    link.download = `GLA_Table_${rawQuery}_${todayStr}.png`;
+                    link.download = `GLA_Table_${rawQuery}_${getTodayDateStr()}.png`;
                     link.href = url;
-                    document.body.appendChild(link);
                     link.click();
-                    document.body.removeChild(link);
                     setTimeout(() => URL.revokeObjectURL(url), 1000);
                 }, 'image/png', 1.0);
-            }).catch(err => {
-                console.error("Export table failed:", err);
-                alert("Image export failed, please try again!");
             });
         }
 
@@ -716,11 +557,11 @@
             ctx.lineTo(midX, y2);
             ctx.lineTo(x2, y2);
             ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.5;
             ctx.stroke();
         }
 
-        // 🌿 單純三代直系演進圖 (父集中在上，母集中在下，右側無邊界延伸)
+        // 🌿 單純三代直系演進圖 (父上母下、左親右配、高度緊密)
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -728,36 +569,34 @@
             if (!container || !canvas) return;
 
             container.innerHTML = '';
-            const boxW = 135, boxH = 38, colGap = 50, rowGap = 60;
+            const boxW = 120, boxH = 32, colGap = 45, rowGap = 50;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
 
-            const col0_X = 25;
+            const col0_X = 20;
             const col1_X = col0_X + boxW + colGap;
             const col2_X = col1_X + boxW + colGap;
             const col3_X = col2_X + boxW + colGap;
 
-            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
+            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
 
             let mateList = [];
             items.forEach(i => {
-                const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
+                const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag']);
                 const boar = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i);
                 if (boar && boar !== '-' && boar !== '未記載公豬' && checkBreedAllowed('', boar)) {
-                    const subBoars = String(boar).split(' ');
-                    subBoars.forEach(sb => {
+                    String(boar).split(' ').forEach(sb => {
                         if (sb.trim() && !mateList.some(m => m.name === sb.trim())) {
-                            mateList.push({ name: sb.trim(), label: isMale ? '♀ Mating Dam (配種母)' : '♂ Mating Sire (配種公)', parity: cleanParityVal(i.parity) });
+                            mateList.push({ name: sb.trim(), label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', parity: cleanParityVal(i.parity) });
                         }
                     });
                 }
             });
 
             const totalMates = Math.max(mateList.length, 1);
-            const cardHeight = Math.max(totalMates * rowGap + 120, 380);
-            
-            const maxRightX = col3_X + boxW + 80;
-            const totalWidth = Math.max(maxRightX, cardContainer.clientWidth || 900);
+            const cardHeight = Math.max(totalMates * rowGap + 80, 300);
+            const maxRightX = col3_X + boxW + 60;
+            const totalWidth = Math.max(maxRightX, cardContainer.clientWidth || 800);
 
             cardContainer.style.height = cardHeight + 'px';
             container.style.height = cardHeight + 'px';
@@ -766,12 +605,13 @@
             const targetY = cardHeight / 2 - boxH / 2;
             const linesToDraw = [];
 
-            const parentY_Sire = targetY - 45;
-            const parentY_Dam  = targetY + 45;
+            // 父上母下座標
+            const parentY_Sire = targetY - 38;
+            const parentY_Dam  = targetY + 38;
 
             const parents = [
-                { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親 - Sire)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', exists: false },
-                { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親 - Dam)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', exists: false }
+                { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', exists: false },
+                { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', exists: false }
             ];
 
             parents.forEach(p => {
@@ -785,12 +625,12 @@
                     attachNodeClick(div, p.name);
                     container.appendChild(div);
 
-                    const midX = col1_X + boxW + colGap / 2;
-                    linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
+                    linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: col1_X + boxW + colGap/2 });
                 }
             });
 
-            const ancYs = [targetY - 110, targetY - 45, targetY + 45, targetY + 110];
+            // 祖代 (父系在上，母系在下)
+            const ancYs = [targetY - 95, targetY - 38, targetY + 38, targetY + 95];
             const usList = [
                 { data: ancData.sireSide[0], fallbackBreed: targetItem.breed || 'LY' },
                 { data: ancData.sireSide[1], fallbackBreed: targetItem.breed || 'LY' },
@@ -810,26 +650,25 @@
                 attachNodeClick(div, a.name);
                 container.appendChild(div);
 
-                const midX = col0_X + boxW + colGap / 2;
                 let targetDestY = (idx < 2) 
                     ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + boxH/2)
                     : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + boxH/2);
 
-                linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: targetDestY, midX: midX });
+                linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: targetDestY, midX: col0_X + boxW + colGap/2 });
             });
 
+            // 核心主角
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
-            targetDiv.style.width = (boxW + 8) + 'px'; targetDiv.style.height = (boxH + 8) + 'px';
-            const sexLabel = isMale ? '🎯 Target Sire (公)' : '🎯 Target Dam (母)';
+            targetDiv.style.width = (boxW + 6) + 'px'; targetDiv.style.height = (boxH + 6) + 'px';
+            const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
             container.appendChild(targetDiv);
 
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const currentY = targetY + (idx - (totalMates - 1) / 2) * rowGap;
-
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
                     mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name, targetItem.breed || 'LY')}`;
@@ -840,8 +679,7 @@
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
-                    const midXRight = col2_X + boxW + colGap / 2;
-                    linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: currentY + boxH/2, midX: midXRight });
+                    linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: currentY + boxH/2, midX: col2_X + boxW + colGap/2 });
                 });
             }
 
@@ -856,7 +694,7 @@
             });
         }
 
-        // 🌳 拓撲近親比對家族樹 (父集中在上，母集中在下，右側無邊界延伸)
+        // 🌳 拓撲家族樹 (緊密化佈局、右側無線延伸)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -867,14 +705,14 @@
 
             container.innerHTML = '';
             headerBar.innerHTML = '';
-            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
-            countTag.innerText = `(Topology: 👈 Target ${targetEar} Ancestors ➔ 🎯Target ➔ Mating Sires ➔ Sire Ancestors 👉)`;
+            const targetEar = targetItem.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']);
+            countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ Mating Sires ➔ Sire Ancestors)`;
 
-            const boxW = 135, boxH = 38, colGap = 55, rowGap = 65;
+            const boxW = 120, boxH = 32, colGap = 45, rowGap = 55;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
 
-            const col0_X = 25;
+            const col0_X = 20;
             const col1_X = col0_X + boxW + colGap;
             const col2_X = col1_X + boxW + colGap;
             const col3_X = col2_X + boxW + colGap;
@@ -882,12 +720,12 @@
             const col5_X = col4_X + boxW + colGap;
 
             const headers = [
-                { text: '👈 Grandparents (祖代)', x: col0_X },
+                { text: 'Grandparents (祖代)', x: col0_X },
                 { text: 'Parents (親本)', x: col1_X },
-                { text: '🎯 Target (核心個體)', x: col2_X },
-                { text: isMale ? 'Mating Dam (當胎母)' : 'Mating Sire (當胎公)', x: col3_X },
-                { text: 'Sire Parents (公豬親本)', x: col4_X },
-                { text: 'Sire Grandparents (公豬祖代) 👉', x: col5_X }
+                { text: 'Target (個體)', x: col2_X },
+                { text: isMale ? 'Mating Dam' : 'Mating Sire', x: col3_X },
+                { text: 'Sire Parents', x: col4_X },
+                { text: 'Sire Grandparents 👉', x: col5_X }
             ];
 
             headers.forEach(h => {
@@ -899,15 +737,14 @@
 
             let mateList = [];
             items.forEach(i => {
-                const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
+                const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag']);
                 const boarRaw = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i);
-                if (boarRaw && boarRaw !== '-' && boarRaw !== '未記載公豬' && boarRaw !== '') {
-                    const subBoars = String(boarRaw).split(' ');
-                    subBoars.forEach(sb => {
+                if (boarRaw && boarRaw !== '-' && boarRaw !== '未記載公豬') {
+                    String(boarRaw).split(' ').forEach(sb => {
                         const cleanBoar = sb.trim();
                         if (cleanBoar && checkBreedAllowed('', cleanBoar)) {
                             if (!mateList.some(m => m.name.toLowerCase() === cleanBoar.toLowerCase())) {
-                                mateList.push({ name: cleanBoar, label: isMale ? '♀ Mating Dam (配種母)' : '♂ Mating Sire (配種公)', parity: cleanParityVal(i.parity) });
+                                mateList.push({ name: cleanBoar, label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', parity: cleanParityVal(i.parity) });
                             }
                         }
                     });
@@ -915,10 +752,8 @@
             });
 
             const totalMates = Math.max(mateList.length, 1);
-            const finalCanvasHeight = Math.max(totalMates * rowGap * 2.2 + 220, 540);
-            
-            const maxRightWidth = col5_X + boxW + 100;
-            const totalWidth = Math.max(maxRightWidth, scrollArea.clientWidth || 1100);
+            const finalCanvasHeight = Math.max(totalMates * rowGap * 2.0 + 180, 480);
+            const totalWidth = Math.max(col5_X + boxW + 80, scrollArea.clientWidth || 1000);
 
             scrollArea.style.height = finalCanvasHeight + 'px';
             container.style.height = finalCanvasHeight + 'px';
@@ -926,13 +761,12 @@
 
             const linesToDraw = [];
             const targetY = finalCanvasHeight / 2 - boxH / 2;
-
-            const parentY_Sire = targetY - 45;
-            const parentY_Dam  = targetY + 45;
+            const parentY_Sire = targetY - 38;
+            const parentY_Dam  = targetY + 38;
 
             const leftParents = [
-                { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親 - Sire)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', exists: false },
-                { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親 - Dam)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', exists: false }
+                { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', exists: false },
+                { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', exists: false }
             ];
 
             leftParents.forEach(p => {
@@ -946,12 +780,11 @@
                     attachNodeClick(div, p.name);
                     container.appendChild(div);
 
-                    const midX = col1_X + boxW + colGap / 2;
-                    linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: midX });
+                    linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: col1_X + boxW + colGap/2 });
                 }
             });
 
-            const leftAncYs = [targetY - 120, targetY - 45, targetY + 45, targetY + 120];
+            const leftAncYs = [targetY - 105, targetY - 38, targetY + 38, targetY + 105];
             const leftAncList = [
                 { data: ancData.sireSide[0], fallbackBreed: targetItem.breed || 'LY' },
                 { data: ancData.sireSide[1], fallbackBreed: targetItem.breed || 'LY' },
@@ -971,26 +804,24 @@
                 attachNodeClick(div, a.name);
                 container.appendChild(div);
 
-                const midX = col0_X + boxW + colGap / 2;
                 let targetDestY = (idx < 2) 
                     ? (leftParents[0].exists ? parentY_Sire + boxH/2 : targetY + boxH/2)
                     : (leftParents[1].exists ? parentY_Dam + boxH/2  : targetY + boxH/2);
 
-                linesToDraw.push({ x1: col0_X + boxW, y1: leftAncYs[idx] + boxH/2, x2: col1_X, y2: targetDestY, midX: midX });
+                linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: targetDestY, midX: col0_X + boxW + colGap/2 });
             });
 
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
-            targetDiv.style.width = (boxW + 8) + 'px'; targetDiv.style.height = (boxH + 8) + 'px';
-            const sexLabel = isMale ? '🎯 Target Sire (公)' : '🎯 Target Dam (母)';
+            targetDiv.style.width = (boxW + 6) + 'px'; targetDiv.style.height = (boxH + 6) + 'px';
+            const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
             container.appendChild(targetDiv);
 
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
-                    const mateY = targetY + (idx - (totalMates - 1) / 2) * (rowGap * 2.2);
-
+                    const mateY = targetY + (idx - (totalMates - 1) / 2) * (rowGap * 2.0);
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
                     mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name, targetItem.breed || 'LY')}`;
@@ -1004,7 +835,7 @@
                     linesToDraw.push({ x1: col2_X + boxW, y1: targetY + boxH/2, x2: col3_X, y2: mateY + boxH/2, midX: col2_X + boxW + colGap/2 });
 
                     const boarItem = pedigreeList.find(it => {
-                        const itEar = it.ear || getValueFromMultiKeys(it, ['耳號', 'Ear Tag', '母豬耳號(Sow Ear Tag)']);
+                        const itEar = it.ear || getValueFromMultiKeys(it, ['耳號', 'Ear Tag']);
                         return String(itEar).toLowerCase() === String(m.name).toLowerCase();
                     });
 
@@ -1015,36 +846,36 @@
                     if (checkBreedAllowed('', curSireName) && curSireName !== '-') {
                         const boarSireDiv = document.createElement('div');
                         boarSireDiv.className = `tree-node ${getBreedClass(curSireName, m.name)}`;
-                        boarSireDiv.style.left = col4_X + 'px'; boarSireDiv.style.top = (mateY - 20) + 'px';
+                        boarSireDiv.style.left = col4_X + 'px'; boarSireDiv.style.top = (mateY - 18) + 'px';
                         boarSireDiv.style.width = boxW + 'px'; boarSireDiv.style.height = boxH + 'px';
-                        boarSireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire (父親)</span><b>${curSireName}</b>`;
+                        boarSireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire</span><b>${curSireName}</b>`;
                         attachNodeClick(boarSireDiv, curSireName);
                         container.appendChild(boarSireDiv);
 
-                        linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 20 + boxH/2, midX: col3_X + boxW + colGap/2 });
+                        linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2, x2: col4_X, y2: mateY - 18 + boxH/2, midX: col3_X + boxW + colGap/2 });
 
                         if (checkBreedAllowed('', curG1) && curG1 !== '-') {
                             const g1Div = document.createElement('div');
                             g1Div.className = `tree-node ${getBreedClass(curG1, curSireName)}`;
-                            g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 50) + 'px';
+                            g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 45) + 'px';
                             g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
-                            g1Div.innerHTML = `<span class="sub-label">♂ Sire\'s Sire (祖父)</span><b>${curG1}</b>`;
+                            g1Div.innerHTML = `<span class="sub-label">♂ Sire\'s Sire</span><b>${curG1}</b>`;
                             attachNodeClick(g1Div, curG1);
                             container.appendChild(g1Div);
 
-                            linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 20 + boxH/2, x2: col5_X, y2: mateY - 50 + boxH/2, midX: col4_X + boxW + colGap/2 });
+                            linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 18 + boxH/2, x2: col5_X, y2: mateY - 45 + boxH/2, midX: col4_X + boxW + colGap/2 });
                         }
 
                         if (checkBreedAllowed('', curG2) && curG2 !== '-') {
                             const g2Div = document.createElement('div');
                             g2Div.className = `tree-node ${getBreedClass(curG2, curSireName)}`;
-                            g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 10) + 'px';
+                            g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 9) + 'px';
                             g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
-                            g2Div.innerHTML = `<span class="sub-label">♀ Sire\'s Dam (祖母)</span><b>${curG2}</b>`;
+                            g2Div.innerHTML = `<span class="sub-label">♀ Sire\'s Dam</span><b>${curG2}</b>`;
                             attachNodeClick(g2Div, curG2);
                             container.appendChild(g2Div);
 
-                            linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 20 + boxH/2, x2: col5_X, y2: mateY + 10 + boxH/2, midX: col4_X + boxW + colGap/2 });
+                            linesToDraw.push({ x1: col4_X + boxW, y1: mateY - 18 + boxH/2, x2: col5_X, y2: mateY + 9 + boxH/2, midX: col4_X + boxW + colGap/2 });
                         }
                     }
                 });
@@ -1065,70 +896,18 @@
             const container = document.getElementById(containerId);
             const canvas = document.getElementById(canvasId);
             const rawQuery = document.getElementById('earInput').value.trim() || 'ALL';
-            const todayStr = getTodayDateStr();
-
             if (!container || !canvas) return;
 
-            const scale = 2.5;
-            const rawW = container.clientWidth || 1000;
-            const rawH = container.clientHeight || 600;
-
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = rawW * scale;
-            exportCanvas.height = rawH * scale;
-
-            const ctx = exportCanvas.getContext('2d');
-            ctx.scale(scale, scale);
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, rawW, rawH);
-
-            ctx.drawImage(canvas, 0, 0, rawW, rawH);
-
-            const nodes = container.querySelectorAll('.tree-node');
-            nodes.forEach(node => {
-                const x = parseFloat(node.style.left) || 0;
-                const y = parseFloat(node.style.top) || 0;
-                const w = parseFloat(node.style.width) || 135;
-                const h = parseFloat(node.style.height) || 38;
-
-                const computedStyle = window.getComputedStyle(node);
-                ctx.fillStyle = computedStyle.backgroundColor || '#ffffff';
-                ctx.strokeStyle = computedStyle.borderColor || '#334155';
-                ctx.lineWidth = parseFloat(computedStyle.borderWidth) || 2;
-
-                ctx.beginPath();
-                ctx.roundRect(x, y, w, h, 6);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = computedStyle.color || '#1e293b';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                const lines = node.innerText.split('\n');
-                if (lines.length >= 2) {
-                    ctx.font = '600 9px "Microsoft JhengHei", sans-serif';
-                    ctx.fillText(lines[0], x + w / 2, y + 12);
-                    ctx.font = 'bold 12px "Microsoft JhengHei", sans-serif';
-                    ctx.fillText(lines[1], x + w / 2, y + 27);
-                } else {
-                    ctx.font = 'bold 12px "Microsoft JhengHei", sans-serif';
-                    ctx.fillText(node.innerText, x + w / 2, y + h / 2);
-                }
+            html2canvas(container, { scale: 2.5, useCORS: true, backgroundColor: '#ffffff' }).then(canvasExport => {
+                canvasExport.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `${fileNamePrefix}_${rawQuery}_${getTodayDateStr()}.png`;
+                    link.href = url;
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }, 'image/png', 1.0);
             });
-
-            exportCanvas.toBlob(blob => {
-                if (!blob) return;
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.download = `${fileNamePrefix}_${rawQuery}_${todayStr}.png`;
-                link.href = url;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-            }, 'image/png', 1.0);
         }
     </script>
 </body>
