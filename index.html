@@ -209,7 +209,7 @@
     <div id="singleTreeArea">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
             <div style="font-weight:bold; font-size:14px; color:#0d6efd;">
-                🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖 - 父上母下、左親右配)
+                🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖)
             </div>
             <div>
                 <button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Direct_Tree')">📸 Export PNG</button>
@@ -332,14 +332,6 @@
             document.getElementById('btnBreedALL').classList.toggle('active', selectedBreeds.size === 4);
 
             if (document.getElementById('earInput').value.trim() !== '') searchPedigree();
-        }
-
-        // 🌟 關鍵修復 1：放寬品種過濾，確保 LY3773 這類個體不會被預設條件擋掉
-        function checkBreedAllowed(breedStr, earStr) {
-            if (!selectedBreeds || selectedBreeds.size === 0) return true;
-            const bClass = getBreedClass(earStr || breedStr);
-            if (bClass === 'breed-DEFAULT') return true;
-            return selectedBreeds.has(bClass.replace('breed-', ''));
         }
 
         function cleanVal(v) {
@@ -475,45 +467,34 @@
             divNode.onclick = () => { document.getElementById('earInput').value = earName; searchPedigree(); };
         }
 
-        // 🌟 關鍵修復 2：採用全寬鬆模糊包含比對 (includes)，讓輸入 3773 能精準抓出 LY3773
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
             if (!rawInput) return;
 
             const targetTerm = rawInput.toLowerCase();
-
             let matchedItems = pedigreeList.filter(item => {
-                const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
-                const fullJson = JSON.stringify(item).toLowerCase();
-                
-                const isEarMatch = itemEar.includes(targetTerm) || fullJson.includes(targetTerm);
-                const isBreedMatch = checkBreedAllowed(item.breed, item.ear);
-                
-                return isEarMatch && isBreedMatch;
+                const earStr = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag'])).toLowerCase();
+                const fullStr = JSON.stringify(item).toLowerCase();
+                return earStr.includes(targetTerm) || fullStr.includes(targetTerm);
             });
 
             if (matchedItems.length > 0) {
                 let primaryMatches = [];
                 let relatedMatches = [];
-                
                 matchedItems.forEach(item => {
-                    const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
-                    if (itemEar.includes(targetTerm)) {
-                        primaryMatches.push(item);
-                    } else {
-                        relatedMatches.push(item);
-                    }
+                    const earVal = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag'])).toLowerCase();
+                    if (earVal.includes(targetTerm)) primaryMatches.push(item);
+                    else relatedMatches.push(item);
                 });
-
                 primaryMatches.sort((a, b) => (parseFloat(a.parity) || 0) - (parseFloat(b.parity) || 0));
 
                 const sortedItems = [...primaryMatches, ...relatedMatches];
                 const targetItem = primaryMatches[0] || sortedItems[0];
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
-                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error(e); }
-                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error(e); }
+                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
+                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
             } else {
                 document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:30px; text-align:center; color:#888;">No data found</div>';
                 document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:20px; text-align:center; color:#888;">No data found</td></tr>';
