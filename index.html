@@ -256,16 +256,13 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // 🌟 鐵血防呆日齡計算與未來日期過濾：若出生日不存在、為 LY、大於今天或大於事件發生日，一律顯示 '-'
         function calculateAgeInDays(breed, birthDateStr, endDateStr) {
             const bClean = String(breed || '').toUpperCase();
             if (bClean.includes('LY') || !birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
             try {
                 const bDate = new Date(birthDateStr.replace(/-/g, '/'));
                 if (isNaN(bDate.getTime())) return '-';
-                
                 const today = new Date();
-                // 如果出生日大於今天，代表資料誤植為未來日期，直接作廢
                 if (bDate > today) return '-';
 
                 let targetDate = today;
@@ -429,7 +426,6 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 鐵血防呆：LY 品種一律強制回傳空白，絕不亂捉欄位
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -515,7 +511,7 @@
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
-            title.innerHTML = `📌 Performance & Index Data Table: <span style="color:#0d6efd;">Query: "${searchTerm}"</span> (Target: ${primaryItems.length})`;
+            title.innerHTML = `📌 Breeding Performance & Index Data Evaluation Table: <span style="color:#0d6efd;">Query: "${searchTerm}"</span> (Target: ${primaryItems.length})`;
 
             let html = '';
             allSortedItems.forEach((item, idx) => {
@@ -525,14 +521,12 @@
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
                 const breedVal = cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']));
 
-                // 🌟 鐵血防呆：LY 品種或未來生日強制顯示 '-'
                 let validBirthDate = '-';
                 if (!breedVal.toUpperCase().includes('LY')) {
                     let rawBirthDate = cleanVal(item.birth_date);
                     if (rawBirthDate !== '-') {
                         const bTime = new Date(rawBirthDate.replace(/-/g, '/')).getTime();
                         const nowTime = new Date().getTime();
-                        // 確保生日不是未來日期，且格式正確
                         if (!isNaN(bTime) && bTime <= nowTime) {
                             validBirthDate = rawBirthDate;
                         }
@@ -603,7 +597,6 @@
             ctx.stroke();
         }
 
-        // 🌿 直系演進圖 (LY 品種自動隱藏左側無關畫布)
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -739,7 +732,6 @@
             });
         }
 
-        // 🌳 拓撲家族樹 (LY 品種自動隱藏左側畫布)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
