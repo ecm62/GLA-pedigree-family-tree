@@ -8,18 +8,19 @@ GID_TREE = "0"
 URL_TREE = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID_TREE}"
 
 def fetch_and_parse():
-    print("🚀 開始讀取並解析 Google Sheet 數據...")
+    print("🚀 開始完整解析 Google Sheet 育種與生產數據...")
     try:
         res = requests.get(URL_TREE, headers={'User-Agent': 'Mozilla/5.0'})
         res.encoding = 'utf-8-sig'
         df = pd.read_csv(io.StringIO(res.text))
+        # 清除欄位名稱空格與換行
         df.columns = [str(c).replace('\n', '').replace('\r', '').strip() for c in df.columns]
-        df = df.dropna(how='all')
+        df = df.dropna(how='all') 
     except Exception as e:
-        print(f"❌ 下載 CSV 失敗: {e}")
+        print(f"❌ Error: {e}")
         return
 
-    # 彈性尋找欄位名稱
+    # 彈性搜尋欄位名稱輔助函數
     def find_col(keywords):
         for kw in keywords:
             for col in df.columns:
@@ -27,8 +28,8 @@ def fetch_and_parse():
                     return col
         return None
 
-    # 涵蓋所有可能出現的耳號欄位標頭
-    col_ear = find_col(['耳號', 'Ear Tag', 'EarTag', 'Ear', 'Tag']) or df.columns[0]
+    # 完整欄位映射
+    col_ear = find_col(['耳號', 'Ear Tag', 'EarTag', 'Ear', 'Tag']) or df.columns[2]
     col_sex = find_col(['Sex', '性別'])
     col_parity = find_col(['胎次', 'Parity'])
     col_mate = find_col(['當胎', '配種公', 'Sire', 'Mate'])
@@ -57,7 +58,7 @@ def fetch_and_parse():
     col_gen1_sire = find_col(['第一代公', '1st Sire', '父親'])
     col_gen1_dam  = find_col(['第一代母', '1st Dam', '母親'])
 
-    # 建立純種出生日對照表
+    # 建立純種個體生日對照表
     birth_map = {}
     for _, row in df.iterrows():
         ear_val = str(row.get(col_ear, '')).strip().upper()
@@ -69,7 +70,7 @@ def fetch_and_parse():
     pedigree_data = []
     for _, row in df.iterrows():
         ear = str(row.get(col_ear, '')).strip()
-        if not ear or ear.lower() in ['nan', 'none', '-', '']: 
+        if not ear or ear.lower() in ['nan', 'none', '-']: 
             continue
         
         breed = str(row.get(col_breed, 'D')).strip().upper() if col_breed else 'D'
@@ -119,10 +120,9 @@ def fetch_and_parse():
 
         pedigree_data.append(entry)
 
-    print(f"✅ 成功匯入 {len(pedigree_data)} 筆個體資料！")
-
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
+    print(f"✅ 完整解析完成！共寫入 {len(pedigree_data)} 筆資料。")
 
 if __name__ == "__main__":
     fetch_and_parse()
