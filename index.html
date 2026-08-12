@@ -143,7 +143,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / Name / Boar (耳號/姓名/全血統):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. DD26001, DD26008, 3773" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. D1398, D1413, LY10431" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
 
@@ -505,6 +505,10 @@
             let gen1Sire = getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire', '父親']);
             let gen1Dam  = getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam', '母親']);
 
+            // 嚴格防呆：若 gen1 父母名稱等於個體本身，強制清空
+            if (gen1Sire.toLowerCase() === ear.toLowerCase()) gen1Sire = '-';
+            if (gen1Dam.toLowerCase() === ear.toLowerCase()) gen1Dam = '-';
+
             return {
                 sireSide: [
                     { name: shortenAncestorName(usSireSire), label: '♂ Sire\'s Sire (祖父)' },
@@ -587,7 +591,6 @@
             }
         }
 
-        // 🌟 渲染表格：Birth Date 精準展示 2024-12-20，Age 即時計算為 600d+
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
@@ -809,6 +812,7 @@
             });
         }
 
+        // 🌟 嚴謹修復拓撲樹右側公豬父母親渲染邏輯 (正確拆分 Sire 與 Dam)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -961,10 +965,16 @@
                         return String(itEar).toLowerCase() === String(m.name).toLowerCase();
                     });
 
-                    let curSireName = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['sire_sire', '1st Sire', '父親'])) : '-';
-                    let curDamName  = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['gen1_dam', '1st Dam', '母親'])) : '-';
-                    let curG1 = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Sire美系父親名(祖父)', 'sire_sire', '祖父'])) : '-';
-                    let curG2 = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母'])) : '-';
+                    // 🌟 嚴格區分公豬的父親 (gen1_sire) 與母親 (gen1_dam)
+                    let curSireName = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['gen1_sire', '1st Sire', '父親', 'sire_sire'])) : '-';
+                    let curDamName  = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['gen1_dam', '1st Dam', '母親', 'sire_dam'])) : '-';
+                    
+                    // 防呆：若抓出來的名字剛好等於公豬自己，強制清空
+                    if (curSireName.toLowerCase() === m.name.toLowerCase()) curSireName = '-';
+                    if (curDamName.toLowerCase() === m.name.toLowerCase()) curDamName = '-';
+
+                    let curG1 = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['sire_sire', '祖父'])) : '-';
+                    let curG2 = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['sire_dam', '祖母'])) : '-';
 
                     let sireDiv = null, damDiv = null;
 
@@ -973,7 +983,7 @@
                         sireDiv.className = `tree-node ${getBreedClass(curSireName, 'D')}`;
                         sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = (mateY - 22) + 'px';
                         sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
-                        sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire</span><b>${curSireName}</b>`;
+                        sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire (父親)</span><b>${curSireName}</b>`;
                         attachNodeClick(sireDiv, curSireName);
                         container.appendChild(sireDiv);
                         nodePairsToConnect.push({ from: mDiv, to: sireDiv });
@@ -984,7 +994,7 @@
                         damDiv.className = `tree-node ${getBreedClass(curDamName, 'D')}`;
                         damDiv.style.left = col4_X + 'px'; damDiv.style.top = (mateY + 22) + 'px';
                         damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
-                        damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam</span><b>${curDamName}</b>`;
+                        damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam (母親)</span><b>${curDamName}</b>`;
                         attachNodeClick(damDiv, curDamName);
                         container.appendChild(damDiv);
                         nodePairsToConnect.push({ from: mDiv, to: damDiv });
