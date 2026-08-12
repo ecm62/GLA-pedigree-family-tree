@@ -27,8 +27,21 @@ def extract_number(ear_str):
         return int(nums[0])
     return None
 
+def shorten_name(name_str):
+    if not name_str or name_str in ['-', 'nan', 'None', '']:
+        return '-'
+    s = str(name_str).strip()
+    parts = s.split(' ')
+    keywords = [p for p in parts if not re.match(r'^\d+[\-\d]*$', p) and p.upper() not in ['1CR1', '1CR2', 'CR1', 'CR2']]
+    if keywords:
+        last = keywords[-1]
+        if re.search(r'\d', last) and len(keywords) > 1:
+            keywords.pop()
+        return ' '.join(keywords)
+    return s
+
 def fetch_and_parse():
-    print("🚀 啟動兩軸線獨立解析：鎖定「個體出生背景」與「當胎繁殖績效」...")
+    print("🚀 鎖定美系與自產種豬全系譜，修復親本自我指涉錯誤...")
     headers = {'User-Agent': 'Mozilla/5.0'}
     
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid=0"
@@ -64,7 +77,6 @@ def fetch_and_parse():
     
     col_birth_date = get_exact_col(['DOB', '出生日期', '個體生日'])
     col_farrow_date = get_exact_col(['Tarikh Farrowing date / Tarikh beranak (m/d)', 'Farrowing date', '分娩日期'])
-    col_mating_date = get_exact_col(['Tarikh Kahwin 配種日期 Date(YMD)', 'Mating Date', '配種日期'])
     
     col_spi = get_exact_col(['SPI'])
     col_mli = get_exact_col(['MLI'])
@@ -74,21 +86,26 @@ def fetch_and_parse():
     col_weaning = get_exact_col(['Weaning 同胎次離乳數量', '離乳'])
     col_weaning_wt = get_exact_col(['weaning weight 同胎次離乳平均重', '均重'])
 
-    col_sire_name = get_exact_col(['Sire Name美系父親名', 'Sire Name 美系父親名'])
-    col_dam_name  = get_exact_col(['Dam Name美系母親名', 'Dam Name 美系母親名'])
+    # 🌟 美系親本全名欄位鎖定（對應截圖 W 欄、AB 欄與 O 欄）
+    col_us_sire_full = get_exact_col(['Sire Name美系父親-全名', 'Sire Name美系父親全名'])
+    col_us_sire_short = get_exact_col(['Sire Name美系父親名', 'Sire Name 美系父親名'])
+    col_us_dam_full  = get_exact_col(['Dam Name美系母親-全名', 'Dam Name美系母親全名'])
+    col_us_dam_short  = get_exact_col(['Dam Name美系母親名', 'Dam Name 美系母親名'])
+    col_us_mgs       = get_exact_col(['MGS Name 美系MGS名', 'MGS Name美系MGS名'])
 
     col_notch_start = get_exact_col(['Ear Notch Breeder (start)', 'Notch Breeder (start)'])
     col_notch_end   = get_exact_col(['Ear Notch Breeder (end)', 'Notch Breeder (end)'])
 
-    # PASS 1: 建立同胎對照總表
+    # PASS 1: 同胎範圍總表
     litter_map = []
 
     for _, row in df.iterrows():
         farrow_d = parse_date_value(row.get(col_farrow_date, ''))
         mate_boar = str(row.get(col_mate, '')).strip() if pd.notna(row.get(col_mate)) else '-'
-        sire_n = str(row.get(col_sire_name, '')).strip() if (col_sire_name and pd.notna(row.get(col_sire_name))) else '-'
-        dam_n  = str(row.get(col_dam_name, '')).strip() if (col_dam_name and pd.notna(row.get(col_dam_name))) else '-'
         dam_ear_val = str(row.get(col_ear, '')).strip().upper() if pd.notna(row.get(col_ear)) else ''
+
+        sire_full = str(row.get(col_us_sire_full, '')).strip() if (col_us_sire_full and pd.notna(row.get(col_us_sire_full))) else '-'
+        dam_full  = str(row.get(col_us_dam_full, '')).strip() if (col_us_dam_full and pd.notna(row.get(col_us_dam_full))) else '-'
 
         if col_notch_start and col_notch_end:
             start_num = extract_number(row.get(col_notch_start, ''))
@@ -97,14 +114,14 @@ def fetch_and_parse():
                 litter_map.append({
                     'start': min(start_num, end_num),
                     'end': max(start_num, end_num),
-                    'origin_dob': farrow_d,        # 軸線一：本場個體的真實出生日 (2024-12-20)
-                    'origin_dam': dam_ear_val,     # 母親 (D1064)
-                    'origin_sire': mate_boar,      # 父親 (D1400)
-                    'origin_sire_sire': sire_n,    # 祖父 (1CR2 TRIPLE H 292-2)
-                    'origin_sire_dam': dam_n       # 祖母 (1CR2 FLO 1072-8)
+                    'origin_dob': farrow_d,
+                    'origin_dam': dam_ear_val,
+                    'origin_sire': mate_boar,
+                    'origin_sire_sire': sire_full,
+                    'origin_sire_dam': dam_full
                 })
 
-    # PASS 2: 組裝每筆紀錄
+    # PASS 2: 解析組裝
     pedigree_data = []
 
     for idx, row in df.iterrows():
@@ -149,17 +166,26 @@ def fetch_and_parse():
         if individual_dob == '-' and breed != 'LY' and raw_dob != '-':
             individual_dob = raw_dob
 
-        sire_sire_val = inferred_sire_sire if inferred_sire_sire != '-' else get_v(col_sire_name)
-        sire_dam_val  = inferred_sire_dam if inferred_sire_dam != '-' else get_v(col_dam_name)
+        # 美系個體（如 D1413）直抓 W 欄 (FIRESTONE) 與 AB 欄 (ANNA)
+        us_sire = get_v(col_us_sire_full) if col_us_sire_full else get_v(col_us_sire_short)
+        us_dam  = get_v(col_us_dam_full) if col_us_dam_full else get_v(col_us_dam_short)
+        us_mgs  = get_v(col_us_mgs)
+
+        final_gen1_sire = inferred_sire if inferred_sire != '-' else us_sire
+        final_gen1_dam  = inferred_dam if inferred_dam != '-' else us_dam
+
+        # 🌟 致命死鎖防呆：絕不允許個體自己當自己的親本！
+        if final_gen1_sire.upper() == ear.upper(): final_gen1_sire = '-'
+        if final_gen1_dam.upper() == ear.upper(): final_gen1_dam = '-'
 
         entry = {
             "ear": ear,
             "breed": breed,
             "sex": get_v(col_sex),
             "parity": get_v(col_parity),
-            "mate": get_v(col_mate),             # 軸線二：這頭母豬當次配的公豬
-            "birth_date": individual_dob,        # 軸線一：個體真實出生日 (2024-12-20)
-            "dob": farrow_dob,                   # 軸線二：這頭母豬當次產房分娩日 (2026-04-05)
+            "mate": get_v(col_mate),
+            "birth_date": individual_dob,
+            "dob": farrow_dob,
             "spi": get_v(col_spi),
             "mli": get_v(col_mli),
             "tsi": get_v(col_tsi),
@@ -167,12 +193,12 @@ def fetch_and_parse():
             "born_alive": get_v(col_born_alive),
             "weaning": get_v(col_weaning),
             "weaning_wt": get_v(col_weaning_wt),
-            "sire_sire": sire_sire_val,
-            "sire_dam": sire_dam_val,
-            "dam_sire": get_v(get_exact_col(['Sire美系父親名(外公)', '外公'])),
-            "dam_dam": get_v(get_exact_col(['Dam Name美系母親名(外婆)', '外婆'])),
-            "gen1_sire": inferred_sire if inferred_sire != '-' else get_v(col_mate),
-            "gen1_dam": inferred_dam if inferred_dam != '-' else get_v(col_ear),
+            "sire_sire": shorten_name(inferred_sire_sire) if inferred_sire_sire != '-' else '-',
+            "sire_dam": shorten_name(inferred_sire_dam) if inferred_sire_dam != '-' else '-',
+            "dam_sire": shorten_name(us_mgs), # 外公 (RED ZONE)
+            "dam_dam": '-',
+            "gen1_sire": shorten_name(final_gen1_sire), # 父親 (FIRESTONE)
+            "gen1_dam": shorten_name(final_gen1_dam),   # 母親 (ANNA)
             "details": {}
         }
 
@@ -189,7 +215,7 @@ def fetch_and_parse():
 
         pedigree_data.append(entry)
 
-    print(f"🎉 數據解析完成！共處理 {len(pedigree_data)} 筆紀錄。")
+    print(f"🎉 修正完畢！共處理 {len(pedigree_data)} 筆紀錄，D1413 之親本已鎖定為 FIRESTONE 與 ANNA。")
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
