@@ -294,6 +294,7 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
+        // 🌟 嚴謹日齡計算：完全接受個體真實出生日 (birth_date)
         function calculateAgeInDays(breed, birthDateStr, endDateStr) {
             if (!birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
             try {
@@ -587,6 +588,7 @@
             }
         }
 
+        // 🌟 渲染表格：展示真實反推出的個體出生日 DOB 與即時計算之 Age 日齡
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
