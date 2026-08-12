@@ -115,7 +115,6 @@
             z-index: 20 !important;
         }
 
-        /* 無限延伸展開按鈕 */
         .expand-btn {
             position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
             background: #0d6efd; color: white; border: none; border-radius: 50%;
@@ -158,7 +157,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / Name / Boar (耳號/姓名/全血統):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. DD26002, D1413, FIRESTONE" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. D1074, DD26002, D1413" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
 
@@ -180,10 +179,10 @@
             <span style="font-size:13px; font-weight:700; color:#1e293b;">⚡ 現場即時配對近親檢測 (Mating Check):</span>
         </div>
         <div>
-            <input type="text" id="checkDamInput" placeholder="母豬耳號 (e.g. D1064)">
+            <input type="text" id="checkDamInput" placeholder="母豬耳號 (e.g. D1074)">
         </div>
         <div>
-            <input type="text" id="checkSireInput" placeholder="公豬耳號 (e.g. D1400)">
+            <input type="text" id="checkSireInput" placeholder="公豬耳號 (e.g. D1413)">
         </div>
         <div>
             <button class="btn" onclick="checkInbreedingRisk()">🧪 檢測是否可配種</button>
@@ -283,7 +282,7 @@
         let currentUserAccount = 'Unknown';
         let userRole = 'PublicUser';
         let currentTargetEar = '';
-        let dynamicGenerations = 3; // 🌟 支援無限延伸代次控制
+        let dynamicGenerations = 3;
 
         function getDeviceModel() {
             const ua = navigator.userAgent;
@@ -384,7 +383,7 @@
             if (cleanName.includes('LY') || cleanName.includes('CROSS')) return 'breed-LY';
             
             if (cleanName.startsWith('DD') || cleanName.startsWith('D') || cleanName.includes('DUROC') || 
-                cleanName.includes('RED') || cleanName.includes('ROCK') || cleanName.includes('TUCKER') || cleanName.includes('FLO')) {
+                cleanName.includes('RED') || cleanName.includes('ROCK') || cleanName.includes('TUCKER') || cleanName.includes('FLO') || cleanName.includes('KIMBALL')) {
                 return 'breed-D';
             }
 
@@ -554,7 +553,6 @@
             };
         }
 
-        // 💡 現場即時近親與可否配種檢測邏輯（支援遞迴深層追溯）
         function checkInbreedingRisk() {
             const damInput = document.getElementById('checkDamInput').value.trim().toLowerCase();
             const sireInput = document.getElementById('checkSireInput').value.trim().toLowerCase();
@@ -575,7 +573,6 @@
                 return;
             }
 
-            // 遞迴收集所有深層祖先
             function collectAllAncestors(item, depth = 0, maxDepth = 6, set = new Set()) {
                 if (!item || depth > maxDepth) return set;
                 const ear = String(item.ear || '').toLowerCase();
@@ -633,7 +630,6 @@
                 lockAndSearchEar(earName);
             };
 
-            // 🌟 點擊 [+] 按鈕可無限向下延伸展開世代
             if (isExpandable && parentObj) {
                 const btn = document.createElement('button');
                 btn.className = 'expand-btn';
@@ -917,7 +913,7 @@
             });
         }
 
-        // 2. 拓撲近親比對家族樹（完美對稱：支援動態無限延伸 [+] 按鈕）
+        // 2. 拓撲近親比對家族樹（精準對應美國進口豬與本場自產豬之父代與祖代）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -1055,7 +1051,7 @@
                     attachNodeClick(div, a.name, true, a);
                     container.appendChild(div);
 
-                    const targetParentElem = leftParents[itemObj.parentIdx].elem || targetDiv;
+                    const targetParentElem = parents[itemObj.parentIdx].elem || targetDiv;
                     nodePairsToConnect.push({ from: div, to: targetParentElem });
                 });
             }
@@ -1119,7 +1115,7 @@
                         g1Div.style.left = col5_X + 'px'; g1Div.style.top = (nodeY - 45) + 'px';
                         g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
                         g1Div.innerHTML = `<span class="sub-label">♂ 祖父</span><b>${curG1}</b>`;
-                        attachNodeClick(g1Div, curG1, true, null);
+                        attachNodeClick(g1Div, g1Div, true, null);
                         container.appendChild(g1Div);
                         nodePairsToConnect.push({ from: p1Div || rDiv, to: g1Div });
                     }
@@ -1130,7 +1126,7 @@
                         g2Div.style.left = col5_X + 'px'; g2Div.style.top = (nodeY + 9) + 'px';
                         g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
                         g2Div.innerHTML = `<span class="sub-label">♀ 祖母</span><b>${curG2}</b>`;
-                        attachNodeClick(g2Div, curG2, true, null);
+                        attachNodeClick(g2Div, g2Div, true, null);
                         container.appendChild(g2Div);
                         nodePairsToConnect.push({ from: p1Div || rDiv, to: g2Div });
                     }
