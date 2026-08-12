@@ -70,6 +70,7 @@
         .excel-data-table tr.rel-row { background-color: #f8fafc; color: #64748b; }
         .excel-data-table tr:hover { background-color: #e0f2fe !important; cursor: pointer; }
 
+        /* 畫布區域絕對定位保護 */
         #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
         .single-tree-card { position: relative; width: 100%; height: auto; min-height: 380px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
 
@@ -109,7 +110,7 @@
             z-index: 20 !important;
         }
 
-        canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        canvas.lineCanvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
         .sub-label { font-size: 8px; opacity: 0.85; margin-bottom: 1px; font-weight: 600; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 50px 10px; font-size: 13px; font-weight: 500; }
 
@@ -253,7 +254,7 @@
         });
 
         window.addEventListener('resize', () => {
-            if (currentTargetEar) reDrawLines();
+            if (currentTargetEar) searchPedigree(false);
         });
 
         function getTodayDateStr() {
@@ -304,12 +305,19 @@
                 .catch(err => console.error("Load failed"));
         }
 
+        // 🌟 強化品種判定器：確保杜洛克 (D/DD/RED ROCK) 100% 變紅底
         function getBreedClass(nameStr, parentBreedFallback = '') {
             if (!nameStr || nameStr === '-' || nameStr.includes('未記載') || nameStr === '') return 'breed-DEFAULT';
             const cleanName = String(nameStr).toUpperCase().trim();
 
             if (cleanName.includes('LY') || cleanName.includes('CROSS')) return 'breed-LY';
-            if (cleanName.startsWith('DD') || cleanName.startsWith('D') || cleanName.includes('DUROC')) return 'breed-D';
+            
+            // 杜洛克（Red / D / DD / 特殊公豬名）
+            if (cleanName.startsWith('DD') || cleanName.startsWith('D') || cleanName.includes('DUROC') || 
+                cleanName.includes('RED') || cleanName.includes('ROCK') || cleanName.includes('TUCKER') || cleanName.includes('FLO')) {
+                return 'breed-D';
+            }
+
             if (cleanName.startsWith('YY') || cleanName.startsWith('Y') || cleanName.includes('YORK')) return 'breed-Y';
             if (cleanName.startsWith('LL') || cleanName.startsWith('L') || cleanName.includes('LAND')) return 'breed-L';
             
@@ -528,7 +536,6 @@
             }
         }
 
-        /* 🌟 務實核心：無記載即留空 '-'，不進行任何預測與跨胎次推估 🌟 */
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
@@ -542,7 +549,6 @@
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
                 const breedVal = cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']));
 
-                // 沒記載就空著，跟 LY 一樣，不做任何邏輯干擾
                 let validBirthDate = cleanVal(item.birth_date);
                 if (breedVal.toUpperCase().includes('LY')) {
                     validBirthDate = '-';
@@ -601,17 +607,18 @@
             });
         }
 
-        // 精準座標連線：依據屏幕實際位置畫線，徹底解決網頁縮放與手機連線跑位問題
-        function drawConnectLine(ctx, containerElem, elem1, elem2) {
+        // 🌟 核心座標畫線器：採用 offsetLeft/offsetTop 相對座標，確保 100% 精準對齊不偏離
+        function drawConnectLine(ctx, elem1, elem2) {
             if (!elem1 || !elem2) return;
-            const rContainer = containerElem.getBoundingClientRect();
-            const r1 = elem1.getBoundingClientRect();
-            const r2 = elem2.getBoundingClientRect();
 
-            const x1 = r1.right - rContainer.left;
-            const y1 = r1.top + r1.height / 2 - rContainer.top;
-            const x2 = r2.left - rContainer.left;
-            const y2 = r2.top + r2.height / 2 - rContainer.top;
+            // 計算第一點的右側中點
+            const x1 = elem1.offsetLeft + elem1.offsetWidth;
+            const y1 = elem1.offsetTop + elem1.offsetHeight / 2;
+
+            // 計算第二點的左側中點
+            const x2 = elem2.offsetLeft;
+            const y2 = elem2.offsetTop + elem2.offsetHeight / 2;
+
             const midX = x1 + (x2 - x1) / 2;
 
             ctx.beginPath();
@@ -685,8 +692,8 @@
                 const col1_X = col0_X + boxW + colGap;
 
                 const parents = [
-                    { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', elem: null },
-                    { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', elem: null }
+                    { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'D', elem: null },
+                    { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'D', elem: null }
                 ];
 
                 parents.forEach(p => {
@@ -705,10 +712,10 @@
 
                 const ancYs = [targetY - 95, targetY - 38, targetY + 38, targetY + 95];
                 const usList = [
-                    { data: ancData.sireSide[0], parentIdx: 0 },
-                    { data: ancData.sireSide[1], parentIdx: 0 },
-                    { data: ancData.damSide[1],  parentIdx: 1 },
-                    { data: ancData.damSide[2],  parentIdx: 1 }
+                    { data: ancData.sireSide[0], parentIdx: 0, fallback: 'D' },
+                    { data: ancData.sireSide[1], parentIdx: 0, fallback: 'D' },
+                    { data: ancData.damSide[1],  parentIdx: 1, fallback: 'D' },
+                    { data: ancData.damSide[2],  parentIdx: 1, fallback: 'D' }
                 ];
 
                 usList.forEach((itemObj, idx) => {
@@ -716,7 +723,7 @@
                     if (!a || !a.name || a.name === '' || a.name === '-') return;
                     const nodeY = ancYs[idx];
                     const div = document.createElement('div');
-                    div.className = `tree-node ${getBreedClass(a.name)}`;
+                    div.className = `tree-node ${getBreedClass(a.name, itemObj.fallback)}`;
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
@@ -733,7 +740,7 @@
                     const currentY = targetY + (idx - (totalMates - 1) / 2) * rowGap;
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
-                    mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name, targetItem.breed)}`;
+                    mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name, 'D')}`;
                     mDiv.style.left = col3_X + 'px'; mDiv.style.top = currentY + 'px';
                     mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (P.${m.parity})` : '';
@@ -746,12 +753,12 @@
             }
 
             requestAnimationFrame(() => {
-                canvas.width = cardContainer.clientWidth;
-                canvas.height = cardHeight;
+                canvas.width = container.scrollWidth;
+                canvas.height = container.scrollHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 nodePairsToConnect.forEach(pair => {
-                    drawConnectLine(ctx, cardContainer, pair.from, pair.to);
+                    drawConnectLine(ctx, pair.from, pair.to);
                 });
             });
         }
@@ -845,8 +852,8 @@
                 const col1_X = col0_X + boxW + colGap;
 
                 const leftParents = [
-                    { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', elem: null },
-                    { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', elem: null }
+                    { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'D', elem: null },
+                    { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'D', elem: null }
                 ];
 
                 leftParents.forEach(p => {
@@ -865,10 +872,10 @@
 
                 const leftAncYs = [targetY - 105, targetY - 38, targetY + 38, targetY + 105];
                 const leftAncList = [
-                    { data: ancData.sireSide[0], parentIdx: 0 },
-                    { data: ancData.sireSide[1], parentIdx: 0 },
-                    { data: ancData.damSide[1],  parentIdx: 1 },
-                    { data: ancData.damSide[2],  parentIdx: 1 }
+                    { data: ancData.sireSide[0], parentIdx: 0, fallback: 'D' },
+                    { data: ancData.sireSide[1], parentIdx: 0, fallback: 'D' },
+                    { data: ancData.damSide[1],  parentIdx: 1, fallback: 'D' },
+                    { data: ancData.damSide[2],  parentIdx: 1, fallback: 'D' }
                 ];
 
                 leftAncList.forEach((itemObj, idx) => {
@@ -876,7 +883,7 @@
                     if (!a || !a.name || a.name === '' || a.name === '-') return;
                     const nodeY = leftAncYs[idx];
                     const div = document.createElement('div');
-                    div.className = `tree-node ${getBreedClass(a.name)}`;
+                    div.className = `tree-node ${getBreedClass(a.name, itemObj.fallback)}`;
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
@@ -893,7 +900,7 @@
                     const mateY = targetY + (idx - (totalMates - 1) / 2) * (rowGap * 2.0);
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
-                    mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name, targetItem.breed)}`;
+                    mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name, 'D')}`;
                     mDiv.style.left = col3_X + 'px'; mDiv.style.top = mateY + 'px';
                     mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (P.${m.parity})` : '';
@@ -917,7 +924,7 @@
 
                     if (curSireName && curSireName !== '-') {
                         sireDiv = document.createElement('div');
-                        sireDiv.className = `tree-node ${getBreedClass(curSireName, m.name)}`;
+                        sireDiv.className = `tree-node ${getBreedClass(curSireName, 'D')}`;
                         sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = (mateY - 22) + 'px';
                         sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
                         sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire</span><b>${curSireName}</b>`;
@@ -928,7 +935,7 @@
 
                     if (curDamName && curDamName !== '-') {
                         damDiv = document.createElement('div');
-                        damDiv.className = `tree-node ${getBreedClass(curDamName, m.name)}`;
+                        damDiv.className = `tree-node ${getBreedClass(curDamName, 'D')}`;
                         damDiv.style.left = col4_X + 'px'; damDiv.style.top = (mateY + 22) + 'px';
                         damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
                         damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam</span><b>${curDamName}</b>`;
@@ -939,7 +946,7 @@
 
                     if (curG1 && curG1 !== '-') {
                         const g1Div = document.createElement('div');
-                        g1Div.className = `tree-node ${getBreedClass(curG1, curSireName)}`;
+                        g1Div.className = `tree-node ${getBreedClass(curG1, 'D')}`;
                         g1Div.style.left = col5_X + 'px'; g1Div.style.top = (mateY - 45) + 'px';
                         g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
                         g1Div.innerHTML = `<span class="sub-label">♂ Sire\'s Sire</span><b>${curG1}</b>`;
@@ -950,7 +957,7 @@
 
                     if (curG2 && curG2 !== '-') {
                         const g2Div = document.createElement('div');
-                        g2Div.className = `tree-node ${getBreedClass(curG2, curSireName)}`;
+                        g2Div.className = `tree-node ${getBreedClass(curG2, 'D')}`;
                         g2Div.style.left = col5_X + 'px'; g2Div.style.top = (mateY + 9) + 'px';
                         g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
                         g2Div.innerHTML = `<span class="sub-label">♀ Sire\'s Dam</span><b>${curG2}</b>`;
@@ -962,18 +969,14 @@
             }
 
             requestAnimationFrame(() => {
-                canvas.width = scrollArea.clientWidth;
-                canvas.height = finalCanvasHeight;
+                canvas.width = container.scrollWidth;
+                canvas.height = container.scrollHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 nodePairsToConnect.forEach(pair => {
-                    drawConnectLine(ctx, scrollArea, pair.from, pair.to);
+                    drawConnectLine(ctx, pair.from, pair.to);
                 });
             });
-        }
-
-        function reDrawLines() {
-            if (currentTargetEar) searchPedigree(false);
         }
 
         function exportTreeAsHighResPNG(containerId, canvasId, fileNamePrefix) {
