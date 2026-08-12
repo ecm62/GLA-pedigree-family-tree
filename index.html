@@ -45,7 +45,6 @@
         .btn:hover { background-color: #0b5ed7; }
         .btn-export { background-color: #10b981; margin-left: 8px; }
 
-        /* 💡 現場工人專用近親檢測區塊 */
         .mating-checker-box { background: #f8fafc; border: 2px dashed #0d6efd; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; }
         .checker-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
         .mating-checker-box input { width: 140px; }
@@ -152,7 +151,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / Name / Boar (耳號/姓名/全血統):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. D1074, DD26002, D1413" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. D1071, D1074, DD26002, D1413" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (全開血統樹)</button>
         </div>
 
@@ -174,7 +173,7 @@
             <span style="font-size:13px; font-weight:700; color:#1e293b;">⚡ 現場即時配對近親與血統檢測 (Mating Check):</span>
         </div>
         <div class="checker-row">
-            <input type="text" id="checkDamInput" placeholder="母豬耳號 (e.g. D1074)">
+            <input type="text" id="checkDamInput" placeholder="母豬耳號 (e.g. D1071)">
             <input type="text" id="checkSireInput" placeholder="公豬耳號 (e.g. D1413)">
             <button class="btn" onclick="checkInbreedingRisk()">🧪 執行深度血統與近親檢測</button>
         </div>
@@ -461,38 +460,6 @@
             return '-';
         }
 
-        function getMatingDateForParity(item, rowIndex) {
-            const parityNum = Math.round(parseFloat(item.parity || getValueFromMultiKeys(item, ['胎次', 'Parity'])));
-            if (item.details) {
-                for (let k in item.details) {
-                    const lk = k.toLowerCase();
-                    if (lk.includes('配種日期') || lk.includes('mating date')) {
-                        if (!isNaN(parityNum) && parityNum > 0 && (lk.includes(`_${parityNum}`) || lk.includes(` ${parityNum}`))) {
-                            let val = item.details[k];
-                            if (val && val !== '-' && val !== 'nan') return cleanVal(val);
-                        }
-                    }
-                }
-            }
-            let dates = [];
-            let sourceObj = item.details || item;
-            for (let k in sourceObj) {
-                const lk = k.toLowerCase();
-                if (lk.includes('配種日期') || lk.includes('mating date')) {
-                    let v = sourceObj[k];
-                    if (v && v !== '-' && v !== 'nan') {
-                        let cleanD = cleanVal(v);
-                        if (cleanD !== '-' && !dates.includes(cleanD)) dates.push(cleanD);
-                    }
-                }
-            }
-            if (dates.length > 0) {
-                if (!isNaN(parityNum) && parityNum > 0 && parityNum <= dates.length) return dates[parityNum - 1];
-                return dates[rowIndex < dates.length ? rowIndex : dates.length - 1];
-            }
-            return '-';
-        }
-
         function getMatingBoar(item) {
             if (item.mate && item.mate !== '-') return item.mate;
             if (item.matingBoar && item.matingBoar !== '-') return item.matingBoar;
@@ -543,7 +510,7 @@
             };
         }
 
-        // 💡 豐富資訊單欄位整合近親檢測
+        // 💡 現場即時配對近親與血統檢測邏輯
         function checkInbreedingRisk() {
             const damInput = document.getElementById('checkDamInput').value.trim().toLowerCase();
             const sireInput = document.getElementById('checkSireInput').value.trim().toLowerCase();
@@ -686,6 +653,7 @@
             }
         }
 
+        // 🌟 正確顯示：Birth Date (唯一的個體生日)、Mating Date (X:X 配種日)、Farrow Date (C:C 分娩日)
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
@@ -699,8 +667,8 @@
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
                 const breedVal = cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']));
 
-                let validBirthDate = cleanVal(item.birth_date);
-                let compareDate = cleanVal(item.dob) !== '-' ? cleanVal(item.dob) : getMatingDateForParity(item, idx);
+                let validBirthDate = cleanVal(item.birth_date); // 全表唯一生日
+                let compareDate = cleanVal(item.dob) !== '-' ? cleanVal(item.dob) : cleanVal(item.mating_date);
                 const ageDaysVal = calculateAgeInDays(breedVal, validBirthDate !== '-' ? validBirthDate : null, compareDate);
 
                 const spiVal = userRole === 'SuperAdmin' ? cleanVal(item.spi || getValueFromMultiKeys(item, ['spi'])) : '***';
@@ -714,7 +682,7 @@
                         <td>${cleanVal(item.sex || getValueFromMultiKeys(item, ['性別']))}</td>
                         <td><b>${validBirthDate}</b></td>
                         <td><b style="color:#0284c7;">${ageDaysVal}</b></td>
-                        <td><b>${getMatingDateForParity(item, idx)}</b></td>
+                        <td><b>${cleanVal(item.mating_date)}</b></td>
                         <td><b>${cleanVal(item.dob)}</b></td>
                         <td><b>${parityClean}</b></td>
                         <td><b>${cleanVal(mateBoar)}</b></td>
@@ -771,7 +739,6 @@
             ctx.stroke();
         }
 
-        // 🌟 1. 自動展開多代直系樹
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -903,7 +870,7 @@
             });
         }
 
-        // 🌟 2. 拓撲近親比對家族樹（預設 100% 自動全開展開所有父母與祖代）
+        // 🌟 2. 拓撲近親比對家族樹（預設全自動全開）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -1041,12 +1008,11 @@
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
 
-                    const targetParentElem = leftParents[itemObj.parentIdx].elem || targetDiv;
+                    const targetParentElem = parents[itemObj.parentIdx].elem || targetDiv;
                     nodePairsToConnect.push({ from: div, to: targetParentElem });
                 });
             }
 
-            // 🌟 100% 全自動展開右側配種對象及其所有父母與祖代
             if (rightList.length > 0) {
                 rightList.forEach((rObj, idx) => {
                     const nodeY = targetY + (idx - (totalNodes - 1) / 2) * (rowGap * 2.2);
@@ -1067,7 +1033,6 @@
                         return String(itEar).toLowerCase() === String(rObj.name).toLowerCase();
                     });
 
-                    // 自動展開右側個體的父親 (1st Sire) 與母親 (1st Dam)
                     let curSireName = matchItem ? shortenAncestorName(getValueFromMultiKeys(matchItem, ['gen1_sire', '1st Sire', '父親', 'sire_sire'])) : '-';
                     let curDamName  = matchItem ? shortenAncestorName(getValueFromMultiKeys(matchItem, ['gen1_dam', '1st Dam', '母親', 'sire_dam'])) : '-';
                     
