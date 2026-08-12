@@ -38,12 +38,18 @@
         .system-header-banner p { margin: 3px 0 0 0; font-size: 12px; opacity: 0.85; }
         .user-badge { position: absolute; right: 15px; top: 15px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
-        .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        input[type="text"] { padding: 6px 12px; font-size: 14px; border: 1px solid #ced4da; border-radius: 6px; width: 320px; outline: none; }
+        .control-bar { background: #ffffff; padding: 12px 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        input[type="text"] { padding: 6px 12px; font-size: 14px; border: 1px solid #ced4da; border-radius: 6px; width: 280px; outline: none; }
 
         .btn { padding: 6px 16px; font-size: 14px; background-color: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
         .btn:hover { background-color: #0b5ed7; }
         .btn-export { background-color: #10b981; margin-left: 8px; }
+
+        .mating-checker-box { background: #f8fafc; border: 2px dashed #0d6efd; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .mating-checker-box input { width: 140px; }
+        #matingResultBadge { padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 700; display: none; }
+        .badge-safe { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+        .badge-danger { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
 
         .btn-breed { 
             background-color: #e2e8f0; color: #64748b; margin-right: 4px; padding: 5px 12px; font-size: 13px; 
@@ -80,8 +86,8 @@
 
         #macroScrollArea { width: 100%; min-height: 540px; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; overflow-y: hidden; }
         #macroBoxesContainer { position: relative; width: 100%; min-height: 540px; }
-        .gen-header-bar { position: absolute; top: 10px; left: 0; right: 0; height: 28px; display: flex; pointer-events: none; z-index: 3; }
-        .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; }
+        .gen-header-bar { position: absolute; top: 10px; left: 0; right: 0; height: 32px; display: flex; pointer-events: none; z-index: 3; }
+        .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 6px 10px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
         .tree-node { 
             position: absolute; border: 2px solid #334155; border-radius: 6px; text-align: center; font-size: 10px; 
@@ -96,8 +102,8 @@
         .breed-D  { background-color: #ffe4e6 !important; color: #9f1239 !important; border-color: #f43f5e !important; }
         .breed-DEFAULT { background-color: #ffffff !important; color: #1e293b !important; border-color: #64748b !important; }
 
-        .mate-node-sire { border-style: dashed !important; }
-        .mate-node-dam  { border-style: dashed !important; }
+        .mate-node-sire { border-style: dashed !important; border-color: #f43f5e !important; background-color: #fff1f2 !important; color: #9f1239 !important; }
+        .mate-node-dam  { border-style: dashed !important; border-color: #0ea5e9 !important; background-color: #e0f2fe !important; color: #075985 !important; }
         
         .origin-target { 
             border: 3px solid #f59e0b !important; 
@@ -109,6 +115,14 @@
             z-index: 20 !important;
         }
 
+        /* 無限延伸展開按鈕 */
+        .expand-btn {
+            position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+            background: #0d6efd; color: white; border: none; border-radius: 50%;
+            width: 16px; height: 16px; font-size: 10px; line-height: 16px; text-align: center; cursor: pointer; z-index: 25;
+        }
+        .expand-btn:hover { background: #0b5ed7; transform: translateY(-50%) scale(1.2); }
+
         canvas.lineCanvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
         .sub-label { font-size: 8px; opacity: 0.85; margin-bottom: 1px; font-weight: 600; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 50px 10px; font-size: 13px; font-weight: 500; }
@@ -119,6 +133,7 @@
             input[type="text"] { width: 100% !important; font-size: 15px; padding: 8px 12px; }
             .btn { width: 100%; padding: 10px; font-size: 14px; margin: 0; }
             .btn-export { margin-left: 0; margin-top: 4px; }
+            .mating-checker-box input { width: 100%; }
         }
     </style>
 </head>
@@ -143,7 +158,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / Name / Boar (耳號/姓名/全血統):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. D1413, D1398, LY10431" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. DD26002, D1413, FIRESTONE" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
 
@@ -157,6 +172,23 @@
                 <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D</button>
             </div>
         </div>
+    </div>
+
+    <!-- 💡 現場工人專用雙向近親檢測區 -->
+    <div class="mating-checker-box">
+        <div>
+            <span style="font-size:13px; font-weight:700; color:#1e293b;">⚡ 現場即時配對近親檢測 (Mating Check):</span>
+        </div>
+        <div>
+            <input type="text" id="checkDamInput" placeholder="母豬耳號 (e.g. D1064)">
+        </div>
+        <div>
+            <input type="text" id="checkSireInput" placeholder="公豬耳號 (e.g. D1400)">
+        </div>
+        <div>
+            <button class="btn" onclick="checkInbreedingRisk()">🧪 檢測是否可配種</button>
+        </div>
+        <div id="matingResultBadge"></div>
     </div>
 
     <div class="legend-bar">
@@ -251,6 +283,7 @@
         let currentUserAccount = 'Unknown';
         let userRole = 'PublicUser';
         let currentTargetEar = '';
+        let dynamicGenerations = 3; // 🌟 支援無限延伸代次控制
 
         function getDeviceModel() {
             const ua = navigator.userAgent;
@@ -486,7 +519,6 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 嚴格防呆祖代鏈結：確保公豬 (如 D1413) 能正確抓出 FIRESTONE (父親) 與 ANNA (母親)
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -510,16 +542,81 @@
 
             return {
                 sireSide: [
-                    { name: shortenAncestorName(usG1), label: '♂ Sire\'s Sire (祖父)' },
-                    { name: shortenAncestorName(usG2), label: '♀ Sire\'s Dam (祖母)' },
-                    { name: shortenAncestorName(usSire), label: '♂ 1st Sire (父親)' }
+                    { name: shortenAncestorName(usG1), label: '♂ 祖父 (Sire\'s Sire)' },
+                    { name: shortenAncestorName(usG2), label: '♀ 祖母 (Sire\'s Dam)' },
+                    { name: shortenAncestorName(usSire), label: '♂ 父親 (1st Sire)' }
                 ],
                 damSide: [
-                    { name: shortenAncestorName(usDam), label: '♀ 1st Dam (母親)' },
-                    { name: shortenAncestorName(usDamSire), label: '♂ Dam\'s Sire (外公)' },
-                    { name: shortenAncestorName(usDamDam), label: '♀ Dam\'s Dam (外婆)' }
+                    { name: shortenAncestorName(usDam), label: '♀ 母親 (1st Dam)' },
+                    { name: shortenAncestorName(usDamSire), label: '♂ 外公 (Dam\'s Sire)' },
+                    { name: shortenAncestorName(usDamDam), label: '♀ 外婆 (Dam\'s Dam)' }
                 ]
             };
+        }
+
+        // 💡 現場即時近親與可否配種檢測邏輯（支援遞迴深層追溯）
+        function checkInbreedingRisk() {
+            const damInput = document.getElementById('checkDamInput').value.trim().toLowerCase();
+            const sireInput = document.getElementById('checkSireInput').value.trim().toLowerCase();
+            const badge = document.getElementById('matingResultBadge');
+
+            if (!damInput || !sireInput) {
+                alert('請完整輸入母豬耳號與公豬耳號！');
+                return;
+            }
+
+            const damObj = pedigreeList.find(i => String(i.ear || '').toLowerCase() === damInput);
+            const sireObj = pedigreeList.find(i => String(i.ear || '').toLowerCase() === sireInput);
+
+            if (!damObj && !sireObj) {
+                badge.style.display = 'inline-block';
+                badge.className = 'badge-danger';
+                badge.innerText = `❌ 查無此雙親資料，請確認耳號是否正確！`;
+                return;
+            }
+
+            // 遞迴收集所有深層祖先
+            function collectAllAncestors(item, depth = 0, maxDepth = 6, set = new Set()) {
+                if (!item || depth > maxDepth) return set;
+                const ear = String(item.ear || '').toLowerCase();
+                if (ear && ear !== '-') set.add(ear);
+
+                const anc = getHierarchyAncestors([item], item);
+                anc.sireSide.forEach(n => {
+                    if (n.name !== '-') {
+                        set.add(n.name.toLowerCase());
+                        const parentObj = pedigreeList.find(i => String(i.ear || '').toLowerCase() === n.name.toLowerCase());
+                        if (parentObj) collectAllAncestors(parentObj, depth + 1, maxDepth, set);
+                    }
+                });
+                anc.damSide.forEach(n => {
+                    if (n.name !== '-') {
+                        set.add(n.name.toLowerCase());
+                        const parentObj = pedigreeList.find(i => String(i.ear || '').toLowerCase() === n.name.toLowerCase());
+                        if (parentObj) collectAllAncestors(parentObj, depth + 1, maxDepth, set);
+                    }
+                });
+                return set;
+            }
+
+            let damAncestors = damObj ? collectAllAncestors(damObj) : new Set([damInput]);
+            let sireAncestors = sireObj ? collectAllAncestors(sireObj) : new Set([sireInput]);
+
+            let commonAncestors = [];
+            damAncestors.forEach(anc => {
+                if (sireAncestors.has(anc) && anc !== damInput && anc !== sireInput) {
+                    commonAncestors.push(anc);
+                }
+            });
+
+            badge.style.display = 'inline-block';
+            if (commonAncestors.length > 0) {
+                badge.className = 'badge-danger';
+                badge.innerText = `❌ 警告：多代檢測發現近親風險！共同祖先：[${commonAncestors.join(', ').toUpperCase()}]，建議更換公豬！`;
+            } else {
+                badge.className = 'badge-safe';
+                badge.innerText = `✅ 判定安全：深層多代血統無重疊，可以配種！`;
+            }
         }
 
         function lockAndSearchEar(targetEarName) {
@@ -528,13 +625,27 @@
             searchPedigree(true);
         }
 
-        function attachNodeClick(divNode, earName) {
+        function attachNodeClick(divNode, earName, isExpandable = false, parentObj = null) {
             if (!earName || earName === '-' || earName === '未記載' || earName === '') return;
             divNode.style.cursor = 'pointer';
             divNode.onclick = (e) => {
                 e.stopPropagation();
                 lockAndSearchEar(earName);
             };
+
+            // 🌟 點擊 [+] 按鈕可無限向下延伸展開世代
+            if (isExpandable && parentObj) {
+                const btn = document.createElement('button');
+                btn.className = 'expand-btn';
+                btn.innerText = '+';
+                btn.title = '點擊無限延伸展開上一代祖先';
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    dynamicGenerations += 1;
+                    searchPedigree(true);
+                };
+                divNode.appendChild(btn);
+            }
         }
 
         function searchPedigree(isPreciseLock = false) {
@@ -593,7 +704,7 @@
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
-            title.innerHTML = `📌 Performance Table: <span style="color:#0d6efd;">Query: "${searchTerm}"</span> (Matched: ${primaryItems.length})`;
+            title.innerHTML = `📌 Breeding Performance & Index Data Evaluation Table: <span style="color:#0d6efd;">Query: "${searchTerm}"</span> (Matched: ${primaryItems.length})`;
 
             let html = '';
             allSortedItems.forEach((item, idx) => {
@@ -604,7 +715,6 @@
                 const breedVal = cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']));
 
                 let validBirthDate = cleanVal(item.birth_date);
-
                 let compareDate = cleanVal(item.dob) !== '-' ? cleanVal(item.dob) : getMatingDateForParity(item, idx);
                 const ageDaysVal = calculateAgeInDays(breedVal, validBirthDate !== '-' ? validBirthDate : null, compareDate);
 
@@ -660,13 +770,10 @@
 
         function drawConnectLine(ctx, elem1, elem2) {
             if (!elem1 || !elem2) return;
-
             const x1 = elem1.offsetLeft + elem1.offsetWidth;
             const y1 = elem1.offsetTop + elem1.offsetHeight / 2;
-
             const x2 = elem2.offsetLeft;
             const y2 = elem2.offsetTop + elem2.offsetHeight / 2;
-
             const midX = x1 + (x2 - x1) / 2;
 
             ctx.beginPath();
@@ -679,7 +786,6 @@
             ctx.stroke();
         }
 
-        // 🌟 1. 單個體三代直系血統樹（明確區分左側父親、母親、祖父、祖母）
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -705,7 +811,7 @@
                 if (boar && boar !== '-' && boar !== '未記載公豬') {
                     String(boar).split(' ').forEach(sb => {
                         if (sb.trim() && !mateList.some(m => m.name === sb.trim())) {
-                            mateList.push({ name: sb.trim(), label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', parity: cleanParityVal(i.parity) });
+                            mateList.push({ name: sb.trim(), label: isMale ? '♀ 當胎配種母豬' : '♂ 當胎配種公', parity: cleanParityVal(i.parity) });
                         }
                     });
                 }
@@ -732,17 +838,16 @@
             targetDiv.style.width = (boxW + 6) + 'px'; targetDiv.style.height = (boxH + 6) + 'px';
             const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
-            attachNodeClick(targetDiv, targetEar);
+            attachNodeClick(targetDiv, targetEar, true, targetItem);
             container.appendChild(targetDiv);
 
             if (hasLeftAncestors) {
                 const col0_X = 20;
                 const col1_X = col0_X + boxW + colGap;
 
-                // 左側親本：上方為父親 (Sire)，下方為母親 (Dam)
                 const parents = [
-                    { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'D', elem: null },
-                    { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'D', elem: null }
+                    { name: ancData.sireSide[2].name, label: "♂ 父親 (1st Sire)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'D', elem: null },
+                    { name: ancData.damSide[0].name,  label: "♀ 母親 (1st Dam)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'D', elem: null }
                 ];
 
                 parents.forEach(p => {
@@ -752,20 +857,19 @@
                         div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
                         div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                         div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                        attachNodeClick(div, p.name);
+                        attachNodeClick(div, p.name, true, p);
                         container.appendChild(div);
                         p.elem = div;
                         nodePairsToConnect.push({ from: div, to: targetDiv });
                     }
                 });
 
-                // 左側祖代：祖父、祖母、外公、外婆
                 const ancYs = [targetY - 95, targetY - 38, targetY + 38, targetY + 95];
                 const usList = [
-                    { data: ancData.sireSide[0], parentIdx: 0, fallback: 'D' }, // 祖父
-                    { data: ancData.sireSide[1], parentIdx: 0, fallback: 'D' }, // 祖母
-                    { data: ancData.damSide[1],  parentIdx: 1, fallback: 'D' }, // 外公
-                    { data: ancData.damSide[2],  parentIdx: 1, fallback: 'D' }  // 外婆
+                    { data: ancData.sireSide[0], parentIdx: 0, fallback: 'D' },
+                    { data: ancData.sireSide[1], parentIdx: 0, fallback: 'D' },
+                    { data: ancData.damSide[1],  parentIdx: 1, fallback: 'D' },
+                    { data: ancData.damSide[2],  parentIdx: 1, fallback: 'D' }
                 ];
 
                 usList.forEach((itemObj, idx) => {
@@ -777,7 +881,7 @@
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
-                    attachNodeClick(div, a.name);
+                    attachNodeClick(div, a.name, true, a);
                     container.appendChild(div);
 
                     const targetParentElem = parents[itemObj.parentIdx].elem || targetDiv;
@@ -795,7 +899,7 @@
                     mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (P.${m.parity})` : '';
                     mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>`;
-                    attachNodeClick(mDiv, m.name);
+                    attachNodeClick(mDiv, m.name, true, m);
                     container.appendChild(mDiv);
 
                     nodePairsToConnect.push({ from: targetDiv, to: mDiv });
@@ -813,7 +917,7 @@
             });
         }
 
-        // 🌟 2. 拓撲近親比對家族樹（精準支援公豬/母豬雙向血統與配偶父母展開）
+        // 2. 拓撲近親比對家族樹（完美對稱：支援動態無限延伸 [+] 按鈕）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -827,7 +931,7 @@
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
             const isMale = checkIsMale(targetItem);
 
-            countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ ${isMale ? 'Mating Dams & Offspring Line' : 'Mating Sires & Ancestors'})`;
+            countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ ${isMale ? 'Mating Dams & Offspring Line' : 'Mating Sires & Ancestors'} | Generations: ${dynamicGenerations})`;
 
             const boxW = 120, boxH = 32, colGap = 45, rowGap = 55;
             const ancData = getHierarchyAncestors(items, targetItem);
@@ -841,17 +945,17 @@
             const col5_X = col4_X + boxW + colGap;
 
             const headers = hasLeftAncestors ? [
-                { text: 'Grandparents (祖代)', x: 20 },
-                { text: 'Parents (親本)', x: 20 + boxW + colGap },
-                { text: 'Target (個體)', x: col2_X },
-                { text: isMale ? 'Mating Dams (配過母豬)' : 'Mating Sires (配種公豬)', x: col3_X },
-                { text: isMale ? 'Dam Parents' : 'Sire Parents', x: col4_X },
-                { text: isMale ? 'Dam Grandparents 👉' : 'Sire Grandparents 👉', x: col5_X }
+                { text: '👉 父系祖代 (Sire Side)', x: 20 },
+                { text: '父親 (1st Sire)', x: 20 + boxW + colGap },
+                { text: '🎯 核心主角 (Target)', x: col2_X },
+                { text: isMale ? '配種母豬 (Mating Dam)' : '母親 & 配種公豬 (Dam & Sire)', x: col3_X },
+                { text: '母系祖代 (Dam Side)', x: col4_X },
+                { text: '留種母豬延伸 (Progeny) 👉', x: col5_X }
             ] : [
-                { text: 'Target (個體)', x: col2_X },
-                { text: isMale ? 'Mating Dams (配過母豬)' : 'Mating Sires (配種公豬)', x: col3_X },
-                { text: isMale ? 'Dam Parents' : 'Sire Parents', x: col4_X },
-                { text: isMale ? 'Dam Grandparents 👉' : 'Sire Grandparents 👉', x: col5_X }
+                { text: '🎯 核心主角 (Target)', x: col2_X },
+                { text: isMale ? '配種母豬 (Mating Dam)' : '母親 & 配種公豬 (Dam & Sire)', x: col3_X },
+                { text: '母系祖代 (Dam Side)', x: col4_X },
+                { text: '留種母豬延伸 (Progeny) 👉', x: col5_X }
             ];
 
             headers.forEach(h => {
@@ -868,7 +972,7 @@
                     if (mateStr && mateStr.toLowerCase().includes(targetEar.toLowerCase())) {
                         const damEar = item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']);
                         if (damEar && damEar !== '-' && !rightList.some(r => r.name.toLowerCase() === damEar.toLowerCase())) {
-                            rightList.push({ name: damEar, label: '♀ Mating Dam', parity: cleanParityVal(item.parity), itemObj: item });
+                            rightList.push({ name: damEar, label: '♀ 配種母豬 (Dam)', parity: cleanParityVal(item.parity), itemObj: item });
                         }
                     }
                 });
@@ -879,7 +983,7 @@
                         String(boarRaw).split(' ').forEach(sb => {
                             const cleanBoar = sb.trim();
                             if (cleanBoar && !rightList.some(r => r.name.toLowerCase() === cleanBoar.toLowerCase())) {
-                                rightList.push({ name: cleanBoar, label: '♂ Mating Sire', parity: cleanParityVal(i.parity), itemObj: null });
+                                rightList.push({ name: cleanBoar, label: '♂ 當胎配種公', parity: cleanParityVal(i.parity), itemObj: null });
                             }
                         });
                     }
@@ -905,17 +1009,16 @@
             targetDiv.style.width = (boxW + 6) + 'px'; targetDiv.style.height = (boxH + 6) + 'px';
             const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
-            attachNodeClick(targetDiv, targetEar);
+            attachNodeClick(targetDiv, targetEar, true, targetItem);
             container.appendChild(targetDiv);
 
             if (hasLeftAncestors) {
                 const col0_X = 20;
                 const col1_X = col0_X + boxW + colGap;
 
-                // 左側親本：上方為父親，下方為母親
                 const leftParents = [
-                    { name: ancData.sireSide[2].name, label: "♂ 1st Sire (父親)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'D', elem: null },
-                    { name: ancData.damSide[0].name,  label: "♀ 1st Dam (母親)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'D', elem: null }
+                    { name: ancData.sireSide[2].name, label: "♂ 父親 (1st Sire)", y: parentY_Sire, fallbackBreed: targetItem.breed || 'D', elem: null },
+                    { name: ancData.damSide[0].name,  label: "♀ 母親 (1st Dam)",  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'D', elem: null }
                 ];
 
                 leftParents.forEach(p => {
@@ -925,7 +1028,7 @@
                         div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
                         div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                         div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                        attachNodeClick(div, p.name);
+                        attachNodeClick(div, p.name, true, p);
                         container.appendChild(div);
                         p.elem = div;
                         nodePairsToConnect.push({ from: div, to: targetDiv });
@@ -934,10 +1037,10 @@
 
                 const leftAncYs = [targetY - 105, targetY - 38, targetY + 38, targetY + 105];
                 const leftAncList = [
-                    { data: ancData.sireSide[0], parentIdx: 0, fallback: 'D' }, // 祖父
-                    { data: ancData.sireSide[1], parentIdx: 0, fallback: 'D' }, // 祖母
-                    { data: ancData.damSide[1],  parentIdx: 1, fallback: 'D' }, // 外公
-                    { data: ancData.damSide[2],  parentIdx: 1, fallback: 'D' }  // 外婆
+                    { data: ancData.sireSide[0], parentIdx: 0, fallback: 'D' },
+                    { data: ancData.sireSide[1], parentIdx: 0, fallback: 'D' },
+                    { data: ancData.damSide[1],  parentIdx: 1, fallback: 'D' },
+                    { data: ancData.damSide[2],  parentIdx: 1, fallback: 'D' }
                 ];
 
                 leftAncList.forEach((itemObj, idx) => {
@@ -949,7 +1052,7 @@
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
-                    attachNodeClick(div, a.name);
+                    attachNodeClick(div, a.name, true, a);
                     container.appendChild(div);
 
                     const targetParentElem = leftParents[itemObj.parentIdx].elem || targetDiv;
@@ -967,7 +1070,7 @@
                     rDiv.style.width = boxW + 'px'; rDiv.style.height = boxH + 'px';
                     const parityText = (rObj.parity && rObj.parity !== '-') ? ` (P.${rObj.parity})` : '';
                     rDiv.innerHTML = `<span class="sub-label">${rObj.label}${parityText}</span><b>${cleanVal(rObj.name)}</b>`;
-                    attachNodeClick(rDiv, rObj.name);
+                    attachNodeClick(rDiv, rObj.name, true, rObj);
                     container.appendChild(rDiv);
 
                     nodePairsToConnect.push({ from: targetDiv, to: rDiv });
@@ -977,7 +1080,6 @@
                         return String(itEar).toLowerCase() === String(rObj.name).toLowerCase();
                     });
 
-                    // 🌟 嚴格區分右側個體的父親 (1st Sire) 與母親 (1st Dam)
                     let curSireName = matchItem ? shortenAncestorName(getValueFromMultiKeys(matchItem, ['gen1_sire', '1st Sire', '父親', 'sire_sire'])) : '-';
                     let curDamName  = matchItem ? shortenAncestorName(getValueFromMultiKeys(matchItem, ['gen1_dam', '1st Dam', '母親', 'sire_dam'])) : '-';
                     
@@ -994,8 +1096,8 @@
                         p1Div.className = `tree-node ${getBreedClass(curSireName, 'D')}`;
                         p1Div.style.left = col4_X + 'px'; p1Div.style.top = (nodeY - 22) + 'px';
                         p1Div.style.width = boxW + 'px'; p1Div.style.height = boxH + 'px';
-                        p1Div.innerHTML = `<span class="sub-label">♂ 1st Sire (父親)</span><b>${curSireName}</b>`;
-                        attachNodeClick(p1Div, curSireName);
+                        p1Div.innerHTML = `<span class="sub-label">♂ 父親 (1st Sire)</span><b>${curSireName}</b>`;
+                        attachNodeClick(p1Div, curSireName, true, matchItem);
                         container.appendChild(p1Div);
                         nodePairsToConnect.push({ from: rDiv, to: p1Div });
                     }
@@ -1005,8 +1107,8 @@
                         p2Div.className = `tree-node ${getBreedClass(curDamName, 'D')}`;
                         p2Div.style.left = col4_X + 'px'; p2Div.style.top = (nodeY + 22) + 'px';
                         p2Div.style.width = boxW + 'px'; p2Div.style.height = boxH + 'px';
-                        p2Div.innerHTML = `<span class="sub-label">♀ 1st Dam (母親)</span><b>${curDamName}</b>`;
-                        attachNodeClick(p2Div, curDamName);
+                        p2Div.innerHTML = `<span class="sub-label">♀ 母親 (1st Dam)</span><b>${curDamName}</b>`;
+                        attachNodeClick(p2Div, curDamName, true, matchItem);
                         container.appendChild(p2Div);
                         nodePairsToConnect.push({ from: rDiv, to: p2Div });
                     }
@@ -1016,8 +1118,8 @@
                         g1Div.className = `tree-node ${getBreedClass(curG1, 'D')}`;
                         g1Div.style.left = col5_X + 'px'; g1Div.style.top = (nodeY - 45) + 'px';
                         g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
-                        g1Div.innerHTML = `<span class="sub-label">♂ Grandfather</span><b>${curG1}</b>`;
-                        attachNodeClick(g1Div, curG1);
+                        g1Div.innerHTML = `<span class="sub-label">♂ 祖父</span><b>${curG1}</b>`;
+                        attachNodeClick(g1Div, curG1, true, null);
                         container.appendChild(g1Div);
                         nodePairsToConnect.push({ from: p1Div || rDiv, to: g1Div });
                     }
@@ -1027,8 +1129,8 @@
                         g2Div.className = `tree-node ${getBreedClass(curG2, 'D')}`;
                         g2Div.style.left = col5_X + 'px'; g2Div.style.top = (nodeY + 9) + 'px';
                         g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
-                        g2Div.innerHTML = `<span class="sub-label">♀ Grandmother</span><b>${curG2}</b>`;
-                        attachNodeClick(g2Div, curG2);
+                        g2Div.innerHTML = `<span class="sub-label">♀ 祖母</span><b>${curG2}</b>`;
+                        attachNodeClick(g2Div, curG2, true, null);
                         container.appendChild(g2Div);
                         nodePairsToConnect.push({ from: p1Div || rDiv, to: g2Div });
                     }
