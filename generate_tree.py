@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 SPREADSHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
 
 def parse_date_value(val):
-    """自動將 Excel 序列號 (如 45665) 或正常日期字串轉為 YYYY-MM-DD"""
     if pd.isna(val) or str(val).strip() in ['', '-', 'nan', 'NaN', 'None', 'null']:
         return '-'
     val_str = str(val).replace('🔴', '').strip()
@@ -23,7 +22,6 @@ def parse_date_value(val):
     return val_str
 
 def extract_number(ear_str):
-    """擷取耳號純數字 (例如 DD26008 -> 26008)"""
     nums = re.findall(r'\d+', str(ear_str))
     if nums:
         return int(nums[0])
@@ -82,9 +80,7 @@ def fetch_and_parse():
     col_notch_start = get_exact_col(['Ear Notch Breeder (start)', 'Notch Breeder (start)'])
     col_notch_end   = get_exact_col(['Ear Notch Breeder (end)', 'Notch Breeder (end)'])
 
-    # ----------------------------------------------------
-    # PASS 1: 建立母豬生產同胎與耳號範圍總對照表 (Litter Origin Map)
-    # ----------------------------------------------------
+    # PASS 1: 建立同胎對照總表
     litter_map = []
 
     for _, row in df.iterrows():
@@ -108,9 +104,7 @@ def fetch_and_parse():
                     'origin_sire_dam': dam_n       # 祖母 (1CR2 FLO 1072-8)
                 })
 
-    # ----------------------------------------------------
-    # PASS 2: 組裝每筆紀錄，徹底分離「個體生日」與「當胎分娩日」
-    # ----------------------------------------------------
+    # PASS 2: 組裝每筆紀錄
     pedigree_data = []
 
     for idx, row in df.iterrows():
@@ -133,7 +127,7 @@ def fetch_and_parse():
             return '-'
 
         raw_dob = get_date_v(col_birth_date)
-        farrow_dob = get_date_v(col_farrow_date) # 軸線二：這頭母豬當次產房分娩日 (2026-04-05)
+        farrow_dob = get_date_v(col_farrow_date)
 
         individual_dob = '-'
         inferred_sire = '-'
@@ -141,7 +135,6 @@ def fetch_and_parse():
         inferred_sire_sire = '-'
         inferred_sire_dam = '-'
 
-        # 軸線一：優先取耳號範圍反推 DOB，確保五位數個體生日恆定為同胎分娩日 (2024-12-20)
         ear_num = extract_number(ear)
         if ear_num is not None:
             for litter in litter_map:
@@ -196,7 +189,7 @@ def fetch_and_parse():
 
         pedigree_data.append(entry)
 
-    print(f"🎉 數據拆軸解析完成！共處理 {len(pedigree_data)} 筆紀錄。")
+    print(f"🎉 數據解析完成！共處理 {len(pedigree_data)} 筆紀錄。")
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
