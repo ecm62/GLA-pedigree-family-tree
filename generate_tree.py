@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 SPREADSHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
 
 def parse_date_value(val):
-    """自動將 Excel 日期序列號 (如 45665) 或正常日期字串轉為 YYYY-MM-DD"""
+    """自動將 Excel 序列號 (如 45665) 或正常日期字串轉為 YYYY-MM-DD"""
     if pd.isna(val) or str(val).strip() in ['', '-', 'nan', 'NaN', 'None', 'null']:
         return '-'
     val_str = str(val).replace('🔴', '').strip()
@@ -101,11 +101,11 @@ def fetch_and_parse():
                 litter_map.append({
                     'start': min(start_num, end_num),
                     'end': max(start_num, end_num),
-                    'origin_dob': farrow_d,        # 軸線一：本場個體的真實出生日
-                    'origin_dam': dam_ear_val,     # 母親
-                    'origin_sire': mate_boar,      # 父親
-                    'origin_sire_sire': sire_n,    # 祖父
-                    'origin_sire_dam': dam_n       # 祖母
+                    'origin_dob': farrow_d,        # 軸線一：本場個體的真實出生日 (2024-12-20)
+                    'origin_dam': dam_ear_val,     # 母親 (D1064)
+                    'origin_sire': mate_boar,      # 父親 (D1400)
+                    'origin_sire_sire': sire_n,    # 祖父 (1CR2 TRIPLE H 292-2)
+                    'origin_sire_dam': dam_n       # 祖母 (1CR2 FLO 1072-8)
                 })
 
     # ----------------------------------------------------
@@ -133,7 +133,7 @@ def fetch_and_parse():
             return '-'
 
         raw_dob = get_date_v(col_birth_date)
-        farrow_dob = get_date_v(col_farrow_date) # 軸線二：這頭母豬當次產房分娩日
+        farrow_dob = get_date_v(col_farrow_date) # 軸線二：這頭母豬當次產房分娩日 (2026-04-05)
 
         individual_dob = '-'
         inferred_sire = '-'
@@ -141,20 +141,20 @@ def fetch_and_parse():
         inferred_sire_sire = '-'
         inferred_sire_dam = '-'
 
-        # 軸線一判斷：美國原廠 DOB > 本場同胎耳號範圍反推 DOB
-        if breed != 'LY' and raw_dob != '-':
+        # 軸線一：優先取耳號範圍反推 DOB，確保五位數個體生日恆定為同胎分娩日 (2024-12-20)
+        ear_num = extract_number(ear)
+        if ear_num is not None:
+            for litter in litter_map:
+                if litter['start'] <= ear_num <= litter['end']:
+                    individual_dob = litter['origin_dob']
+                    inferred_dam = litter['origin_dam']
+                    inferred_sire = litter['origin_sire']
+                    inferred_sire_sire = litter['origin_sire_sire']
+                    inferred_sire_dam = litter['origin_sire_dam']
+                    break
+
+        if individual_dob == '-' and breed != 'LY' and raw_dob != '-':
             individual_dob = raw_dob
-        else:
-            ear_num = extract_number(ear)
-            if ear_num is not None:
-                for litter in litter_map:
-                    if litter['start'] <= ear_num <= litter['end']:
-                        individual_dob = litter['origin_dob']
-                        inferred_dam = litter['origin_dam']
-                        inferred_sire = litter['origin_sire']
-                        inferred_sire_sire = litter['origin_sire_sire']
-                        inferred_sire_dam = litter['origin_sire_dam']
-                        break
 
         sire_sire_val = inferred_sire_sire if inferred_sire_sire != '-' else get_v(col_sire_name)
         sire_dam_val  = inferred_sire_dam if inferred_sire_dam != '-' else get_v(col_dam_name)
@@ -165,8 +165,8 @@ def fetch_and_parse():
             "sex": get_v(col_sex),
             "parity": get_v(col_parity),
             "mate": get_v(col_mate),             # 軸線二：這頭母豬當次配的公豬
-            "birth_date": individual_dob,        # 軸線一：個體真實出生日 (恆定唯一，算 Age 用)
-            "dob": farrow_dob,                   # 軸線二：這頭母豬當次產房分娩日 (算歷胎用)
+            "birth_date": individual_dob,        # 軸線一：個體真實出生日 (2024-12-20)
+            "dob": farrow_dob,                   # 軸線二：這頭母豬當次產房分娩日 (2026-04-05)
             "spi": get_v(col_spi),
             "mli": get_v(col_mli),
             "tsi": get_v(col_tsi),
