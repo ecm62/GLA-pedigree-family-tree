@@ -41,12 +41,12 @@ def shorten_name(name_str):
     return s
 
 def fetch_and_parse():
-    print("🚀 啟動：全資料庫精確對接（美國種源 0 代 + 場內自繁 1/2 代）...")
+    print("🚀 啟動：精確對接美國原始種源數據、合併報表與育種家族階層...")
     headers = {'User-Agent': 'Mozilla/5.0'}
     
     target_gids = {
-        "us_source": "803517616",      # 美國原始種源數據
-        "main_prod": "0"               # 合併報表_配種_產房
+        "us_source": "803517616",      # 美國原始種源數據 (4位數)
+        "main_prod": "0"               # 合併報表(配種+產房)
     }
     
     dfs = {}
@@ -131,7 +131,7 @@ def fetch_and_parse():
             except Exception:
                 pass
 
-    # 3. 組合全場生產與血統紀錄
+    # 3. 組合全場生產與血統紀錄 (正確比對前半部配種與後半部生產)
     pedigree_data = []
     registered_ears = set()
 
@@ -152,7 +152,7 @@ def fetch_and_parse():
         d_sire    = '-'
         d_dam     = '-'
 
-        # 4 位數美系原種
+        # 4 位數美系原種 (如 D1071)
         if ear in us_db or (ear_num and str(ear_num) in us_db and len(str(ear_num)) == 4):
             u_info = us_db.get(ear) or us_db.get(str(ear_num))
             ind_birth = u_info["birth_date"]
@@ -192,6 +192,7 @@ def fetch_and_parse():
         farrow_d = parse_date_value(row.get(col_farrow, '')) if col_farrow else '-'
         mate_sire = str(row.get(col_sire, '-')).strip().upper() if col_sire and pd.notna(row.get(col_sire)) else '-'
 
+        # 讀取完整 21 個欄位數據
         entry = {
             "ear": ear,
             "breed": breed,
@@ -209,6 +210,11 @@ def fetch_and_parse():
             "born_alive": str(row.get('Born alive', row.get('活胎', '-'))).strip(),
             "weaning": str(row.get('Weaning', row.get('離乳', '-'))).strip(),
             "weaning_wt": str(row.get('weaning weight', row.get('均重', '-'))).strip(),
+            "mother_wt": str(row.get('Mother total Weight', row.get('生育重', '-'))).strip(),
+            "tnb": str(row.get('TNB', '-')).strip(),
+            "nba": str(row.get('NBA', '-')).strip(),
+            "lteat": str(row.get('Lteat', '-')).strip(),
+            "rteat": str(row.get('Rteat', '-')).strip(),
             "gen1_sire": ind_sire,
             "gen1_dam": ind_dam,
             "sire_sire": s_sire,
@@ -220,7 +226,7 @@ def fetch_and_parse():
         pedigree_data.append(entry)
         registered_ears.add(ear)
 
-    # 4. 把美系種源所有公豬/母豬全部註冊為獨立個體
+    # 4. 把美系種源所有 0 代公豬/母豬全部以獨立個體補齊入庫
     for u_ear, u_info in us_db.items():
         if u_ear.isdigit() or u_ear in registered_ears:
             continue
@@ -242,6 +248,11 @@ def fetch_and_parse():
             "born_alive": "-",
             "weaning": "-",
             "weaning_wt": "-",
+            "mother_wt": "-",
+            "tnb": "-",
+            "nba": "-",
+            "lteat": "-",
+            "rteat": "-",
             "gen1_sire": u_info["sire"],
             "gen1_dam": u_info["dam"],
             "sire_sire": u_info["sire_sire"],
