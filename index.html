@@ -7,8 +7,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
-        
-        /* 權限驗證遮罩 */
         #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999; display: flex; align-items: center; justify-content: center; }
         .auth-card { background: #ffffff; padding: 32px 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; max-width: 380px; width: 90%; }
         .auth-card h2 { margin-top: 0; color: #1e293b; font-size: 20px; }
@@ -19,12 +17,10 @@
         .auth-btn:hover { background: #0b5ed7; }
         .auth-error { color: #dc2626; font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
         
-        /* 系統頂部橫幅 */
         .system-header-banner { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #ffffff; padding: 14px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 12px; text-align: center; }
         .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 1px; }
         .system-header-banner p { margin: 3px 0 0 0; font-size: 12px; opacity: 0.85; }
         
-        /* 控制列 */
         .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         input[type="text"] { padding: 6px 12px; font-size: 14px; border: 1px solid #ced4da; border-radius: 6px; width: 320px; outline: none; }
         input[type="text"]:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
@@ -33,7 +29,6 @@
         .btn-export { background-color: #10b981; margin-left: 8px; }
         .btn-export:hover { background-color: #059669; }
         
-        /* 品種篩選按鈕 */
         .btn-breed { background-color: #e2e8f0; color: #64748b; margin-right: 4px; padding: 5px 12px; font-size: 13px; border: 2px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; }
         .btn-breed.active { box-shadow: 0 2px 6px rgba(0,0,0,0.15); border-color: #1e293b; }
         .btn-breed-all.active { background-color: #334155 !important; color: white !important; }
@@ -45,11 +40,10 @@
         .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 14px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 2px 8px; border-radius: 4px; font-weight: bold; }
         
-        /* 四大品種淡色系配色 */
-        .breed-D  { background-color: #ffe4e6 !important; color: #9f1239 !important; border: 2px solid #f43f5e !important; } /* 淡紅 */
-        .breed-Y  { background-color: #fef3c7 !important; color: #92400e !important; border: 2px solid #f59e0b !important; } /* 淡黃 */
-        .breed-L  { background-color: #e0f2fe !important; color: #075985 !important; border: 2px solid #0ea5e9 !important; } /* 淡藍 */
-        .breed-LY { background-color: #d1fae5 !important; color: #065f46 !important; border: 2px solid #10b981 !important; } /* 淡綠 */
+        .breed-D  { background-color: #ffe4e6 !important; color: #9f1239 !important; border: 2px solid #f43f5e !important; }
+        .breed-Y  { background-color: #fef3c7 !important; color: #92400e !important; border: 2px solid #f59e0b !important; }
+        .breed-L  { background-color: #e0f2fe !important; color: #075985 !important; border: 2px solid #0ea5e9 !important; }
+        .breed-LY { background-color: #d1fae5 !important; color: #065f46 !important; border: 2px solid #10b981 !important; }
         
         .origin-target { border: 3px solid #f59e0b !important; background-color: #1d4ed8 !important; color: #ffffff !important; font-size: 12px !important; font-weight: 800 !important; box-shadow: 0 0 12px rgba(245, 158, 11, 0.6) !important; z-index: 20 !important; }
         .inbreeding-alert { outline: 3px dashed #dc2626 !important; background-color: #fee2e2 !important; animation: pulse 1.5s infinite; }
@@ -60,7 +54,6 @@
             100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
 
-        /* 數據表格 */
         #permanentCard { background: #ffffff; border: 1px solid #e0e6ed; border-left: 4px solid #0d6efd; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .card-title { font-size: 16px; color: #1e293b; font-weight: 700; margin: 0; }
@@ -70,24 +63,20 @@
         .excel-data-table td { padding: 6px 10px; border: 1px solid #e2e8f0; color: #1e293b; }
         .excel-data-table tr:hover { background-color: #e0f2fe !important; }
         
-        /* 直系演進圖容器 */
         #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .single-tree-card { position: relative; width: 100%; min-height: 420px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
         
-        /* 拓撲圖容器 */
         #macroTreePanel { background: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block !important; }
         .macro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
         .macro-title { font-size: 15px; font-weight: 700; color: #0d6efd; display: flex; align-items: center; gap: 8px; }
         #macroScrollArea { width: 100%; min-height: 480px; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; overflow-y: hidden; }
         #macroBoxesContainer { position: relative; width: 100%; min-height: 480px; }
         
-        /* 系譜節點 */
         .tree-node { position: absolute; border-radius: 6px; text-align: center; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 2; padding: 3px; box-sizing: border-box; transition: all 0.15s ease; line-height: 1.2; white-space: nowrap; }
         .tree-node:hover { transform: scale(1.05); z-index: 10; border-width: 2.5px; }
         canvas.lineCanvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
         .sub-label { font-size: 8px; opacity: 0.85; margin-bottom: 1px; font-weight: 600; }
         
-        /* 字級動態適配 */
         .ear-text { font-weight: 800; word-break: break-word; line-height: 1.15; }
         .font-normal { font-size: 11.5px; }
         .font-small  { font-size: 9.5px; }
@@ -266,10 +255,21 @@
 
         function renderTable(items, query) {
             document.getElementById('cardTitle').innerHTML = `📌 育種性能與評定表: <span style="color:#2563eb;">檢索主體 "${query}" (${items.length} 筆胎次)</span>`;
+            
+            // 前端雙重防護：找出主體的真實固定 DOB
+            let fixedDOB = '-';
+            for (let i of items) {
+                if (i.birth_date && i.birth_date !== '-' && (i.birth_date.startsWith('2023') || i.birth_date.startsWith('2024'))) {
+                    fixedDOB = i.birth_date;
+                    break;
+                }
+            }
+
             let html = '';
             items.forEach(i => {
+                const displayDOB = (fixedDOB !== '-') ? fixedDOB : i.birth_date;
                 html += `<tr>
-                    <td><b>${i.ear}</b></td><td>${i.breed}</td><td>${i.sex}</td><td><b>${i.birth_date}</b></td><td>${i.parity}</td>
+                    <td><b>${i.ear}</b></td><td>${i.breed}</td><td>${i.sex}</td><td><b style="color:#0d6efd;">${displayDOB}</b></td><td>${i.parity}</td>
                     <td><b>${i.mate}</b></td><td>${i.mating_date}</td><td>${i.dob}</td><td>${i.total_born}</td><td>${i.born_alive}</td><td>${i.weaning}</td>
                     <td>${i.mother_wt}</td><td>${i.weaning_wt}</td><td><b>${i.spi}</b></td><td><b>${i.mli}</b></td>
                     <td><b>${i.tsi}</b></td><td>${i.tnb}</td><td>${i.nba}</td><td>${i.lteat}</td><td>${i.rteat}</td>
@@ -353,7 +353,7 @@
         }
 
         /* ----------------------------------------------------
-           2. 蝴蝶形近親拓撲家族樹 (全系譜展開、零重疊)
+           2. 蝴蝶形近親拓撲家族樹 (全系譜展開)
            ---------------------------------------------------- */
         function renderTopologyTree(allItems, target) {
             const container = document.getElementById('macroBoxesContainer');
@@ -454,9 +454,6 @@
             drawSmoothCurves(canvas, container, links, nodeMap);
         }
 
-        /* ----------------------------------------------------
-           流體貝茲曲線繪製 (Smooth Cubic Bezier Curves)
-           ---------------------------------------------------- */
         function drawSmoothCurves(canvas, container, links, nodeMap) {
             const w = parseInt(container.style.width) || 1200;
             const h = parseInt(container.style.height) || 500;
