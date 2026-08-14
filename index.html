@@ -46,6 +46,7 @@
         
         .mate-node-box { background-color: #fff1f2 !important; border: 2px dashed #e11d48 !important; color: #9f1239 !important; }
         .origin-target { background-color: #1d4ed8 !important; color: #ffffff !important; border: 3px solid #f59e0b !important; font-weight: 800 !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.7) !important; z-index: 20 !important; }
+        .inbreeding-alert { outline: 3px dashed #dc2626 !important; background-color: #fee2e2 !important; }
 
         #permanentCard { background: #ffffff; border-left: 4px solid #2563eb; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
         .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 6px; }
@@ -54,19 +55,18 @@
         .excel-data-table td { padding: 6px 8px; border: 1px solid #e2e8f0; }
 
         .tree-container { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .tree-viewport { position: relative; width: 100%; height: 500px; overflow: auto; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
-        .line-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-        .nodes-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+        .tree-viewport { position: relative; width: 100%; min-height: 480px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .line-canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+        .nodes-wrapper { position: relative; width: 100%; min-height: 480px; z-index: 2; }
 
         .tree-node { position: absolute; border-radius: 6px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.08); padding: 4px 6px; box-sizing: border-box; cursor: pointer; transition: transform 0.1s ease; }
         .tree-node:hover { transform: scale(1.04); z-index: 30; }
         .sub-label { font-size: 9px; opacity: 0.85; font-weight: 700; margin-bottom: 2px; }
         
-        /* 動態縮小長字串或多隻公豬 */
         .ear-text { font-weight: 800; word-break: break-word; line-height: 1.1; }
         .font-normal { font-size: 12px; }
         .font-small  { font-size: 10px; }
-        .font-mini   { font-size: 8.5px; }
+        .font-mini   { font-size: 8px; letter-spacing: -0.3px; }
 
         .placeholder-text { text-align: center; color: #94a3b8; padding: 60px 10px; font-size: 13px; font-weight: 600; }
     </style>
@@ -84,13 +84,13 @@
 
     <div class="system-header-banner">
         <h1>GLA Pedigree & Lineage Analysis System</h1>
-        <p>專業商業豬場多世代系譜與配種分析平台</p>
+        <p>專業商業豬場多世代系譜與配種拓撲分析平台</p>
     </div>
 
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>耳號 / 美系名 / 配種公搜尋：</strong></label>
-            <input type="text" id="earInput" placeholder="例如：DD26002, D1062, D1400" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如：DD26002, D1062, D1400, D1398" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" onclick="searchPedigree()">🔍 展開系譜樹</button>
         </div>
         <div>
@@ -114,7 +114,7 @@
     <!-- 1. 21 欄位表格 -->
     <div id="permanentCard">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="font-size:15px; font-weight:800;" id="cardTitle">📌 育種性能與指數評定表</div>
+            <div style="font-size:15px; font-weight:800;" id="cardTitle">📌 育種性能與評估表</div>
             <button class="btn btn-export" onclick="exportTableAsPNG()">📸 匯出數據表 PNG</button>
         </div>
         <div class="data-table-wrapper" id="dataTableContainer">
@@ -138,11 +138,25 @@
     <div class="tree-container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="font-weight:800; font-size:15px; color:#1e3c72;">🌿 1. Single Lineage 3-Generation Direct Tree (三代直系演進圖 - 父上母下、左親右配)</div>
-            <button class="btn btn-export" onclick="exportCanvasPNG('singleViewport', 'GLA_Direct_Tree')">📸 匯出系譜 PNG</button>
+            <button class="btn btn-export" onclick="exportCanvasPNG('singleViewport', 'GLA_Direct_Tree')">📸 匯出直系圖 PNG</button>
         </div>
         <div class="tree-viewport" id="singleViewport">
             <canvas class="line-canvas" id="singleCanvas"></canvas>
             <div class="nodes-wrapper" id="singleContainer">
+                <div class="placeholder-text">等待搜尋系譜數據...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Inbreeding Comparison Topology Family Tree (近親比對拓撲家族樹) -->
+    <div class="tree-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-weight:800; font-size:15px; color:#1e3c72;">🌳 2. Inbreeding Comparison Topology Family Tree (近親比對拓撲家族樹)</div>
+            <button class="btn btn-export" onclick="exportCanvasPNG('topologyViewport', 'GLA_Topology_Tree')">📸 匯出拓撲圖 PNG</button>
+        </div>
+        <div class="tree-viewport" id="topologyViewport">
+            <canvas class="line-canvas" id="topologyCanvas"></canvas>
+            <div class="nodes-wrapper" id="topologyContainer">
                 <div class="placeholder-text">等待搜尋系譜數據...</div>
             </div>
         </div>
@@ -228,6 +242,7 @@
 
             renderTable(allItems, term);
             renderDirectTree(allItems, targetItem);
+            renderTopologyTree(allItems, targetItem);
         }
 
         function renderTable(items, query) {
@@ -246,7 +261,7 @@
         }
 
         /* ----------------------------------------------------
-           三代直系演進圖 (父上母下、左親右配、精確折線連接)
+           1. 三代直系圖 (自適應高寬度、不重疊、精確折線)
            ---------------------------------------------------- */
         function renderDirectTree(allItems, target) {
             const container = document.getElementById('singleContainer');
@@ -254,43 +269,53 @@
             const viewport = document.getElementById('singleViewport');
             container.innerHTML = '';
 
-            const W = 130, H = 55;
+            const W = 135, H = 55;
             const nodes = [];
             const links = [];
 
-            // 1. 核心主角 (Gen 0 Center)
-            const targetX = 400, targetY = 220;
+            const matingRecords = allItems.filter(i => i.mate && i.mate !== '-');
+            const mateCount = matingRecords.length;
+            
+            // 計算自適應高度
+            const mateTotalHeight = Math.max(mateCount * 70, 460);
+            const totalHeight = Math.max(mateTotalHeight, 480);
+            const midY = totalHeight / 2;
+
+            container.style.height = `${totalHeight}px`;
+            container.style.minWidth = `950px`;
+
+            // 1. 核心目標
+            const targetX = 400, targetY = midY - (H / 2);
             nodes.push({ id: 'target', label: '🎯 Target Dam', ear: target.ear, breed: target.breed, x: targetX, y: targetY, isTarget: true });
 
-            // 2. 左側親代 (Sire 父系在上, Dam 母系在下)
+            // 2. 左側親代 (Sire 上, Dam 下)
             const sire1 = target.gen1_sire !== '-' ? target.gen1_sire : 'Sire (未記載)';
             const dam1 = target.gen1_dam !== '-' ? target.gen1_dam : 'Dam (未記載)';
-            nodes.push({ id: 'sire1', label: '♂ 1st Sire (父親)', ear: sire1, breed: target.breed, x: 220, y: 120 });
-            nodes.push({ id: 'dam1', label: '♀ 1st Dam (母親)', ear: dam1, breed: target.breed, x: 220, y: 320 });
+            nodes.push({ id: 'sire1', label: '♂ 1st Sire (父親)', ear: sire1, breed: target.breed, x: 220, y: midY - 110 });
+            nodes.push({ id: 'dam1', label: '♀ 1st Dam (母親)', ear: dam1, breed: target.breed, x: 220, y: midY + 55 });
             links.push({ from: 'sire1', to: 'target', type: 'parent-merge' });
             links.push({ from: 'dam1', to: 'target', type: 'parent-merge' });
 
             // 3. 左側祖代
-            nodes.push({ id: 'ss', label: "♂ Sire's Sire (祖父)", ear: target.sire_sire, breed: target.breed, x: 40, y: 60 });
-            nodes.push({ id: 'sd', label: "♀ Sire's Dam (祖母)", ear: target.sire_dam, breed: target.breed, x: 40, y: 160 });
-            nodes.push({ id: 'ds', label: "♂ Dam's Sire (外公)", ear: target.dam_sire, breed: target.breed, x: 40, y: 260 });
-            nodes.push({ id: 'dd', label: "♀ Dam's Dam (外婆)", ear: target.dam_dam, breed: target.breed, x: 40, y: 380 });
+            nodes.push({ id: 'ss', label: "♂ Sire's Sire (祖父)", ear: target.sire_sire, breed: target.breed, x: 40, y: midY - 160 });
+            nodes.push({ id: 'sd', label: "♀ Sire's Dam (祖母)", ear: target.sire_dam, breed: target.breed, x: 40, y: midY - 60 });
+            nodes.push({ id: 'ds', label: "♂ Dam's Sire (外公)", ear: target.dam_sire, breed: target.breed, x: 40, y: midY + 10 });
+            nodes.push({ id: 'dd', label: "♀ Dam's Dam (外婆)", ear: target.dam_dam, breed: target.breed, x: 40, y: midY + 110 });
             links.push({ from: 'ss', to: 'sire1', type: 'left-pair' });
             links.push({ from: 'sd', to: 'sire1', type: 'left-pair' });
             links.push({ from: 'ds', to: 'dam1', type: 'left-pair' });
             links.push({ from: 'dd', to: 'dam1', type: 'left-pair' });
 
-            // 4. 右側配種公豬 (Mating Sires)
-            const matingRecords = allItems.filter(i => i.mate && i.mate !== '-');
-            const startMateY = 220 - ((matingRecords.length - 1) * 35);
+            // 4. 右側配種公 (等距排開，避免重疊)
+            const startMateY = midY - ((mateCount - 1) * 35) - (H / 2);
             matingRecords.forEach((rec, idx) => {
                 const mId = `mate_${idx}`;
-                const mY = Math.max(40, startMateY + (idx * 70));
+                const mY = startMateY + (idx * 70);
                 nodes.push({ id: mId, label: `♂ Mating Sire (P.${rec.parity})`, ear: rec.mate, isMate: true, x: 580, y: mY });
                 links.push({ from: 'target', to: mId, type: 'mate-branch' });
             });
 
-            // 繪製節點 DOM
+            // 渲染 DOM
             const nodeMap = {};
             nodes.forEach(n => {
                 const div = document.createElement('div');
@@ -308,13 +333,84 @@
                 nodeMap[n.id] = { ...n, leftX: n.x, rightX: n.x + W, midY: n.y + H / 2 };
             });
 
-            // 連線繪製 (正交折線連接)
-            drawOrthogonalLines(canvas, viewport, links, nodeMap);
+            drawOrthogonalLines(canvas, container, links, nodeMap);
         }
 
-        function drawOrthogonalLines(canvas, viewport, links, nodeMap) {
-            canvas.width = viewport.scrollWidth || 1000;
-            canvas.height = viewport.scrollHeight || 500;
+        /* ----------------------------------------------------
+           2. 近親比對拓撲家族樹 (配種公右向拓撲展開)
+           ---------------------------------------------------- */
+        function renderTopologyTree(allItems, target) {
+            const container = document.getElementById('topologyContainer');
+            const canvas = document.getElementById('topologyCanvas');
+            container.innerHTML = '';
+
+            const W = 135, H = 55;
+            const nodes = [];
+            const links = [];
+            const earUsage = {};
+
+            const matingRecords = allItems.filter(i => i.mate && i.mate !== '-');
+            const totalHeight = Math.max(matingRecords.length * 85 + 60, 520);
+            container.style.height = `${totalHeight}px`;
+            container.style.minWidth = `1200px`;
+
+            const targetY = totalHeight / 2 - (H / 2);
+            nodes.push({ id: 'top_target', label: '🎯 核心母豬', ear: target.ear, breed: target.breed, x: 40, y: targetY, isTarget: true });
+
+            matingRecords.forEach((rec, idx) => {
+                const mBoar = rec.mate;
+                const mId = `top_mate_${idx}`;
+                const mY = 30 + (idx * 80);
+                nodes.push({ id: mId, label: `♂ P${rec.parity} 配種公`, ear: mBoar, isMate: true, x: 280, y: mY });
+                links.push({ from: 'top_target', to: mId, type: 'mate-branch' });
+
+                // 配種公之父母追溯
+                const boarInfo = pedigreeList.find(p => p.ear === mBoar);
+                if (boarInfo) {
+                    const bsId = `bs_${idx}`;
+                    const bdId = `bd_${idx}`;
+                    const bsName = boarInfo.gen1_sire !== '-' ? boarInfo.gen1_sire : boarInfo.sire_sire;
+                    const bdName = boarInfo.gen1_dam !== '-' ? boarInfo.gen1_dam : boarInfo.sire_dam;
+
+                    if (bsName && bsName !== '-') {
+                        nodes.push({ id: bsId, label: `♂ 配種公之父`, ear: bsName, breed: boarInfo.breed, x: 520, y: mY - 18 });
+                        links.push({ from: mId, to: bsId, type: 'mate-branch' });
+                        earUsage[bsName] = (earUsage[bsName] || 0) + 1;
+                    }
+                    if (bdName && bdName !== '-') {
+                        nodes.push({ id: bdId, label: `♀ 配種公之母`, ear: bdName, breed: boarInfo.breed, x: 520, y: mY + 28 });
+                        links.push({ from: mId, to: bdId, type: 'mate-branch' });
+                        earUsage[bdName] = (earUsage[bdName] || 0) + 1;
+                    }
+                }
+                earUsage[mBoar] = (earUsage[mBoar] || 0) + 1;
+            });
+
+            // 繪製與近親標記
+            const nodeMap = {};
+            nodes.forEach(n => {
+                const isDuplicated = earUsage[n.ear] > 1;
+                const div = document.createElement('div');
+                let bCls = n.isTarget ? 'origin-target' : (n.isMate ? 'mate-node-box' : getBreedClass(n.breed, n.ear));
+                div.className = `tree-node ${bCls} ${isDuplicated ? 'inbreeding-alert' : ''}`;
+                div.style.left = `${n.x}px`;
+                div.style.top = `${n.y}px`;
+                div.style.width = `${W}px`;
+                div.style.height = `${H}px`;
+
+                const fontCls = getFontClass(n.ear);
+                div.innerHTML = `<span class="sub-label">${n.label}</span><span class="ear-text ${fontCls}">${n.ear}</span>`;
+                div.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
+                container.appendChild(div);
+                nodeMap[n.id] = { ...n, leftX: n.x, rightX: n.x + W, midY: n.y + H / 2 };
+            });
+
+            drawOrthogonalLines(canvas, container, links, nodeMap);
+        }
+
+        function drawOrthogonalLines(canvas, container, links, nodeMap) {
+            canvas.width = container.scrollWidth || 1000;
+            canvas.height = container.scrollHeight || 500;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.lineWidth = 2;
@@ -326,28 +422,11 @@
                 if (!from || !to) return;
 
                 ctx.beginPath();
-                if (l.type === 'left-pair') {
-                    // 祖代 -> 親代 (向右折線匯聚)
-                    const midX = from.rightX + 25;
-                    ctx.moveTo(from.rightX, from.midY);
-                    ctx.lineTo(midX, from.midY);
-                    ctx.lineTo(midX, to.midY);
-                    ctx.lineTo(to.leftX, to.midY);
-                } else if (l.type === 'parent-merge') {
-                    // 親代 -> 主角 (向右折線匯聚)
-                    const midX = from.rightX + 25;
-                    ctx.moveTo(from.rightX, from.midY);
-                    ctx.lineTo(midX, from.midY);
-                    ctx.lineTo(midX, to.midY);
-                    ctx.lineTo(to.leftX, to.midY);
-                } else if (l.type === 'mate-branch') {
-                    // 主角 -> 配種公 (向右展開分支)
-                    const midX = from.rightX + 25;
-                    ctx.moveTo(from.rightX, from.midY);
-                    ctx.lineTo(midX, from.midY);
-                    ctx.lineTo(midX, to.midY);
-                    ctx.lineTo(to.leftX, to.midY);
-                }
+                const midX = (from.rightX + to.leftX) / 2;
+                ctx.moveTo(from.rightX, from.midY);
+                ctx.lineTo(midX, from.midY);
+                ctx.lineTo(midX, to.midY);
+                ctx.lineTo(to.leftX, to.midY);
                 ctx.stroke();
             });
         }
