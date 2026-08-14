@@ -167,7 +167,6 @@
         </div>
     </div>
 
-    <!-- 💡 現場工人專用雙向近親檢測區 (豐富資訊單欄位整合) -->
     <div class="mating-checker-box">
         <div class="checker-row">
             <span style="font-size:13px; font-weight:700; color:#1e293b;">⚡ 現場即時配對近親與血統檢測 (Mating Check):</span>
@@ -229,7 +228,6 @@
         </div>
     </div>
 
-    <!-- 1. Single Lineage Direct Tree -->
     <div id="singleTreeArea">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
             <div style="font-weight:bold; font-size:14px; color:#0d6efd;">
@@ -245,7 +243,6 @@
         </div>
     </div>
 
-    <!-- 2. Topology Butterfly Tree -->
     <div id="macroTreePanel" style="display:block !important;">
         <div class="macro-header">
             <div class="macro-title">
@@ -475,6 +472,7 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
+        // 🌟 修正後的血統自動抓取與二次追溯邏輯
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -486,31 +484,46 @@
                 };
             }
 
-            let usSire = getValueFromMultiKeys(targetItem, ['gen1_sire', '1st Sire', '父親', 'sire_sire', 'Sire Name美系父親名']);
-            let usDam  = getValueFromMultiKeys(targetItem, ['gen1_dam', '1st Dam', '母親', 'sire_dam', 'Dam Name美系母親名']);
-            let usG1   = getValueFromMultiKeys(targetItem, ['sire_sire', '祖父', 'Sire美系父親名(祖父)']);
-            let usG2   = getValueFromMultiKeys(targetItem, ['sire_dam', '祖母', 'Dam Name美系母親名(祖母)']);
-            let usDamSire = getValueFromMultiKeys(targetItem, ['dam_sire', '外公', 'Sire美系父親名(外公)']);
-            let usDamDam  = getValueFromMultiKeys(targetItem, ['dam_dam', '外婆', 'Dam Name美系母親名(外婆)']);
+            let sire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['gen1_sire', '1st Sire', '父親']);
+            let dam  = targetItem.gen1_dam  || getValueFromMultiKeys(targetItem, ['gen1_dam', '1st Dam', '母親']);
 
-            if (usSire.toLowerCase() === ear.toLowerCase()) usSire = '-';
-            if (usDam.toLowerCase() === ear.toLowerCase()) usDam = '-';
+            let sSire = targetItem.sire_sire || getValueFromMultiKeys(targetItem, ['sire_sire', '祖父']);
+            let sDam  = targetItem.sire_dam  || getValueFromMultiKeys(targetItem, ['sire_dam', '祖母']);
+            let dSire = targetItem.dam_sire  || getValueFromMultiKeys(targetItem, ['dam_sire', '外公']);
+            let dDam  = targetItem.dam_dam   || getValueFromMultiKeys(targetItem, ['dam_dam', '外婆']);
+
+            if ((sSire === '-' || sDam === '-') && sire !== '-') {
+                const sObj = pedigreeList.find(i => String(i.ear || '').toLowerCase() === sire.toLowerCase());
+                if (sObj) {
+                    if (sSire === '-') sSire = sObj.gen1_sire || sObj.sire_sire || '-';
+                    if (sDam === '-') sDam = sObj.gen1_dam || sObj.sire_dam || '-';
+                }
+            }
+            if ((dSire === '-' || dDam === '-') && dam !== '-') {
+                const dObj = pedigreeList.find(i => String(i.ear || '').toLowerCase() === dam.toLowerCase());
+                if (dObj) {
+                    if (dSire === '-') dSire = dObj.gen1_sire || dObj.dam_sire || '-';
+                    if (dDam === '-') dDam = dObj.gen1_dam || dObj.dam_dam || '-';
+                }
+            }
+
+            if (sire.toLowerCase() === ear.toLowerCase()) sire = '-';
+            if (dam.toLowerCase() === ear.toLowerCase()) dam = '-';
 
             return {
                 sireSide: [
-                    { name: shortenAncestorName(usG1), label: '♂ 祖父 (Sire\'s Sire)' },
-                    { name: shortenAncestorName(usG2), label: '♀ 祖母 (Sire\'s Dam)' },
-                    { name: shortenAncestorName(usSire), label: '♂ 父親 (1st Sire)' }
+                    { name: shortenAncestorName(sSire), label: '♂ 祖父 (Sire\'s Sire)' },
+                    { name: shortenAncestorName(sDam), label: '♀ 祖母 (Sire\'s Dam)' },
+                    { name: shortenAncestorName(sire), label: '♂ 父親 (1st Sire)' }
                 ],
                 damSide: [
-                    { name: shortenAncestorName(usDam), label: '♀ 母親 (1st Dam)' },
-                    { name: shortenAncestorName(usDamSire), label: '♂ 外公 (Dam\'s Sire)' },
-                    { name: shortenAncestorName(usDamDam), label: '♀ 外婆 (Dam\'s Dam)' }
+                    { name: shortenAncestorName(dam), label: '♀ 母親 (1st Dam)' },
+                    { name: shortenAncestorName(dSire), label: '♂ 外公 (Dam\'s Sire)' },
+                    { name: shortenAncestorName(dDam), label: '♀ 外婆 (Dam\'s Dam)' }
                 ]
             };
         }
 
-        // 💡 現場即時配對近親與血統檢測邏輯
         function checkInbreedingRisk() {
             const damInput = document.getElementById('checkDamInput').value.trim().toLowerCase();
             const sireInput = document.getElementById('checkSireInput').value.trim().toLowerCase();
@@ -653,7 +666,6 @@
             }
         }
 
-        // 🌟 正確顯示：Birth Date (唯一的個體生日)、Mating Date (X:X 配種日)、Farrow Date (C:C 分娩日)
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
             const tbody = document.getElementById('excelTableBody');
             const title = document.getElementById('cardTitle');
@@ -667,7 +679,7 @@
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
                 const breedVal = cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']));
 
-                let validBirthDate = cleanVal(item.birth_date); // 全表唯一生日
+                let validBirthDate = cleanVal(item.birth_date);
                 let compareDate = cleanVal(item.dob) !== '-' ? cleanVal(item.dob) : cleanVal(item.mating_date);
                 const ageDaysVal = calculateAgeInDays(breedVal, validBirthDate !== '-' ? validBirthDate : null, compareDate);
 
@@ -870,7 +882,6 @@
             });
         }
 
-        // 🌟 2. 拓撲近親比對家族樹（預設全自動全開）
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
