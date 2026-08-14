@@ -1,141 +1,138 @@
-import os
-import re
 import json
 import pandas as pd
-import numpy as np
+import requests
+import io
 
-def clean_name(name):
-    if pd.isna(name) or not str(name).strip():
-        return "-"
-    name = str(name).strip()
-    # 移除前綴代碼如 1CR1, 1CR2, CR2 等
-    name = re.sub(r'^[0-9]*[A-Z]+[0-9]*\s+', '', name)
-    # 移除耳缺號後綴如 1147-1, 1085-6, 514-1, 224-2 等
-    name = re.sub(r'\s+[0-9]+-[0-9]+.*$', '', name)
-    return name.strip()
+SPREADSHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
+# 假設 GID 0 為主表，若美國原始種源在其他分頁，可對應修改 GID
+GID_TREE = "0"
+URL_TREE = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={GID_TREE}"
 
-def get_breed_code(tag, default="D"):
-    if not tag or tag == "-":
-        return default
-    tag = str(tag).strip().upper()
-    if tag.startswith("DD") or tag.startswith("D"):
-        return "D"
-    elif tag.startswith("YY") or tag.startswith("Y"):
-        return "Y"
-    elif tag.startswith("LL") or tag.startswith("L"):
-        return "L"
-    elif "LY" in tag:
-        return "LY"
-    return default
-
-def load_data():
-    # 1. 讀取美國原始種源數據
-    us_df = pd.read_csv('2024_GLA_Genetic_遺傳整合_育種_遺傳_賣豬_美國原始種源數據.csv')
+def fetch_and_parse():
+    print("🚀 正在從資料庫原始出處抓取真實資料與個體出生日 (DOB)...")
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
     
-    # 2. 讀取育種家族階層清單
-    family_df = pd.read_csv('2024_GLA_Genetic_遺傳整合_育種_遺傳_賣豬_育種_家族階層清單.csv')
+    try:
+        res = requests.get(URL_TREE, headers=headers, timeout=15)
+        res.encoding = 'utf-8-sig'
+        if res.status_code != 200:
+            print(f"❌ 下載失敗，狀態碼: {res.status_code}")
+            return
+        df = pd.read_csv(io.StringIO(res.text))
+        df.columns = [str(c).replace('\n', '').replace('\r', '').strip() for c in df.columns]
+        df = df.dropna(how='all')
+        print(f"✅ 成功下載！原始資料筆數：{len(df)}")
+    except Exception as e:
+        print(f"❌ 錯誤: {e}")
+        return
+    if df.empty:
+        return
+
+    def find_col(keywords):
+        for kw in keywords:
+            for col in df.columns:
+                if kw.lower() in col.lower():
+                    return col
+        return None
+
+    col_ear = find_col(['耳號', 'C']) or df.columns[2]
+    col_sex = find_col(['Sex', '性別'])
+    col_parity = find_col(['胎次', 'Parity'])
+    col_mate = find_col(['當胎', '配種公'])
+    col_breed = find_col(['Breed', '品'])
+
+    # 🌟 嚴格對應原始資料中的「個體出生日 (DOB)」欄位，與「當胎分娩日」徹底分開
+    col_birth_date = find_col(['DOB', '出生日期', '生日', '個體生日'])
+    col_farrow_date = find_col(['farrowing date', '分娩日期', '產房日期'])
+
+    col_spi = find_col(['SPI'])
+    col_mli = find_col(['MLI'])
+    col_tsi = find_col(['TSI'])
+    col_total_born = find_col(['Total', '總生產', '總生'])
+    col_born_alive = find_col(['Born', '活胎'])
+    col_weaning = find_col(['Weaning', '離乳'])
+    col_mother_wt = find_col(['mother total', '生育重'])
+    col_weaning_wt = find_col(['均重', 'weight'])
+    col_tnb = find_col(['TNB'])
+    col_nba = find_col(['NBA'])
+    col_lteat = find_col(['lteat', '左乳'])
+    col_rteat = find_col(['rteat', '右乳'])
     
-    # 3. 建立 4 位數美系祖代快取
-    ancestor_cache = {}
-    for _, row in us_df.iterrows():
-        tag = str(row.get('耳號', '')).strip()
-        if not tag:
+    col_sire_sire = find_col(['Sire 美系父親名(祖父)', 'Sire 美系父親名', '祖父'])
+    col_sire_dam  = find_col(['Dam Name美系母親名(祖母)', 'Dam Name美系母親名', '祖母'])
+    col_dam_sire  = find_col(['Sire 美系父親名(外公)', '外公'])
+    col_dam_dam   = find_col(['Dam Name美系母親名(外婆)', '外婆'])
+    col_gen1_sire = find_col(['第一代公'])
+    col_gen1_dam  = find_col(['第一代母'])
+    col_gen2_sire = find_col(['第二代公'])
+    col_gen2_dam  = find_col(['第二代母'])
+    col_gen3_sire = find_col(['第三代公', '第三代'])
+
+    pedigree_data = []
+    for idx, row in df.iterrows():
+        ear = str(row.get(col_ear, '')).strip() if pd.notna(row.get(col_ear)) else ""
+        if not ear or ear.lower() in ['nan', 'none', '-', '', 'null']:
             continue
-        ancestor_cache[tag] = {
-            "sire": clean_name(row.get('Sire Name美系父親名', row.get('Sire Name美系父親-全名', '-'))),
-            "dam": clean_name(row.get('Dam Name美系母親名', row.get('Dam Name美系母親-全名', '-'))),
-            "mgs": clean_name(row.get('MGS Name 美系MGS名', '-')),
-            "dob": str(row.get('DOB', '')).strip(),
-            "breed": str(row.get('Breed', 'Duroc')).strip(),
-            "sex": str(row.get('Sex', 'Gilt')).strip(),
-            "spi": row.get('SPI', '-'),
-            "mli": row.get('MLI', '-'),
-            "tsi": row.get('TSI', '-'),
-            "tnb": row.get('TNB', '-'),
-            "nba": row.get('NBA', '-'),
-            "lteat": row.get('Lteat', '-'),
-            "rteat": row.get('Rteat', '-')
+        
+        breed = str(row.get(col_breed, '')).strip().upper() if pd.notna(row.get(col_breed)) else "D"
+        if 'LY' in ear.upper(): 
+            breed = 'LY'
+        elif 'Y' in ear.upper() and breed == 'D': 
+            breed = 'Y'
+        elif 'L' in ear.upper() and breed == 'D': 
+            breed = 'L'
+
+        def get_v(col_name):
+            if col_name and pd.notna(row.get(col_name)):
+                val = str(row.get(col_name)).strip()
+                return val if val.lower() not in ['nan', 'none', ''] else '-'
+            return '-'
+
+        # 🌟 核心原則：若是 LY 品種，直接不給予個體出生日（因為原始出處沒有），維持 '-'
+        raw_dob = get_v(col_birth_date)
+        if breed == 'LY' or 'LY' in ear.upper():
+            birth_date_val = '-'
+        else:
+            birth_date_val = raw_dob if raw_dob != '-' else '-'
+
+        entry = {
+            "ear": ear,
+            "breed": breed,
+            "sex": get_v(col_sex),
+            "parity": get_v(col_parity),
+            "mate": get_v(col_mate),
+            "birth_date": birth_date_val,       # 來自原始資料出處的個體生日
+            "dob": get_v(col_farrow_date),      # 當胎分娩日
+            "spi": get_v(col_spi),
+            "mli": get_v(col_mli),
+            "tsi": get_v(col_tsi),
+            "total_born": get_v(col_total_born),
+            "born_alive": get_v(col_born_alive),
+            "weaning": get_v(col_weaning),
+            "mother_wt": get_v(col_mother_wt),
+            "weaning_wt": get_v(col_weaning_wt),
+            "tnb": get_v(col_tnb),
+            "nba": get_v(col_nba),
+            "lteat": get_v(col_lteat),
+            "rteat": get_v(col_rteat),
+            "sire_sire": get_v(col_sire_sire),
+            "sire_dam": get_v(col_sire_dam),
+            "dam_sire": get_v(col_dam_sire),
+            "dam_dam": get_v(col_dam_dam),
+            "gen1_sire": get_v(col_gen1_sire),
+            "gen1_dam":  get_v(col_gen1_dam),
+            "gen2_sire": get_v(col_gen2_sire),
+            "gen2_dam":  get_v(col_gen2_dam),
+            "gen3_sire": get_v(col_gen3_sire),
+            "details": {str(k).strip(): (str(v).strip() if pd.notna(v) else "") for k, v in row.items()}
         }
 
-    # 4. 組織個體資料結構
-    database = {}
+        pedigree_data.append(entry)
 
-    # 先提取所有出現在家族階層清單中的個體
-    grouped_family = family_df.groupby('耳號')
-    
-    for tag, group in grouped_family:
-        tag = str(tag).strip()
-        if not tag or tag == 'nan':
-            continue
+    print(f"🎉 數據解析完成！共處理 {len(pedigree_data)} 筆紀錄。")
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
+    print(f"✅ 成功寫入 data.json，共 {len(pedigree_data)} 筆紀錄")
 
-        base_info = ancestor_cache.get(tag, {})
-        first_row = group.iloc[0]
-
-        # 整理歷胎配種與分娩紀錄
-        matings = []
-        for idx, row in group.iterrows():
-            m_sire = str(row.get('當胎配種公豬', '')).strip()
-            if m_sire == 'nan' or not m_sire:
-                continue
-            
-            p_sire_info = ancestor_cache.get(m_sire, {})
-            matings.append({
-                "parity": int(row.get('胎次(Parity)', 0)) if pd.notna(row.get('胎次(Parity)')) else idx,
-                "mating_sire": m_sire,
-                "mating_date": str(row.get('配種日期(Mating Date)', '-')),
-                "farrow_date": str(row.get('DOB出生日期', '-')) if pd.notna(row.get('DOB出生日期')) else '-',
-                "total_born": row.get('Total born同胎總生產數', '-'),
-                "born_alive": row.get('Born alive同胎次活胎數量', '-'),
-                "weaning": row.get('Weaning同胎次離乳數量', '-'),
-                "mother_wt": row.get('Mother total Weight(母豬生育重量)', '-'),
-                "wean_wt": row.get('weaning weight同胎次離乳平均重', '-'),
-                "sire_sire": p_sire_info.get('sire', '-'),
-                "sire_dam": p_sire_info.get('dam', '-')
-            })
-
-        # 決定祖先節點
-        sire_name = base_info.get('sire', '-')
-        dam_name = base_info.get('dam', '-')
-        mgs_name = base_info.get('mgs', '-')
-
-        # 向上提取祖父、祖母、外公、外婆
-        s_sire = "-"
-        s_dam = "-"
-        d_sire = mgs_name
-        d_dam = "ANNA" if dam_name == "ANNA" else "-"
-
-        # 若父親也是 4 位數個體，直接解析父親的父母
-        if sire_name in ancestor_cache:
-            s_sire = ancestor_cache[sire_name].get('sire', '-')
-            s_dam = ancestor_cache[sire_name].get('dam', '-')
-
-        database[tag] = {
-            "ear_tag": tag,
-            "breed": base_info.get('breed', str(first_row.get('Breed', 'DUROC'))),
-            "sex": base_info.get('sex', str(first_row.get('Sex', 'FEMALE'))),
-            "dob": base_info.get('dob', str(first_row.get('DOB出生日期', '-'))),
-            "spi": base_info.get('spi', first_row.get('SPI', '-')),
-            "mli": base_info.get('mli', first_row.get('MLI', '-')),
-            "tsi": base_info.get('tsi', first_row.get('TSI', '-')),
-            "tnb": base_info.get('tnb', first_row.get('TNB', '-')),
-            "nba": base_info.get('nba', first_row.get('NBA', '-')),
-            "lteat": base_info.get('lteat', first_row.get('Lteat', '-')),
-            "rteat": base_info.get('rteat', first_row.get('Rteat', '-')),
-            "pedigree": {
-                "sire": sire_name,
-                "dam": dam_name,
-                "sire_sire": s_sire,
-                "sire_dam": s_dam,
-                "dam_sire": d_sire,
-                "dam_dam": d_dam
-            },
-            "matings": matings
-        }
-
-    # 寫入 data.json
-    with open('data.json', 'w', encoding='utf-8') as f:
-        json.dump(database, f, ensure_ascii=False, indent=2)
-    print("✅ data.json 產出完成，收錄豬隻筆數:", len(database))
-
-if __name__ == '__main__':
-    load_data()
+if __name__ == "__main__":
+    fetch_and_parse()
