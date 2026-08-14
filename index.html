@@ -151,7 +151,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / Name / Boar (耳號/姓名/全血統):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. D1071, D1074, DD26002, D1413" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. D1071, D1074, DD26002, D1413, D1401" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (全開血統樹)</button>
         </div>
 
@@ -439,19 +439,32 @@
             return isNaN(num) ? '-' : num.toFixed(1);
         }
 
+        // 🌟 核心升級：深度穿透模糊比對（外層 + details 同時檢索）
         function getValueFromMultiKeys(obj, possibleKeys) {
             if (!obj) return '-';
             const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
-            for (let kCandidate of possibleKeys) {
-                const targetK = sanitize(kCandidate);
-                for (let rawK in obj) {
-                    if (sanitize(rawK).includes(targetK)) {
-                        const val = obj[rawK];
-                        if (val !== undefined && val !== null && !['nan', 'none', '', 'undefined'].includes(String(val).toLowerCase())) {
-                            return String(val).trim();
+            
+            const searchTarget = (target) => {
+                if (!target) return null;
+                for (let kCandidate of possibleKeys) {
+                    const targetK = sanitize(kCandidate);
+                    for (let rawK in target) {
+                        if (sanitize(rawK).includes(targetK)) {
+                            const val = target[rawK];
+                            if (val !== undefined && val !== null && !['nan', 'none', '', 'undefined', '-'].includes(String(val).toLowerCase())) {
+                                return String(val).trim();
+                            }
                         }
                     }
                 }
+                return null;
+            };
+
+            let res = searchTarget(obj);
+            if (res) return res;
+            if (obj.details) {
+                res = searchTarget(obj.details);
+                if (res) return res;
             }
             return '-';
         }
@@ -471,7 +484,7 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 核心修復：強制對接數字與字元，精準畫出左側血統樹
+        // 🌟 核心：穿透抓取祖父祖母外公外婆
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -483,17 +496,15 @@
                 };
             }
 
-            // 提取數字的防呆工具
             const extractNum = str => { const m = String(str).match(/\d+/); return m ? m[0] : null; };
 
-            let sire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['gen1_sire', '1st Sire', '父親']);
-            let dam  = targetItem.gen1_dam  || getValueFromMultiKeys(targetItem, ['gen1_dam', '1st Dam', '母親']);
-            let sSire = targetItem.sire_sire || getValueFromMultiKeys(targetItem, ['sire_sire', '祖父']);
-            let sDam  = targetItem.sire_dam  || getValueFromMultiKeys(targetItem, ['sire_dam', '祖母']);
-            let dSire = targetItem.dam_sire  || getValueFromMultiKeys(targetItem, ['dam_sire', '外公']);
-            let dDam  = targetItem.dam_dam   || getValueFromMultiKeys(targetItem, ['dam_dam', '外婆']);
+            let sire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['gen1_sire', '1st Sire', '父親', 'sire', '父親名']);
+            let dam  = targetItem.gen1_dam  || getValueFromMultiKeys(targetItem, ['gen1_dam', '1st Dam', '母親', 'dam', '母親名']);
+            let sSire = targetItem.sire_sire || getValueFromMultiKeys(targetItem, ['sire_sire', '祖父', 'Sire Sire', 'Sire Name美系父親名(祖父)']);
+            let sDam  = targetItem.sire_dam  || getValueFromMultiKeys(targetItem, ['sire_dam', '祖母', 'Sire Dam', 'Dam Name美系母親名(祖母)']);
+            let dSire = targetItem.dam_sire  || getValueFromMultiKeys(targetItem, ['dam_sire', '外公', 'MGS', 'Dam Sire', 'Sire美系父親名(外公)']);
+            let dDam  = targetItem.dam_dam   || getValueFromMultiKeys(targetItem, ['dam_dam', '外婆', 'Dam Dam', 'Dam Name美系母親名(外婆)']);
 
-            // 全場搜索函數 (字串比對 + 數字穿透比對)
             const findInDb = (searchName) => {
                 if (!searchName || searchName === '-') return null;
                 const sUpper = String(searchName).toUpperCase();
@@ -507,29 +518,27 @@
                 });
             };
 
-            // 如果本體缺乏父母資訊，從全場重新打撈
             if (!sire || sire === '-') {
                 const selfObj = findInDb(ear);
-                if (selfObj && selfObj.gen1_sire && selfObj.gen1_sire !== '-') sire = selfObj.gen1_sire;
+                if (selfObj) sire = selfObj.gen1_sire || getValueFromMultiKeys(selfObj, ['gen1_sire', '1st Sire', '父親', 'sire']) || '-';
             }
             if (!dam || dam === '-') {
                 const selfObj = findInDb(ear);
-                if (selfObj && selfObj.gen1_dam && selfObj.gen1_dam !== '-') dam = selfObj.gen1_dam;
+                if (selfObj) dam = selfObj.gen1_dam || getValueFromMultiKeys(selfObj, ['gen1_dam', '1st Dam', '母親', 'dam']) || '-';
             }
 
-            // 二次打撈父母的祖代資訊
             if (sire && sire !== '-') {
                 const sireObj = findInDb(sire);
                 if (sireObj) {
-                    if (!sSire || sSire === '-') sSire = sireObj.gen1_sire || sireObj.sire_sire || '-';
-                    if (!sDam || sDam === '-') sDam = sireObj.gen1_dam || sireObj.sire_dam || '-';
+                    if (!sSire || sSire === '-') sSire = sireObj.gen1_sire || sireObj.sire_sire || getValueFromMultiKeys(sireObj, ['gen1_sire', '父親', '祖父']) || '-';
+                    if (!sDam || sDam === '-') sDam = sireObj.gen1_dam || sireObj.sire_dam || getValueFromMultiKeys(sireObj, ['gen1_dam', '母親', '祖母']) || '-';
                 }
             }
             if (dam && dam !== '-') {
                 const damObj = findInDb(dam);
                 if (damObj) {
-                    if (!dSire || dSire === '-') dSire = damObj.gen1_sire || damObj.dam_sire || '-';
-                    if (!dDam || dDam === '-') dDam = damObj.gen1_dam || damObj.dam_dam || '-';
+                    if (!dSire || dSire === '-') dSire = damObj.gen1_sire || damObj.dam_sire || getValueFromMultiKeys(damObj, ['gen1_sire', '父親', '外公']) || '-';
+                    if (!dDam || dDam === '-') dDam = damObj.gen1_dam || damObj.dam_dam || getValueFromMultiKeys(damObj, ['gen1_dam', '母親', '外婆']) || '-';
                 }
             }
 
@@ -791,6 +800,7 @@
             ctx.stroke();
         }
 
+        // 🌟 1. Single Lineage Direct Tree：強制拉出左側三代祖系
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -803,6 +813,8 @@
             const ancData = getHierarchyAncestors(items, targetItem);
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
+            
+            // 強制開啟左側祖先欄位
             const hasLeftAncestors = !(breed.includes('LY') || ear.startsWith('LY'));
 
             const col2_X = hasLeftAncestors ? 20 + (boxW + colGap) * 2 : 50;
@@ -860,6 +872,7 @@
             attachNodeClick(targetDiv, targetEar);
             container.appendChild(targetDiv);
 
+            // 左側祖代強制建立節點
             if (hasLeftAncestors) {
                 const col0_X = 20;
                 const col1_X = col0_X + boxW + colGap;
@@ -870,17 +883,15 @@
                 ];
 
                 parents.forEach(p => {
-                    if (p.name && p.name !== '' && p.name !== '-') {
-                        const div = document.createElement('div');
-                        div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
-                        div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
-                        div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                        div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                        attachNodeClick(div, p.name);
-                        container.appendChild(div);
-                        p.elem = div;
-                        nodePairsToConnect.push({ from: div, to: targetDiv });
-                    }
+                    const div = document.createElement('div');
+                    div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
+                    div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
+                    div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                    div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
+                    if (p.name !== '-') attachNodeClick(div, p.name);
+                    container.appendChild(div);
+                    p.elem = div;
+                    nodePairsToConnect.push({ from: div, to: targetDiv });
                 });
 
                 const ancYs = [targetY - 95, targetY - 38, targetY + 38, targetY + 95];
@@ -893,14 +904,13 @@
 
                 usList.forEach((itemObj, idx) => {
                     const a = itemObj.data;
-                    if (!a || !a.name || a.name === '' || a.name === '-') return;
                     const nodeY = ancYs[idx];
                     const div = document.createElement('div');
-                    div.className = `tree-node ${getBreedClass(a.name, itemObj.fallback)}`;
+                    div.className = `tree-node ${getBreedClass(a ? a.name : '-', itemObj.fallback)}`;
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                    div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
-                    attachNodeClick(div, a.name);
+                    div.innerHTML = `<span class="sub-label">${a ? a.label : ''}</span><b>${cleanVal(a ? a.name : '-')}</b>`;
+                    if (a && a.name !== '-') attachNodeClick(div, a.name);
                     container.appendChild(div);
 
                     const targetParentElem = parents[itemObj.parentIdx].elem || targetDiv;
@@ -936,6 +946,7 @@
             });
         }
 
+        // 🌟 2. 拓撲蝴蝶樹：完全左右平衡強制展開
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -1044,17 +1055,15 @@
                 ];
 
                 leftParents.forEach(p => {
-                    if (p.name && p.name !== '' && p.name !== '-') {
-                        const div = document.createElement('div');
-                        div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
-                        div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
-                        div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                        div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
-                        attachNodeClick(div, p.name);
-                        container.appendChild(div);
-                        p.elem = div;
-                        nodePairsToConnect.push({ from: div, to: targetDiv });
-                    }
+                    const div = document.createElement('div');
+                    div.className = `tree-node ${getBreedClass(p.name, p.fallbackBreed)}`;
+                    div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
+                    div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                    div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
+                    if (p.name !== '-') attachNodeClick(div, p.name);
+                    container.appendChild(div);
+                    p.elem = div;
+                    nodePairsToConnect.push({ from: div, to: targetDiv });
                 });
 
                 const leftAncYs = [targetY - 105, targetY - 38, targetY + 38, targetY + 105];
@@ -1067,14 +1076,13 @@
 
                 leftAncList.forEach((itemObj, idx) => {
                     const a = itemObj.data;
-                    if (!a || !a.name || a.name === '' || a.name === '-') return;
                     const nodeY = leftAncYs[idx];
                     const div = document.createElement('div');
-                    div.className = `tree-node ${getBreedClass(a.name, itemObj.fallback)}`;
+                    div.className = `tree-node ${getBreedClass(a ? a.name : '-', itemObj.fallback)}`;
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                    div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
-                    attachNodeClick(div, a.name);
+                    div.innerHTML = `<span class="sub-label">${a ? a.label : ''}</span><b>${cleanVal(a ? a.name : '-')}</b>`;
+                    if (a && a.name !== '-') attachNodeClick(div, a.name);
                     container.appendChild(div);
 
                     const targetParentElem = leftParents[itemObj.parentIdx].elem || targetDiv;
