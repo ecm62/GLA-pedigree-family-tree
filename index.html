@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
+        
         #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999; display: flex; align-items: center; justify-content: center; }
         .auth-card { background: #ffffff; padding: 32px 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; max-width: 380px; width: 90%; }
         .auth-card h2 { margin-top: 0; color: #1e293b; font-size: 20px; }
@@ -40,6 +41,7 @@
         .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 14px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 2px 8px; border-radius: 4px; font-weight: bold; }
         
+        /* 四大品種淡色系配色 */
         .breed-D  { background-color: #ffe4e6 !important; color: #9f1239 !important; border: 2px solid #f43f5e !important; }
         .breed-Y  { background-color: #fef3c7 !important; color: #92400e !important; border: 2px solid #f59e0b !important; }
         .breed-L  { background-color: #e0f2fe !important; color: #075985 !important; border: 2px solid #0ea5e9 !important; }
@@ -102,7 +104,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>耳號 / 美系名 / 配種公搜尋：</strong></label>
-            <input type="text" id="earInput" placeholder="例如：D1061, DD26002, D1400" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如：D1061, DD26002, D1418" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 展開系譜樹</button>
         </div>
         <div>
@@ -167,6 +169,7 @@
 
     <script>
         let pedigreeList = [];
+        let earDobMap = {}; // 專屬耳號生日字典 { "D1061": "2023-08-18", "D1418": "2023-09-18", ... }
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
         let isAuthorized = false;
 
@@ -184,7 +187,19 @@
         function loadPedigreeData() {
             fetch('data.json?t=' + Date.now())
                 .then(r => r.json())
-                .then(data => { pedigreeList = Array.isArray(data) ? data : []; })
+                .then(data => {
+                    pedigreeList = Array.isArray(data) ? data : [];
+                    // 建立每一隻個體耳號的專屬生日字典
+                    earDobMap = {};
+                    pedigreeList.forEach(item => {
+                        const ear = String(item.ear || '').trim();
+                        if (ear && ear !== '-' && item.birth_date && item.birth_date !== '-') {
+                            if (!earDobMap[ear] || item.birth_date.startsWith('2023') || item.birth_date.startsWith('2024')) {
+                                earDobMap[ear] = item.birth_date;
+                            }
+                        }
+                    });
+                })
                 .catch(e => console.error("資料載入失敗", e));
         }
 
@@ -256,20 +271,14 @@
         function renderTable(items, query) {
             document.getElementById('cardTitle').innerHTML = `📌 育種性能與評定表: <span style="color:#2563eb;">檢索主體 "${query}" (${items.length} 筆胎次)</span>`;
             
-            // 前端雙重防護：找出主體的真實固定 DOB
-            let fixedDOB = '-';
-            for (let i of items) {
-                if (i.birth_date && i.birth_date !== '-' && (i.birth_date.startsWith('2023') || i.birth_date.startsWith('2024'))) {
-                    fixedDOB = i.birth_date;
-                    break;
-                }
-            }
-
             let html = '';
             items.forEach(i => {
-                const displayDOB = (fixedDOB !== '-') ? fixedDOB : i.birth_date;
+                const itemEar = String(i.ear || '').trim();
+                // 嚴格依據「該行個體耳號」查找生日，絕不跨個體混用
+                let rowDOB = earDobMap[itemEar] || i.birth_date || '-';
+                
                 html += `<tr>
-                    <td><b>${i.ear}</b></td><td>${i.breed}</td><td>${i.sex}</td><td><b style="color:#0d6efd;">${displayDOB}</b></td><td>${i.parity}</td>
+                    <td><b>${i.ear}</b></td><td>${i.breed}</td><td>${i.sex}</td><td><b>${rowDOB}</b></td><td>${i.parity}</td>
                     <td><b>${i.mate}</b></td><td>${i.mating_date}</td><td>${i.dob}</td><td>${i.total_born}</td><td>${i.born_alive}</td><td>${i.weaning}</td>
                     <td>${i.mother_wt}</td><td>${i.weaning_wt}</td><td><b>${i.spi}</b></td><td><b>${i.mli}</b></td>
                     <td><b>${i.tsi}</b></td><td>${i.tnb}</td><td>${i.nba}</td><td>${i.lteat}</td><td>${i.rteat}</td>
@@ -353,7 +362,7 @@
         }
 
         /* ----------------------------------------------------
-           2. 蝴蝶形近親拓撲家族樹 (全系譜展開)
+           2. 蝴蝶形近親拓撲家族樹
            ---------------------------------------------------- */
         function renderTopologyTree(allItems, target) {
             const container = document.getElementById('macroBoxesContainer');
