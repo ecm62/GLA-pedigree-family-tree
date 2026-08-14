@@ -471,7 +471,7 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 完全重構：血統樹雙向深度檢索邏輯
+        // 🌟 核心修復：強制對接數字與字元，精準畫出左側血統樹
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -483,39 +483,53 @@
                 };
             }
 
-            // 多重備用 Key 搜索
-            let sire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['gen1_sire', '1st Sire', '父親', 'sire']);
-            let dam  = targetItem.gen1_dam  || getValueFromMultiKeys(targetItem, ['gen1_dam', '1st Dam', '母親', 'dam']);
-            let sSire = targetItem.sire_sire || getValueFromMultiKeys(targetItem, ['sire_sire', '祖父', 'Sire Sire']);
-            let sDam  = targetItem.sire_dam  || getValueFromMultiKeys(targetItem, ['sire_dam', '祖母', 'Sire Dam']);
-            let dSire = targetItem.dam_sire  || getValueFromMultiKeys(targetItem, ['dam_sire', '外公', 'Dam Sire']);
-            let dDam  = targetItem.dam_dam   || getValueFromMultiKeys(targetItem, ['dam_dam', '外婆', 'Dam Dam']);
+            // 提取數字的防呆工具
+            const extractNum = str => { const m = String(str).match(/\d+/); return m ? m[0] : null; };
 
-            // 若目標個體欠缺父/母資料，向全場清單全文檢索此耳號之血統
-            if (sire === '-' || !sire) {
-                const sObj = pedigreeList.find(i => String(i.ear || '').toUpperCase() === ear && i.gen1_sire && i.gen1_sire !== '-');
-                if (sObj) sire = sObj.gen1_sire;
+            let sire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['gen1_sire', '1st Sire', '父親']);
+            let dam  = targetItem.gen1_dam  || getValueFromMultiKeys(targetItem, ['gen1_dam', '1st Dam', '母親']);
+            let sSire = targetItem.sire_sire || getValueFromMultiKeys(targetItem, ['sire_sire', '祖父']);
+            let sDam  = targetItem.sire_dam  || getValueFromMultiKeys(targetItem, ['sire_dam', '祖母']);
+            let dSire = targetItem.dam_sire  || getValueFromMultiKeys(targetItem, ['dam_sire', '外公']);
+            let dDam  = targetItem.dam_dam   || getValueFromMultiKeys(targetItem, ['dam_dam', '外婆']);
+
+            // 全場搜索函數 (字串比對 + 數字穿透比對)
+            const findInDb = (searchName) => {
+                if (!searchName || searchName === '-') return null;
+                const sUpper = String(searchName).toUpperCase();
+                const sNum = extractNum(sUpper);
+                
+                return pedigreeList.find(i => {
+                    const iEar = String(i.ear || '').toUpperCase();
+                    if (iEar === sUpper) return true;
+                    if (sNum && extractNum(iEar) === sNum && (iEar.includes('D') || iEar.includes('L') || iEar.includes('Y'))) return true;
+                    return false;
+                });
+            };
+
+            // 如果本體缺乏父母資訊，從全場重新打撈
+            if (!sire || sire === '-') {
+                const selfObj = findInDb(ear);
+                if (selfObj && selfObj.gen1_sire && selfObj.gen1_sire !== '-') sire = selfObj.gen1_sire;
             }
-            if (dam === '-' || !dam) {
-                const dObj = pedigreeList.find(i => String(i.ear || '').toUpperCase() === ear && i.gen1_dam && i.gen1_dam !== '-');
-                if (dObj) dam = dObj.gen1_dam;
+            if (!dam || dam === '-') {
+                const selfObj = findInDb(ear);
+                if (selfObj && selfObj.gen1_dam && selfObj.gen1_dam !== '-') dam = selfObj.gen1_dam;
             }
 
-            // 向全場追溯 Sire 的父母
+            // 二次打撈父母的祖代資訊
             if (sire && sire !== '-') {
-                const sireObj = pedigreeList.find(i => String(i.ear || '').toUpperCase() === sire.toUpperCase());
+                const sireObj = findInDb(sire);
                 if (sireObj) {
-                    if (sSire === '-' || !sSire) sSire = sireObj.gen1_sire || sireObj.sire_sire || '-';
-                    if (sDam === '-' || !sDam) sDam = sireObj.gen1_dam || sireObj.sire_dam || '-';
+                    if (!sSire || sSire === '-') sSire = sireObj.gen1_sire || sireObj.sire_sire || '-';
+                    if (!sDam || sDam === '-') sDam = sireObj.gen1_dam || sireObj.sire_dam || '-';
                 }
             }
-
-            // 向全場追溯 Dam 的父母
             if (dam && dam !== '-') {
-                const damObj = pedigreeList.find(i => String(i.ear || '').toUpperCase() === dam.toUpperCase());
+                const damObj = findInDb(dam);
                 if (damObj) {
-                    if (dSire === '-' || !dSire) dSire = damObj.gen1_sire || damObj.dam_sire || '-';
-                    if (dDam === '-' || !dDam) dDam = damObj.gen1_dam || damObj.dam_dam || '-';
+                    if (!dSire || dSire === '-') dSire = damObj.gen1_sire || damObj.dam_sire || '-';
+                    if (!dDam || dDam === '-') dDam = damObj.gen1_dam || damObj.dam_dam || '-';
                 }
             }
 
@@ -637,14 +651,24 @@
             if (!rawInput) return;
 
             const targetTerm = rawInput.toLowerCase();
+            const extractNum = str => { const m = String(str).match(/\d+/); return m ? m[0] : null; };
+            const targetNum = extractNum(targetTerm);
+            
             currentTargetEar = rawInput;
-
             sendAuditLog('SEARCH_QUERY', rawInput);
 
             let matchedItems = pedigreeList.filter(item => {
                 const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
+                const itemNum = extractNum(itemEar);
                 const fullJson = JSON.stringify(item).toLowerCase();
-                const isMatch = isPreciseLock ? (itemEar === targetTerm) : (itemEar.includes(targetTerm) || fullJson.includes(targetTerm));
+                
+                let isMatch = false;
+                if (isPreciseLock) {
+                    isMatch = (itemEar === targetTerm) || (targetNum && itemNum === targetNum && itemEar.includes('d'));
+                } else {
+                    isMatch = itemEar.includes(targetTerm) || fullJson.includes(targetTerm) || (targetNum && itemNum === targetNum);
+                }
+                
                 const isBreedMatch = checkBreedAllowed(item.breed, item.ear);
                 return isMatch && isBreedMatch;
             });
@@ -655,8 +679,12 @@
                 
                 matchedItems.forEach(item => {
                     const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
-                    if (itemEar.includes(targetTerm)) primaryMatches.push(item);
-                    else relatedMatches.push(item);
+                    const itemNum = extractNum(itemEar);
+                    if (itemEar.includes(targetTerm) || (targetNum && itemNum === targetNum)) {
+                        primaryMatches.push(item);
+                    } else {
+                        relatedMatches.push(item);
+                    }
                 });
 
                 primaryMatches.sort((a, b) => (parseFloat(a.parity) || 0) - (parseFloat(b.parity) || 0));
@@ -679,10 +707,15 @@
             title.innerHTML = `📌 Breeding Performance & Index Data Evaluation Table: <span style="color:#0d6efd;">Query: "${searchTerm}"</span> (Matched: ${primaryItems.length})`;
 
             let html = '';
+            const extractNum = str => { const m = String(str).match(/\d+/); return m ? m[0] : null; };
+            const searchNum = extractNum(searchTerm);
+
             allSortedItems.forEach((item) => {
                 const mateBoar = getMatingBoar(item);
                 const itemEar = item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']);
-                const isPrimary = String(itemEar).toLowerCase().includes(searchTerm.toLowerCase());
+                const itemEarNum = extractNum(itemEar);
+                
+                const isPrimary = String(itemEar).toLowerCase().includes(searchTerm.toLowerCase()) || (searchNum && itemEarNum === searchNum);
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
                 const breedVal = cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']));
 
@@ -758,7 +791,6 @@
             ctx.stroke();
         }
 
-        // 🌟 修正：公豬/母豬直系繪圖修復
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -776,13 +808,15 @@
             const col2_X = hasLeftAncestors ? 20 + (boxW + colGap) * 2 : 50;
             const col3_X = col2_X + boxW + colGap;
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
+            const extractNum = str => { const m = String(str).match(/\d+/); return m ? m[0] : null; };
+            const tNum = extractNum(targetEar);
 
-            // 自動雙向抓取配對個體：主角是公豬抓配種母豬；主角是母豬抓當胎配種公
             let mateList = [];
             if (isMale) {
                 pedigreeList.forEach(i => {
                     const mateBoar = getMatingBoar(i);
-                    if (mateBoar && mateBoar.toUpperCase().includes(targetEar.toUpperCase())) {
+                    const mNum = extractNum(mateBoar);
+                    if (mateBoar && (mateBoar.toUpperCase().includes(targetEar.toUpperCase()) || (tNum && mNum === tNum))) {
                         const damEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag']);
                         if (damEar && damEar !== '-' && !mateList.some(m => m.name === damEar)) {
                             mateList.push({ name: damEar, label: '♀ 配對母豬', parity: cleanParityVal(i.parity) });
@@ -826,7 +860,6 @@
             attachNodeClick(targetDiv, targetEar);
             container.appendChild(targetDiv);
 
-            // 左側祖代繪製
             if (hasLeftAncestors) {
                 const col0_X = 20;
                 const col1_X = col0_X + boxW + colGap;
@@ -875,7 +908,6 @@
                 });
             }
 
-            // 右側配對對象繪製
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const currentY = targetY + (idx - (totalMates - 1) / 2) * rowGap;
@@ -904,7 +936,6 @@
             });
         }
 
-        // 🌟 拓撲蝴蝶樹：完全覆蓋公豬與母豬的主角場景
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -952,11 +983,15 @@
                 headerBar.appendChild(div);
             });
 
+            const extractNum = str => { const m = String(str).match(/\d+/); return m ? m[0] : null; };
+            const tNum = extractNum(targetEar);
+
             let rightList = [];
             if (isMale) {
                 pedigreeList.forEach(item => {
                     const mateStr = getMatingBoar(item);
-                    if (mateStr && mateStr.toUpperCase().includes(targetEar.toUpperCase())) {
+                    const mNum = extractNum(mateStr);
+                    if (mateStr && (mateStr.toUpperCase().includes(targetEar.toUpperCase()) || (tNum && mNum === tNum))) {
                         const damEar = item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']);
                         if (damEar && damEar !== '-' && !rightList.some(r => r.name.toUpperCase() === damEar.toUpperCase())) {
                             rightList.push({ name: damEar, label: '♀ 配對母豬', parity: cleanParityVal(item.parity), itemObj: item });
@@ -1062,7 +1097,12 @@
 
                     nodePairsToConnect.push({ from: targetDiv, to: rDiv });
 
-                    const matchItem = rObj.itemObj || pedigreeList.find(it => String(it.ear || '').toUpperCase() === String(rObj.name).toUpperCase());
+                    const rNum = extractNum(rObj.name);
+                    const matchItem = rObj.itemObj || pedigreeList.find(it => {
+                        const itEar = String(it.ear || '').toUpperCase();
+                        return itEar === String(rObj.name).toUpperCase() || (rNum && extractNum(itEar) === rNum && itEar.includes('D'));
+                    });
+
                     const mateAnc = matchItem ? getHierarchyAncestors([matchItem], matchItem) : null;
 
                     let mateSire = mateAnc ? mateAnc.sireSide[2].name : '-';
