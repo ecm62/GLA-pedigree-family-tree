@@ -83,15 +83,29 @@ def fetch_and_parse():
         return None
 
     # 欄位對齊
-    col_ear = find_col(["Nombor Telinga 母豬耳號", "母豬耳號", "Nombor Telinga", "耳號", "Tag"]) or df.columns[2]
+    col_ear = (
+        find_col(["母豬耳號", "Nombor Telinga", "耳號", "Tag"]) or df.columns[2]
+    )
     col_sex = find_col(["Sex", "性別"])
     col_parity = find_col(["胎次Parity", "胎次", "Parity", "Pari"])
-    col_mate = find_col(["配種公豬Boar mate", "當胎配種公", "Jantan 配種公", "Jantan", "Mate"])
+    col_mate = find_col(
+        ["配種公豬Boar mate", "當胎配種公", "Jantan 配種公", "Jantan", "Mate"]
+    )
     col_breed = find_col(["親代品系Sow's breed", "Breed", "品系", "Baka"])
-    
+
     col_us_dob = find_col(["DOB出生日期", "DOB", "出生日期", "個體生日"])
-    col_mating_date = find_col(["Tarikh Kahwin 配種日期", "Tarikh Kahwin", "配種日期", "Mating Date"])
-    col_farrow_date = find_col(["分娩日Farrowing", "Tarikh Farrowing", "Tarikh beranak", "分娩日", "產房日期"])
+    col_mating_date = find_col(
+        ["Tarikh Kahwin 配種日期", "Tarikh Kahwin", "配種日期", "Mating Date"]
+    )
+    col_farrow_date = find_col(
+        [
+            "分娩日Farrowing",
+            "Tarikh Farrowing",
+            "Tarikh beranak",
+            "分娩日",
+            "產房日期",
+        ]
+    )
 
     col_spi = find_col(["SPI"])
     col_mli = find_col(["MLI"])
@@ -106,17 +120,35 @@ def fetch_and_parse():
     col_lteat = find_col(["Lteat", "左乳"])
     col_rteat = find_col(["Rteat", "右乳"])
 
-    col_sire_sire = find_col(["Sire 美系第0代父親名", "Sire Name美系父親名", "Sire 美系父親名(祖父)", "祖父"])
-    col_sire_dam  = find_col(["Dam Name美系第0代母親名", "Dam Name美系母親名", "Dam Name美系母親名(祖母)", "祖母"])
-    col_dam_sire  = find_col(["Sire 美系第0代外公", "Sire 美系父親名(外公)", "外公"])
-    col_dam_dam   = find_col(["Dam Name美系第0代外婆", "Dam Name美系母親名(外婆)", "外婆"])
+    col_sire_sire = find_col(
+        [
+            "Sire 美系第0代父親名",
+            "Sire Name美系父親名",
+            "Sire 美系父親名(祖父)",
+            "祖父",
+        ]
+    )
+    col_sire_dam = find_col(
+        [
+            "Dam Name美系第0代母親名",
+            "Dam Name美系母親名",
+            "Dam Name美系母親名(祖母)",
+            "祖母",
+        ]
+    )
+    col_dam_sire = find_col(
+        ["Sire 美系第0代外公", "Sire 美系父親名(外公)", "外公"]
+    )
+    col_dam_dam = find_col(
+        ["Dam Name美系第0代外婆", "Dam Name美系母親名(外婆)", "外婆"]
+    )
     col_gen1_sire = find_col(["1代/2代公(父)", "第一代公", "Sire"])
-    col_gen1_dam  = find_col(["1代/2代母(母)", "第一代母", "Dam"])
+    col_gen1_dam = find_col(["1代/2代母(母)", "第一代母", "Dam"])
 
     col_retained_start = find_col(["Ear Notch Breeder (start)", "留種耳號區間"])
-    col_retained_end   = find_col(["Ear Notch Breeder (end)"])
+    col_retained_end = find_col(["Ear Notch Breeder (end)"])
 
-    # 1. 建立 4 位數美系原種庫 (固定 DOB 與美系祖先) 與 5 位數留種區間庫
+    # 1. 第一階段：精準鎖定 4 位數美系原種庫 (必須是 2023/2024 年真實出生日，不包含產房胎次日)
     us_stock_map = {}
     farrow_ranges = []
 
@@ -127,44 +159,63 @@ def fetch_and_parse():
 
         tag_match = re.search(r"([A-Za-z]+)(\d+)", ear_val)
         raw_dob_val = clean_str(row.get(col_us_dob))
+        p_val = clean_str(row.get(col_parity))
+        m_val = clean_str(row.get(col_mate))
 
-        # 4 位數原種個體：鎖定真實 DOB (來自美國原始種源數據)
+        # 判定是否為《美國原始種源數據》分頁的原始行 (無配種公或為原始登錄行)
         if tag_match and len(tag_match.group(2)) == 4:
-            if ear_val not in us_stock_map or (us_stock_map[ear_val]["dob"] == "-" and raw_dob_val != "-"):
+            # 原始原種行的 DOB 通常早於 2024 年年中 (如 2023/8/18)
+            if raw_dob_val != "-" and (
+                p_val in ["-", "10", "10.0", "0", "0.0"] or m_val == "-"
+            ):
                 us_stock_map[ear_val] = {
-                    "dob": raw_dob_val if raw_dob_val != "-" else us_stock_map.get(ear_val, {}).get("dob", "-"),
+                    "dob": raw_dob_val,
                     "sire_sire": clean_name(row.get(col_sire_sire)),
                     "sire_dam": clean_name(row.get(col_sire_dam)),
                     "dam_sire": clean_name(row.get(col_dam_sire)),
                     "dam_dam": clean_name(row.get(col_dam_dam)),
                 }
 
-        # 5 位數自繁個體：收集產房分娩留種區間 (來自 🧬GLA 遺傳育種資訊)
-        start_val = clean_str(row.get(col_retained_start)) if col_retained_start else "-"
-        end_val   = clean_str(row.get(col_retained_end)) if col_retained_end else "-"
-        
+        # 收集 5 位數產房留種區間
+        start_val = (
+            clean_str(row.get(col_retained_start))
+            if col_retained_start
+            else "-"
+        )
+        end_val = (
+            clean_str(row.get(col_retained_end)) if col_retained_end else "-"
+        )
+
         range_obj = None
         if start_val != "-" and end_val != "-":
             m1 = re.search(r"([A-Za-z]+)(\d+)", start_val)
             m2 = re.search(r"([A-Za-z]+)(\d+)", end_val)
             if m1 and m2:
-                range_obj = {"prefix": m1.group(1).upper(), "start": int(m1.group(2)), "end": int(m2.group(2))}
+                range_obj = {
+                    "prefix": m1.group(1).upper(),
+                    "start": int(m1.group(2)),
+                    "end": int(m2.group(2)),
+                }
         elif start_val != "-":
             range_obj = parse_tag_range(start_val)
 
         if range_obj:
-            farrow_ranges.append({
-                "dam_ear": ear_val,
-                "sire_ear": clean_str(row.get(col_mate)),
-                "farrow_date": clean_str(row.get(col_farrow_date)),
-                "prefix": range_obj["prefix"],
-                "start": range_obj["start"],
-                "end": range_obj["end"]
-            })
+            farrow_ranges.append(
+                {
+                    "dam_ear": ear_val,
+                    "sire_ear": clean_str(row.get(col_mate)),
+                    "farrow_date": clean_str(row.get(col_farrow_date)),
+                    "prefix": range_obj["prefix"],
+                    "start": range_obj["start"],
+                    "end": range_obj["end"],
+                }
+            )
 
-    print(f"📊 已鎖定 {len(us_stock_map)} 隻美系原種真實生日庫，{len(farrow_ranges)} 筆產房留種出生索引。")
+    print(
+        f"📊 已鎖定 {len(us_stock_map)} 隻美系原種真實生日庫，{len(farrow_ranges)} 筆產房留種出生索引。"
+    )
 
-    # 2. 正式組裝每一筆胎次數據
+    # 2. 第二階段：組裝數據（確保每一胎的真實生日終身固定）
     pedigree_data = []
     for _, row in df.iterrows():
         ear = clean_str(row.get(col_ear))
@@ -189,26 +240,33 @@ def fetch_and_parse():
         inferred_sire = clean_name(row.get(col_gen1_sire))
         inferred_dam = clean_name(row.get(col_gen1_dam))
         s_sire = clean_name(row.get(col_sire_sire))
-        s_dam  = clean_name(row.get(col_sire_dam))
+        s_dam = clean_name(row.get(col_sire_dam))
         d_sire = clean_name(row.get(col_dam_sire))
-        d_dam  = clean_name(row.get(col_dam_dam))
+        d_dam = clean_name(row.get(col_dam_dam))
         is_5_digit = False
 
         if tag_match:
             prefix, num_str = tag_match.groups()
-            # 4 位數（第 1 代原種）：直接從原種庫拿出生日，絕不拿當胎分娩日
+            # 4 位數：一律從美系原種庫提取終身固定的真實生日
             if len(num_str) == 4:
-                if ear in us_stock_map and us_stock_map[ear]["dob"] != "-":
+                if ear in us_stock_map:
                     real_birth_date = us_stock_map[ear]["dob"]
+                    s_sire = us_stock_map[ear]["sire_sire"] or s_sire
+                    s_dam = us_stock_map[ear]["sire_dam"] or s_dam
+                    d_sire = us_stock_map[ear]["dam_sire"] or d_sire
+                    d_dam = us_stock_map[ear]["dam_dam"] or d_dam
                 else:
                     real_birth_date = clean_str(row.get(col_us_dob))
 
-            # 5 位數（第 2 代自繁）：從產房留種區間反查出生日的固定分娩日
+            # 5 位數：從產房留種反查
             elif len(num_str) >= 5:
                 is_5_digit = True
                 int_tag = int(num_str)
                 for f_item in farrow_ranges:
-                    if f_item["prefix"] == prefix.upper() and f_item["start"] <= int_tag <= f_item["end"]:
+                    if (
+                        f_item["prefix"] == prefix.upper()
+                        and f_item["start"] <= int_tag <= f_item["end"]
+                    ):
                         inferred_dam = f_item["dam_ear"]
                         inferred_sire = f_item["sire_ear"]
                         real_birth_date = f_item["farrow_date"]
@@ -216,10 +274,10 @@ def fetch_and_parse():
 
                 if inferred_sire in us_stock_map:
                     s_sire = us_stock_map[inferred_sire]["sire_sire"] or s_sire
-                    s_dam  = us_stock_map[inferred_sire]["sire_dam"]  or s_dam
+                    s_dam = us_stock_map[inferred_sire]["sire_dam"] or s_dam
                 if inferred_dam in us_stock_map:
                     d_sire = us_stock_map[inferred_dam]["sire_sire"] or d_sire
-                    d_dam  = us_stock_map[inferred_dam]["sire_dam"]  or d_dam
+                    d_dam = us_stock_map[inferred_dam]["sire_dam"] or d_dam
 
         entry = {
             "ear": ear,
@@ -227,9 +285,9 @@ def fetch_and_parse():
             "sex": clean_str(row.get(col_sex)),
             "parity": clean_str(row.get(col_parity)),
             "mate": clean_str(row.get(col_mate)),
-            "birth_date": real_birth_date,     # 終身固定的真實生日 (如 D1061 固定為 2023-08-18)
-            "mating_date": mating_date,        # 當胎配種日 (如 2024-12-31)
-            "dob": farrow_date,                # 當胎分娩日 (如 2025-04-26)
+            "birth_date": real_birth_date,  # 終身固定的真實生日 (如 D1061 固定為 2023-08-18)
+            "mating_date": mating_date,  # 當胎配種日 (如 2024-12-31)
+            "dob": farrow_date,  # 當胎分娩日 (如 2025-04-26)
             "spi": clean_str(row.get(col_spi)),
             "mli": clean_str(row.get(col_mli)),
             "tsi": clean_str(row.get(col_tsi)),
@@ -249,13 +307,15 @@ def fetch_and_parse():
             "gen1_sire": inferred_sire,
             "gen1_dam": inferred_dam,
             "is_5_digit": is_5_digit,
-            "details": {str(k).strip(): clean_str(v) for k, v in row.items()}
+            "details": {
+                str(k).strip(): clean_str(v) for k, v in row.items()
+            },
         }
         pedigree_data.append(entry)
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
-    print(f"🎉 成功更新 data.json（共 {len(pedigree_data)} 筆紀錄，真實生日已全面校正對齊）！")
+    print(f"🎉 成功輸出 data.json（共 {len(pedigree_data)} 筆紀錄）！")
 
 
 if __name__ == "__main__":
