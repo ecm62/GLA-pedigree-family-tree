@@ -41,237 +41,215 @@ def shorten_name(name_str):
     return s
 
 def fetch_and_parse():
-    print("🚀 啟動：全種源美系公豬庫與生產履歷雙向血統穿透聚合...")
+    print("🚀 啟動：0代美系種源與5位數自繁仔豬耳號區間精準鎖定串聯...")
     headers = {'User-Agent': 'Mozilla/5.0'}
     
     target_gids = {
-        "us_source": "803517616",      # 美國原始種源數據 (含公豬父母祖代)
-        "gla_breeding": "1821811808",  # GLA 遺傳育種資訊
-        "main_prod": "0"               # 配種與分娩表
+        "us_source": "803517616",      # 美國原始種源數據 (4位數)
+        "main_prod": "0"               # 合併報表_配種_產房 (包含耳號區間與分娩日)
     }
     
     dfs = {}
     for key, gid in target_gids.items():
         url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
         try:
-            res = requests.get(url, headers=headers, timeout=15)
+            res = requests.get(url, headers=headers, timeout=20)
             res.encoding = 'utf-8-sig'
             if res.status_code == 200:
-                temp_df = pd.read_csv(io.StringIO(res.text))
+                temp_df = pd.read_csv(io.StringIO(res.text), low_memory=False)
                 temp_df.columns = [str(c).replace('\n', '').replace('\r', '').strip() for c in temp_df.columns]
                 dfs[key] = temp_df.dropna(how='all')
         except Exception as e:
             print(f"⚠️ 分頁 {key} 讀取失敗: {e}")
             dfs[key] = pd.DataFrame()
 
-    def get_val_fuzzy(row, candidate_keys):
-        """強效模糊比對：只要欄位名稱包含關鍵字就抓取"""
-        for ck in candidate_keys:
-            ck_clean = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', ck.lower())
-            for col in row.index:
-                col_clean = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', str(col).lower())
-                if ck_clean in col_clean:
-                    v = row[col]
-                    if pd.notna(v) and str(v).strip().lower() not in ['', '-', 'nan', 'none', 'null']:
-                        return str(v).strip()
-        return '-'
-
-    # ==========================================
-    # 1. 建立完整的美系種源字典（不論公母，全數建檔）
-    # ==========================================
-    us_identity_db = {}
+    # =========================================================
+    # 1. 建立 0 代美國原種庫 (4位數耳號，如 D1400, D1062, D1071, D1401)
+    # =========================================================
+    us_db = {}
     us_df = dfs.get("us_source", pd.DataFrame())
     
     if not us_df.empty:
         for _, row in us_df.iterrows():
-            ear_val = get_val_fuzzy(row, ['耳號', 'Ear Tag', 'Nombor', 'Ear'])
-            if ear_val == '-':
-                for col_idx in [2, 6, 7]:
-                    if len(us_df.columns) > col_idx:
-                        val = str(row.iloc[col_idx]).strip().upper()
-                        if val.isdigit() and len(val) == 4:
-                            ear_val = val
-                            break
+            ear_val = str(row.get('耳號', row.get('Ear Tag', ''))).strip().upper()
+            if not ear_val or ear_val == 'NAN':
+                ear2 = str(row.get('耳號2', '')).strip()
+                if ear2 and ear2.isdigit():
+                    b_code = str(row.get('品種代號', 'D')).strip().upper()
+                    ear_val = f"{b_code}{ear2}"
 
-            if ear_val != '-':
-                ear_upper = ear_val.upper()
-                dob_g = parse_date_value(get_val_fuzzy(row, ['DOB', '出生日期', 'Birth Date']))
-                
-                sire_w    = shorten_name(get_val_fuzzy(row, ['Sire Name美系父親-全名', 'Sire Name美系父親名', '1st Sire', '父親']))
-                dam_ab    = shorten_name(get_val_fuzzy(row, ['Dam Name美系母親-全名', 'Dam Name美系母親名', '1st Dam', '母親']))
-                sire_sire = shorten_name(get_val_fuzzy(row, ['Sire美系父親名(祖父)', 'sire_sire', '祖父']))
-                sire_dam  = shorten_name(get_val_fuzzy(row, ['Dam Name美系母親名(祖母)', 'sire_dam', '祖母']))
-                dam_sire  = shorten_name(get_val_fuzzy(row, ['MGS Name 美系MGS名', 'dam_sire', '外公', 'MGS']))
-                dam_dam   = shorten_name(get_val_fuzzy(row, ['dam_dam', '外婆']))
+            if ear_val and ear_val != 'NAN':
+                dob = parse_date_value(row.get('DOB', row.get('出生日期', '-')))
+                sire_name = shorten_name(row.get('Sire Name美系父親名', row.get('Sire Name美系父親-全名', '-')))
+                dam_name  = shorten_name(row.get('Dam Name美系母親名', row.get('Dam Name美系母親-全名', '-')))
+                mgs_name  = shorten_name(row.get('MGS Name 美系MGS名', '-'))
 
-                info = {
-                    'ear': ear_upper,
-                    'birth_date': dob_g,
-                    'sire': sire_w,
-                    'dam': dam_ab,
-                    'sire_sire': sire_sire,
-                    'sire_dam': sire_dam,
-                    'dam_sire': dam_sire,
-                    'dam_dam': dam_dam,
-                    'details': {str(k).strip(): str(v).strip() for k, v in row.items() if pd.notna(v)}
+                us_db[ear_val] = {
+                    "birth_date": dob,
+                    "sire": sire_name,
+                    "dam": dam_name,
+                    "mgs": mgs_name,
+                    "sire_sire": sire_name,   # 0代公豬父系頂層
+                    "sire_dam": dam_name,    # 0代母系頂層
+                    "dam_sire": mgs_name,
+                    "dam_dam": dam_name
                 }
-                
-                # 建立多重索引 (D1401, 1401, 1401純數字)
-                us_identity_db[ear_upper] = info
-                num = extract_number(ear_upper)
+                num = extract_number(ear_val)
                 if num:
-                    us_identity_db[str(num)] = info
-                    us_identity_db[f"D{num}"] = info
-                    us_identity_db[f"L{num}"] = info
-                    us_identity_db[f"Y{num}"] = info
+                    us_db[str(num)] = us_db[ear_val]
 
-    # ==========================================
-    # 2. 處理生產歷程與五位數自產豬
-    # ==========================================
-    gla_df = dfs.get("gla_breeding", pd.DataFrame())
-    main_df = dfs.get("main_prod", pd.DataFrame())
-    prod_df = pd.concat([d for d in [gla_df, main_df] if not d.empty], ignore_index=True).drop_duplicates() if (not gla_df.empty or not main_df.empty) else pd.DataFrame()
+    # =========================================================
+    # 2. 建立 5 位數自產豬耳號區間庫 (由 4位數父母生下)
+    # =========================================================
+    prod_df = dfs.get("main_prod", pd.DataFrame())
+    litter_interval_db = []
+    
+    # 尋找關鍵欄位
+    col_dam = next((c for c in prod_df.columns if '母豬耳號' in c or 'Nombor' in c or 'Ear Tag' in c), None)
+    col_sire = next((c for c in prod_df.columns if '配種公豬' in c or 'Jantan' in c or 'Boar' in c), None)
+    col_farrow = next((c for c in prod_df.columns if 'Farrowing' in c or '分娩日' in c), None)
+    col_mating = next((c for c in prod_df.columns if 'Kahwin' in c or '配種日' in c), None)
+    col_breed = next((c for c in prod_df.columns if 'Breed' in c or '品種' in c), None)
 
-    litter_range_db = []
-    if not prod_df.empty:
-        for _, row in prod_df.iterrows():
-            farrow_c = parse_date_value(get_val_fuzzy(row, ['Tarikh Farrowing', 'Farrowing date', '分娩日期']))
-            dam_ear = get_val_fuzzy(row, ['Nombor Telinga', '母豬耳號', '耳號', 'Ear Tag']).upper()
-            mate_sire = get_val_fuzzy(row, ['Jantan', '配種公豬', '當胎配種公', 'Boar'])
-            notch_start = get_val_fuzzy(row, ['Notch Breeder (start)', 'Ear Notch Breeder (start)'])
-            notch_end   = get_val_fuzzy(row, ['Notch Breeder (end)', 'Ear Notch Breeder (end)'])
+    # 尋找耳號間距欄位 (Notch Breeder Start / End)
+    col_n_start1 = next((c for c in prod_df.columns if 'Notch Breeder (start)' in c or 'Breeder (start)' in c), None)
+    col_n_end1   = next((c for c in prod_df.columns if 'Notch Breeder (end)' in c or 'Breeder (end)' in c), None)
 
-            s_num = extract_number(notch_start)
-            e_num = extract_number(notch_end)
-            if s_num is not None and e_num is not None and farrow_c != '-':
-                litter_range_db.append({
-                    'start': min(s_num, e_num),
-                    'end': max(s_num, e_num),
-                    'birth_date': farrow_c,
-                    'dam': dam_ear,
-                    'sire': mate_sire
-                })
+    for _, row in prod_df.iterrows():
+        farrow_d = parse_date_value(row.get(col_farrow, '')) if col_farrow else '-'
+        dam_e    = str(row.get(col_dam, '')).strip().upper() if col_dam and pd.notna(row.get(col_dam)) else ''
+        sire_e   = str(row.get(col_sire, '')).strip().upper() if col_sire and pd.notna(row.get(col_sire)) else ''
 
+        # 檢查耳號區間
+        for start_col, end_col in [(col_n_start1, col_n_end1), (90, 91), (92, 93)]:
+            try:
+                s_val = row.iloc[start_col] if isinstance(start_col, int) and len(row) > start_col else row.get(start_col)
+                e_val = row.iloc[end_col] if isinstance(end_col, int) and len(row) > end_col else row.get(end_col)
+                s_num = extract_number(s_val)
+                e_num = extract_number(e_val)
+                if s_num and e_num and farrow_d != '-':
+                    litter_interval_db.append({
+                        "start": min(s_num, e_num),
+                        "end": max(s_num, e_num),
+                        "birth_date": farrow_d,
+                        "dam_ear": dam_e,
+                        "sire_ear": sire_e
+                    })
+            except Exception:
+                pass
+
+    # =========================================================
+    # 3. 組合全場資料庫 (0代原種 + 1/2代自繁五位數)
+    # =========================================================
     pedigree_data = []
-    processed_ears = set()
+    registered_ears = set()
 
-    # 先將生產表個體組裝入庫
-    if not prod_df.empty:
-        for _, row in prod_df.iterrows():
-            ear = get_val_fuzzy(row, ['Nombor Telinga', '母豬耳號', '耳號', 'Ear Tag'])
-            if ear == '-' or not ear: continue
-            
-            ear_upper = ear.upper()
-            ear_num = extract_number(ear)
-            breed = get_val_fuzzy(row, ['Breed', '品種', '品種代號']).upper()
-            if breed == '-': breed = 'D' if ear_upper.startswith('D') else ('L' if ear_upper.startswith('L') else ('Y' if ear_upper.startswith('Y') else 'D'))
-            if 'LY' in ear_upper: breed = 'LY'
-
-            ind_bdate = '-'
-            ind_sire = '-'
-            ind_dam = '-'
-            s_sire = '-'
-            s_dam = '-'
-            d_sire = '-'
-            d_dam = '-'
-
-            # 命中美系種源庫
-            info = us_identity_db.get(ear_upper) or us_identity_db.get(str(ear_num) if ear_num else '')
-            if info:
-                ind_bdate = info['birth_date']
-                ind_sire  = info['sire']
-                ind_dam   = info['dam']
-                s_sire    = info['sire_sire']
-                s_dam     = info['sire_dam']
-                d_sire    = info['dam_sire']
-                d_dam     = info['dam_dam']
-            elif ear_num is not None and len(str(ear_num)) == 5:
-                # 命中五位數自產豬
-                for litter in litter_range_db:
-                    if litter['start'] <= ear_num <= litter['end']:
-                        ind_bdate = litter['birth_date']
-                        ind_dam   = litter['dam']
-                        ind_sire  = litter['sire']
-                        
-                        s_info = us_identity_db.get(ind_sire.upper()) or us_identity_db.get(str(extract_number(ind_sire)))
-                        if s_info:
-                            s_sire = s_info['sire']
-                            s_dam  = s_info['dam']
-                        d_info = us_identity_db.get(ind_dam.upper()) or us_identity_db.get(str(extract_number(ind_dam)))
-                        if d_info:
-                            d_sire = d_info['sire']
-                            d_dam  = d_info['dam']
-                        break
-
-            entry = {
-                "ear": ear_upper,
-                "breed": breed,
-                "sex": get_val_fuzzy(row, ['Sex', '性別']),
-                "parity": get_val_fuzzy(row, ['Parity', '胎次']),
-                "mate": get_val_fuzzy(row, ['Jantan', '配種公豬', '當胎配種公', 'Boar']),
-                "birth_date": ind_bdate,
-                "mating_date": parse_date_value(get_val_fuzzy(row, ['Tarikh Kahwin', 'Mating Date', '配種日期'])),
-                "dob": parse_date_value(get_val_fuzzy(row, ['Tarikh Farrowing', 'Farrowing date', '分娩日期'])),
-                "weaning_date": parse_date_value(get_val_fuzzy(row, ['Weaning day', '離乳日'])),
-                "spi": get_val_fuzzy(row, ['SPI']),
-                "mli": get_val_fuzzy(row, ['MLI']),
-                "tsi": get_val_fuzzy(row, ['TSI']),
-                "total_born": get_val_fuzzy(row, ['Total born', '總生產']),
-                "born_alive": get_val_fuzzy(row, ['Born alive', '活胎']),
-                "weaning": get_val_fuzzy(row, ['Weaning', '離乳']),
-                "weaning_wt": get_val_fuzzy(row, ['weaning weight', '均重']),
-                "gen1_sire": ind_sire,
-                "gen1_dam": ind_dam,
-                "sire_sire": s_sire,
-                "sire_dam": s_dam,
-                "dam_sire": d_sire,
-                "dam_dam": d_dam,
-                "details": {str(k).strip(): str(v).strip() for k, v in row.items() if pd.notna(v)}
-            }
-            pedigree_data.append(entry)
-            processed_ears.add(ear_upper)
-
-    # ==========================================
-    # 3. 【核心關鍵】把所有美系種源公豬強制寫入個體清單！
-    # ==========================================
-    for ear_key, info in us_identity_db.items():
-        if ear_key in processed_ears or re.match(r'^\d+$', ear_key):
+    for _, row in prod_df.iterrows():
+        ear = str(row.get(col_dam, '')).strip().upper() if col_dam and pd.notna(row.get(col_dam)) else ''
+        if not ear or ear in ['NAN', '-', '', 'NONE']:
             continue
-        
-        # 建立完整的獨立公豬個體
-        b_class = "D"
-        if ear_key.startswith("L"): b_class = "L"
-        elif ear_key.startswith("Y"): b_class = "Y"
 
+        ear_num = extract_number(ear)
+        breed = str(row.get(col_breed, 'D')).strip().upper() if col_breed and pd.notna(row.get(col_breed)) else 'D'
+        if 'LY' in ear: breed = 'LY'
+
+        ind_birth = '-'
+        ind_sire  = '-'
+        ind_dam   = '-'
+        s_sire    = '-'
+        s_dam     = '-'
+        d_sire    = '-'
+        d_dam     = '-'
+
+        # 情況 A：4 位數美國原種 (直接查美國表)
+        if ear in us_db or (ear_num and len(str(ear_num)) == 4 and str(ear_num) in us_db):
+            u_info = us_db.get(ear) or us_db.get(str(ear_num))
+            ind_birth = u_info["birth_date"]
+            ind_sire  = u_info["sire"]
+            ind_dam   = u_info["dam"]
+            s_sire    = u_info["sire_sire"]
+            s_dam     = u_info["sire_dam"]
+            d_sire    = u_info["dam_sire"]
+            d_dam     = u_info["dam_dam"]
+
+        # 情況 B：5 位數自產豬 (從耳號區間查出生日與父母耳號，再向上穿透到美國表)
+        elif ear_num and len(str(ear_num)) == 5:
+            for litter in litter_interval_db:
+                if litter["start"] <= ear_num <= litter["end"]:
+                    ind_birth = litter["birth_date"]
+                    parent_dam_ear  = litter["dam_ear"]
+                    parent_sire_ear = litter["sire_ear"]
+
+                    # 查詢父親的美國血統
+                    s_info = us_db.get(parent_sire_ear) or us_db.get(str(extract_number(parent_sire_ear)))
+                    if s_info:
+                        ind_sire = s_info["sire"]        # 父親名稱
+                        s_sire   = s_info["sire"]        # 祖父
+                        s_dam    = s_info["dam"]         # 祖母
+                    else:
+                        ind_sire = parent_sire_ear
+
+                    # 查詢母親的美國血統
+                    d_info = us_db.get(parent_dam_ear) or us_db.get(str(extract_number(parent_dam_ear)))
+                    if d_info:
+                        ind_dam  = d_info["dam"]         # 母親名稱
+                        d_sire   = d_info["sire"]        # 外公
+                        d_dam    = d_info["dam"]         # 外婆
+                    else:
+                        ind_dam = parent_dam_ear
+                    break
+
+        mating_d = parse_date_value(row.get(col_mating, '')) if col_mating else '-'
+        farrow_d = parse_date_value(row.get(col_farrow, '')) if col_farrow else '-'
+        mate_sire = str(row.get(col_sire, '-')).strip().upper() if col_sire and pd.notna(row.get(col_sire)) else '-'
+
+        entry = {
+            "ear": ear,
+            "breed": breed,
+            "sex": "FEMALE" if not (ear.startswith('D') and not ear.startswith('DD')) else "MALE",
+            "parity": str(row.get('Parity', row.get('胎次', '-'))).strip(),
+            "mate": mate_sire,
+            "birth_date": ind_birth,
+            "mating_date": mating_d,
+            "dob": farrow_d,
+            "gen1_sire": ind_sire,
+            "gen1_dam": ind_dam,
+            "sire_sire": s_sire,
+            "sire_dam": s_dam,
+            "dam_sire": d_sire,
+            "dam_dam": d_dam,
+            "details": {str(k): str(v) for k, v in row.items() if pd.notna(v)}
+        }
+        pedigree_data.append(entry)
+        registered_ears.add(ear)
+
+    # =========================================================
+    # 4. 把 0 代美國種源所有公豬/母豬強制以獨立個體補齊入庫
+    # =========================================================
+    for u_ear, u_info in us_db.items():
+        if u_ear.isdigit() or u_ear in registered_ears:
+            continue
+        b_class = "D" if u_ear.startswith("D") else ("L" if u_ear.startswith("L") else "Y")
         pedigree_data.append({
-            "ear": ear_key,
+            "ear": u_ear,
             "breed": b_class,
-            "sex": "MALE",
+            "sex": "MALE" if not u_ear.startswith("DD") else "FEMALE",
             "parity": "-",
             "mate": "-",
-            "birth_date": info['birth_date'],
+            "birth_date": u_info["birth_date"],
             "mating_date": "-",
             "dob": "-",
-            "weaning_date": "-",
-            "spi": "-",
-            "mli": "-",
-            "tsi": "-",
-            "total_born": "-",
-            "born_alive": "-",
-            "weaning": "-",
-            "weaning_wt": "-",
-            "gen1_sire": info['sire'],
-            "gen1_dam": info['dam'],
-            "sire_sire": info['sire_sire'],
-            "sire_dam": info['sire_dam'],
-            "dam_sire": info['dam_sire'],
-            "dam_dam": info['dam_dam'],
-            "details": info.get('details', {})
+            "gen1_sire": u_info["sire"],
+            "gen1_dam": u_info["dam"],
+            "sire_sire": u_info["sire_sire"],
+            "sire_dam": u_info["sire_dam"],
+            "dam_sire": u_info["dam_sire"],
+            "dam_dam": u_info["dam_dam"],
+            "details": {}
         })
-        processed_ears.add(ear_key)
+        registered_ears.add(u_ear)
 
-    print(f"🎉 聚合完成！共導出 {len(pedigree_data)} 筆完整系譜個體。")
-
+    print(f"🎉 資料鏈結完成！共產出 {len(pedigree_data)} 筆系譜。")
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
 
