@@ -41,13 +41,13 @@ def shorten_name(name_str):
     return s
 
 def fetch_and_parse():
-    print("🚀 啟動統一個體出生日與全血統深度雙向關聯算碼...")
+    print("🚀 啟動智能數字去殼比對與全血統深度雙向關聯算碼...")
     headers = {'User-Agent': 'Mozilla/5.0'}
     
     target_gids = {
-        "us_source": "803517616",      # 美國原始種源數據
-        "gla_breeding": "1821811808",  # GLA 遺傳育種資訊
-        "main_prod": "0"               # 配種與分娩表
+        "us_source": "803517616",      
+        "gla_breeding": "1821811808",  
+        "main_prod": "0"               
     }
     
     dfs = {}
@@ -63,7 +63,7 @@ def fetch_and_parse():
         except Exception as e:
             dfs[key] = pd.DataFrame()
 
-    # 1. 建立美系種源庫
+    # 1. 建立美系種源庫 (加上純數字 mapping 解決 D1401 vs 1401 找不到的問題)
     us_identity_db = {}
     us_df = dfs.get("us_source", pd.DataFrame())
     if not us_df.empty:
@@ -92,15 +92,17 @@ def fetch_and_parse():
                 dam_sire  = shorten_name(row.get('MGS Name 美系MGS名', row.get('dam_sire', '-')))
                 dam_dam   = shorten_name(row.get('dam_dam', '-'))
 
-                us_identity_db[ear_val] = {
-                    'birth_date': dob_g,
-                    'sire': sire_w,
-                    'dam': dam_ab,
-                    'sire_sire': sire_sire,
-                    'sire_dam': sire_dam,
-                    'dam_sire': dam_sire,
-                    'dam_dam': dam_dam
+                info_dict = {
+                    'birth_date': dob_g, 'sire': sire_w, 'dam': dam_ab,
+                    'sire_sire': sire_sire, 'sire_dam': sire_dam,
+                    'dam_sire': dam_sire, 'dam_dam': dam_dam
                 }
+                us_identity_db[ear_val] = info_dict
+                
+                # 【核心修復】同時將純數字也加入索引！
+                num_key = extract_number(ear_val)
+                if num_key:
+                    us_identity_db[num_key] = info_dict
 
     # 2. 合併生產歷程
     gla_df = dfs.get("gla_breeding", pd.DataFrame())
@@ -137,7 +139,6 @@ def fetch_and_parse():
     col_notch_start = get_exact_col(prod_df, ['Ear Notch Breeder (start)', 'Notch Breeder (start)'])
     col_notch_end   = get_exact_col(prod_df, ['Ear Notch Breeder (end)', 'Notch Breeder (end)'])
 
-    # 五位數耳號範圍對照表
     litter_range_db = []
     for _, row in prod_df.iterrows():
         farrow_c = parse_date_value(row.get(col_farrow_date, ''))
@@ -156,9 +157,8 @@ def fetch_and_parse():
                     'sire': mate_sire
                 })
 
-    # 第一階段：提取與算碼
     temp_list = []
-    ear_unique_birth_map = {} # 鎖定唯一出生日
+    ear_unique_birth_map = {}
 
     for idx, row in prod_df.iterrows():
         ear = str(row.get(col_ear, '')).strip() if pd.notna(row.get(col_ear)) else ""
@@ -187,19 +187,18 @@ def fetch_and_parse():
         d_sire = '-'
         d_dam = '-'
 
-        # 四位數耳號判斷
-        if ear_num is not None and (len(str(ear_num)) == 4 or ear_upper in us_identity_db):
-            if ear_upper in us_identity_db:
-                info = us_identity_db[ear_upper]
-                ind_birth_date = info['birth_date']
-                ind_sire       = info['sire']
-                ind_dam        = info['dam']
-                s_sire         = info['sire_sire']
-                s_dam          = info['sire_dam']
-                d_sire         = info['dam_sire']
-                d_dam          = info['dam_dam']
+        # 【核心修復】同時比對字串與純數字
+        info = us_identity_db.get(ear_upper) or us_identity_db.get(ear_num)
+        
+        if info:
+            ind_birth_date = info['birth_date']
+            ind_sire       = info['sire']
+            ind_dam        = info['dam']
+            s_sire         = info['sire_sire']
+            s_dam          = info['sire_dam']
+            d_sire         = info['dam_sire']
+            d_dam          = info['dam_dam']
 
-        # 五位數耳號判斷
         elif ear_num is not None and len(str(ear_num)) == 5:
             for litter in litter_range_db:
                 if litter['start'] <= ear_num <= litter['end']:
@@ -207,17 +206,17 @@ def fetch_and_parse():
                     ind_dam        = litter['dam']
                     ind_sire       = litter['sire']
                     
-                    if ind_sire.upper() in us_identity_db:
-                        s_info = us_identity_db[ind_sire.upper()]
+                    s_info = us_identity_db.get(ind_sire.upper()) or us_identity_db.get(extract_number(ind_sire))
+                    if s_info:
                         s_sire = s_info['sire']
                         s_dam  = s_info['dam']
-                    if ind_dam.upper() in us_identity_db:
-                        d_info = us_identity_db[ind_dam.upper()]
+                        
+                    d_info = us_identity_db.get(ind_dam.upper()) or us_identity_db.get(extract_number(ind_dam))
+                    if d_info:
                         d_sire = d_info['sire']
                         d_dam  = d_info['dam']
                     break
 
-        # 收集唯一合法生日 (若非空且非 '-')
         if ind_birth_date != '-' and ear_upper not in ear_unique_birth_map:
             ear_unique_birth_map[ear_upper] = ind_birth_date
 
@@ -250,11 +249,24 @@ def fetch_and_parse():
             "details": {str(k).strip(): (parse_date_value(v) if '日期' in str(k) or 'date' in str(k).lower() else str(v).strip()) for k, v in row.items() if pd.notna(v)}
         })
 
-    # 第二階段：強制全表 Birth Date 100% 統一
+    # 強制塞入所有美系公豬 (確保 D1401 即使沒配種也能找到獨立祖先檔案)
+    existing_ears = set(str(x['ear']).strip().upper() for x in temp_list)
+    for k, info in us_identity_db.items():
+        if isinstance(k, int): continue
+        if k.upper() not in existing_ears:
+            temp_list.append({
+                "ear": k.upper(), "breed": "D", "sex": "MALE", "parity": "-", "mate": "-",
+                "raw_birth_date": info['birth_date'], "mating_date": "-", "dob": "-", "weaning_date": "-",
+                "spi": "-", "mli": "-", "tsi": "-", "total_born": "-", "born_alive": "-", "weaning": "-", "weaning_wt": "-",
+                "gen1_sire": shorten_name(info['sire']), "gen1_dam": shorten_name(info['dam']),
+                "sire_sire": shorten_name(info['sire_sire']), "sire_dam": shorten_name(info['sire_dam']),
+                "dam_sire": shorten_name(info['dam_sire']), "dam_dam": shorten_name(info['dam_dam']),
+                "details": {}
+            })
+
     pedigree_data = []
     for item in temp_list:
         ear_u = item["ear"].upper()
-        # 若有找到該耳號的唯一生日，全面強制覆蓋！
         final_bdate = ear_unique_birth_map.get(ear_u, item["raw_birth_date"])
         item["birth_date"] = final_bdate
         del item["raw_birth_date"]
