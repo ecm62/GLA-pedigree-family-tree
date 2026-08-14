@@ -46,7 +46,7 @@
         
         .mate-node-box { background-color: #fff1f2 !important; border: 2px dashed #e11d48 !important; color: #9f1239 !important; }
         .origin-target { background-color: #1d4ed8 !important; color: #ffffff !important; border: 3px solid #f59e0b !important; font-weight: 800 !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.7) !important; z-index: 20 !important; }
-        .inbreeding-alert { outline: 3px dashed #dc2626 !important; background-color: #fee2e2 !important; }
+        .inbreeding-alert { outline: 3px dashed #dc2626 !important; background-color: #fee2e2 !important; font-weight: bold !important; }
 
         #permanentCard { background: #ffffff; border-left: 4px solid #2563eb; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
         .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 6px; }
@@ -55,9 +55,9 @@
         .excel-data-table td { padding: 6px 8px; border: 1px solid #e2e8f0; }
 
         .tree-container { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .tree-viewport { position: relative; width: 100%; min-height: 480px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .tree-viewport { position: relative; width: 100%; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; min-height: 420px; }
         .line-canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
-        .nodes-wrapper { position: relative; width: 100%; min-height: 480px; z-index: 2; }
+        .nodes-wrapper { position: relative; z-index: 2; }
 
         .tree-node { position: absolute; border-radius: 6px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.08); padding: 4px 6px; box-sizing: border-box; cursor: pointer; transition: transform 0.1s ease; }
         .tree-node:hover { transform: scale(1.04); z-index: 30; }
@@ -151,7 +151,7 @@
     <!-- 3. Inbreeding Comparison Topology Family Tree (近親比對拓撲家族樹) -->
     <div class="tree-container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="font-weight:800; font-size:15px; color:#1e3c72;">🌳 2. Inbreeding Comparison Topology Family Tree (近親比對拓撲家族樹)</div>
+            <div style="font-weight:800; font-size:15px; color:#1e3c72;">🌳 2. Inbreeding Comparison Topology Family Tree (近親比對拓撲家族樹 - 蝴蝶形全系譜)</div>
             <button class="btn btn-export" onclick="exportCanvasPNG('topologyViewport', 'GLA_Topology_Tree')">📸 匯出拓撲圖 PNG</button>
         </div>
         <div class="tree-viewport" id="topologyViewport">
@@ -266,7 +266,6 @@
         function renderDirectTree(allItems, target) {
             const container = document.getElementById('singleContainer');
             const canvas = document.getElementById('singleCanvas');
-            const viewport = document.getElementById('singleViewport');
             container.innerHTML = '';
 
             const W = 135, H = 55;
@@ -276,13 +275,11 @@
             const matingRecords = allItems.filter(i => i.mate && i.mate !== '-');
             const mateCount = matingRecords.length;
             
-            // 計算自適應高度
-            const mateTotalHeight = Math.max(mateCount * 70, 460);
-            const totalHeight = Math.max(mateTotalHeight, 480);
+            const totalHeight = Math.max(mateCount * 75 + 60, 480);
             const midY = totalHeight / 2;
 
             container.style.height = `${totalHeight}px`;
-            container.style.minWidth = `950px`;
+            container.style.width = `950px`;
 
             // 1. 核心目標
             const targetX = 400, targetY = midY - (H / 2);
@@ -293,26 +290,26 @@
             const dam1 = target.gen1_dam !== '-' ? target.gen1_dam : 'Dam (未記載)';
             nodes.push({ id: 'sire1', label: '♂ 1st Sire (父親)', ear: sire1, breed: target.breed, x: 220, y: midY - 110 });
             nodes.push({ id: 'dam1', label: '♀ 1st Dam (母親)', ear: dam1, breed: target.breed, x: 220, y: midY + 55 });
-            links.push({ from: 'sire1', to: 'target', type: 'parent-merge' });
-            links.push({ from: 'dam1', to: 'target', type: 'parent-merge' });
+            links.push({ from: 'sire1', to: 'target' });
+            links.push({ from: 'dam1', to: 'target' });
 
             // 3. 左側祖代
             nodes.push({ id: 'ss', label: "♂ Sire's Sire (祖父)", ear: target.sire_sire, breed: target.breed, x: 40, y: midY - 160 });
             nodes.push({ id: 'sd', label: "♀ Sire's Dam (祖母)", ear: target.sire_dam, breed: target.breed, x: 40, y: midY - 60 });
             nodes.push({ id: 'ds', label: "♂ Dam's Sire (外公)", ear: target.dam_sire, breed: target.breed, x: 40, y: midY + 10 });
             nodes.push({ id: 'dd', label: "♀ Dam's Dam (外婆)", ear: target.dam_dam, breed: target.breed, x: 40, y: midY + 110 });
-            links.push({ from: 'ss', to: 'sire1', type: 'left-pair' });
-            links.push({ from: 'sd', to: 'sire1', type: 'left-pair' });
-            links.push({ from: 'ds', to: 'dam1', type: 'left-pair' });
-            links.push({ from: 'dd', to: 'dam1', type: 'left-pair' });
+            links.push({ from: 'ss', to: 'sire1' });
+            links.push({ from: 'sd', to: 'sire1' });
+            links.push({ from: 'ds', to: 'dam1' });
+            links.push({ from: 'dd', to: 'dam1' });
 
-            // 4. 右側配種公 (等距排開，避免重疊)
-            const startMateY = midY - ((mateCount - 1) * 35) - (H / 2);
+            // 4. 右側配種公 (等距排開)
+            const startMateY = midY - ((mateCount - 1) * 37) - (H / 2);
             matingRecords.forEach((rec, idx) => {
                 const mId = `mate_${idx}`;
-                const mY = startMateY + (idx * 70);
+                const mY = startMateY + (idx * 75);
                 nodes.push({ id: mId, label: `♂ Mating Sire (P.${rec.parity})`, ear: rec.mate, isMate: true, x: 580, y: mY });
-                links.push({ from: 'target', to: mId, type: 'mate-branch' });
+                links.push({ from: 'target', to: mId });
             });
 
             // 渲染 DOM
@@ -337,7 +334,7 @@
         }
 
         /* ----------------------------------------------------
-           2. 近親比對拓撲家族樹 (配種公右向拓撲展開)
+           2. 近親比對拓撲家族樹 (蝴蝶形全系譜：左親代、中主角、右展開配種公及其父母)
            ---------------------------------------------------- */
         function renderTopologyTree(allItems, target) {
             const container = document.getElementById('topologyContainer');
@@ -350,46 +347,78 @@
             const earUsage = {};
 
             const matingRecords = allItems.filter(i => i.mate && i.mate !== '-');
-            const totalHeight = Math.max(matingRecords.length * 85 + 60, 520);
+            const mateCount = matingRecords.length;
+
+            // 每一隻配種公需要展開父母，分配 125px 高度
+            const mateBlockHeight = 125;
+            const totalHeight = Math.max(mateCount * mateBlockHeight + 40, 520);
+            const midY = totalHeight / 2;
+
             container.style.height = `${totalHeight}px`;
-            container.style.minWidth = `1200px`;
+            container.style.width = `1350px`;
 
-            const targetY = totalHeight / 2 - (H / 2);
-            nodes.push({ id: 'top_target', label: '🎯 核心母豬', ear: target.ear, breed: target.breed, x: 40, y: targetY, isTarget: true });
+            // === A. 中間：核心母豬 (Center X = 460) ===
+            const targetX = 460, targetY = midY - (H / 2);
+            nodes.push({ id: 'top_target', label: '🎯 核心母豬 (Target)', ear: target.ear, breed: target.breed, x: targetX, y: targetY, isTarget: true });
+            earUsage[target.ear] = (earUsage[target.ear] || 0) + 1;
 
+            // === B. 左側：母豬自身父母與祖代 (X = 260 與 60) ===
+            const sire1 = target.gen1_sire !== '-' ? target.gen1_sire : 'Sire (未記載)';
+            const dam1 = target.gen1_dam !== '-' ? target.gen1_dam : 'Dam (未記載)';
+            nodes.push({ id: 'top_sire1', label: '♂ 1st Sire (父)', ear: sire1, breed: target.breed, x: 260, y: midY - 110 });
+            nodes.push({ id: 'top_dam1', label: '♀ 1st Dam (母)', ear: dam1, breed: target.breed, x: 260, y: midY + 55 });
+            links.push({ from: 'top_sire1', to: 'top_target' });
+            links.push({ from: 'top_dam1', to: 'top_target' });
+            if (sire1 !== '-') earUsage[sire1] = (earUsage[sire1] || 0) + 1;
+            if (dam1 !== '-') earUsage[dam1] = (earUsage[dam1] || 0) + 1;
+
+            nodes.push({ id: 'top_ss', label: "♂ 祖父 (Sire's Sire)", ear: target.sire_sire, breed: target.breed, x: 60, y: midY - 160 });
+            nodes.push({ id: 'top_sd', label: "♀ 祖母 (Sire's Dam)", ear: target.sire_dam, breed: target.breed, x: 60, y: midY - 60 });
+            nodes.push({ id: 'top_ds', label: "♂ 外公 (Dam's Sire)", ear: target.dam_sire, breed: target.breed, x: 60, y: midY + 10 });
+            nodes.push({ id: 'top_dd', label: "♀ 外婆 (Dam's Dam)", ear: target.dam_dam, breed: target.breed, x: 60, y: midY + 110 });
+            links.push({ from: 'top_ss', to: 'top_sire1' });
+            links.push({ from: 'top_sd', to: 'top_sire1' });
+            links.push({ from: 'top_ds', to: 'top_dam1' });
+            links.push({ from: 'top_dd', to: 'top_dam1' });
+            [target.sire_sire, target.sire_dam, target.dam_sire, target.dam_dam].forEach(n => {
+                if (n && n !== '-') earUsage[n] = (earUsage[n] || 0) + 1;
+            });
+
+            // === C. 右側：配種公與其父母 (X = 680 與 880) ===
+            const startMateY = midY - ((mateCount * mateBlockHeight) / 2) + (mateBlockHeight / 2) - (H / 2);
             matingRecords.forEach((rec, idx) => {
                 const mBoar = rec.mate;
                 const mId = `top_mate_${idx}`;
-                const mY = 30 + (idx * 80);
-                nodes.push({ id: mId, label: `♂ P${rec.parity} 配種公`, ear: mBoar, isMate: true, x: 280, y: mY });
-                links.push({ from: 'top_target', to: mId, type: 'mate-branch' });
+                const mY = startMateY + (idx * mateBlockHeight);
+                nodes.push({ id: mId, label: `♂ P${rec.parity} 配種公`, ear: mBoar, isMate: true, x: 680, y: mY });
+                links.push({ from: 'top_target', to: mId });
+                earUsage[mBoar] = (earUsage[mBoar] || 0) + 1;
 
-                // 配種公之父母追溯
+                // 追溯配種公的父母
                 const boarInfo = pedigreeList.find(p => p.ear === mBoar);
                 if (boarInfo) {
-                    const bsId = `bs_${idx}`;
-                    const bdId = `bd_${idx}`;
-                    const bsName = boarInfo.gen1_sire !== '-' ? boarInfo.gen1_sire : boarInfo.sire_sire;
-                    const bdName = boarInfo.gen1_dam !== '-' ? boarInfo.gen1_dam : boarInfo.sire_dam;
+                    const bsName = boarInfo.sire_sire !== '-' ? boarInfo.sire_sire : (boarInfo.gen1_sire !== '-' ? boarInfo.gen1_sire : '-');
+                    const bdName = boarInfo.sire_dam !== '-' ? boarInfo.sire_dam : (boarInfo.gen1_dam !== '-' ? boarInfo.gen1_dam : '-');
 
                     if (bsName && bsName !== '-') {
-                        nodes.push({ id: bsId, label: `♂ 配種公之父`, ear: bsName, breed: boarInfo.breed, x: 520, y: mY - 18 });
-                        links.push({ from: mId, to: bsId, type: 'mate-branch' });
+                        const bsId = `bs_${idx}`;
+                        nodes.push({ id: bsId, label: `♂ 配種公之父`, ear: bsName, breed: boarInfo.breed, x: 880, y: mY - 30 });
+                        links.push({ from: mId, to: bsId });
                         earUsage[bsName] = (earUsage[bsName] || 0) + 1;
                     }
                     if (bdName && bdName !== '-') {
-                        nodes.push({ id: bdId, label: `♀ 配種公之母`, ear: bdName, breed: boarInfo.breed, x: 520, y: mY + 28 });
-                        links.push({ from: mId, to: bdId, type: 'mate-branch' });
+                        const bdId = `bd_${idx}`;
+                        nodes.push({ id: bdId, label: `♀ 配種公之母`, ear: bdName, breed: boarInfo.breed, x: 880, y: mY + 30 });
+                        links.push({ from: mId, to: bdId });
                         earUsage[bdName] = (earUsage[bdName] || 0) + 1;
                     }
                 }
-                earUsage[mBoar] = (earUsage[mBoar] || 0) + 1;
             });
 
-            // 繪製與近親標記
+            // === D. 繪製節點 DOM 與近親高亮標記 ===
             const nodeMap = {};
             nodes.forEach(n => {
-                const isDuplicated = earUsage[n.ear] > 1;
+                const isDuplicated = (earUsage[n.ear] > 1) && (n.ear !== '-' && n.ear !== '');
                 const div = document.createElement('div');
                 let bCls = n.isTarget ? 'origin-target' : (n.isMate ? 'mate-node-box' : getBreedClass(n.breed, n.ear));
                 div.className = `tree-node ${bCls} ${isDuplicated ? 'inbreeding-alert' : ''}`;
@@ -409,10 +438,12 @@
         }
 
         function drawOrthogonalLines(canvas, container, links, nodeMap) {
-            canvas.width = container.scrollWidth || 1000;
-            canvas.height = container.scrollHeight || 500;
+            const w = parseInt(container.style.width) || 1200;
+            const h = parseInt(container.style.height) || 600;
+            canvas.width = w;
+            canvas.height = h;
             const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, w, h);
             ctx.lineWidth = 2;
             ctx.strokeStyle = '#475569';
 
@@ -422,11 +453,20 @@
                 if (!from || !to) return;
 
                 ctx.beginPath();
-                const midX = (from.rightX + to.leftX) / 2;
-                ctx.moveTo(from.rightX, from.midY);
-                ctx.lineTo(midX, from.midY);
-                ctx.lineTo(midX, to.midY);
-                ctx.lineTo(to.leftX, to.midY);
+                // 判斷連接方向（從左向右，或從右向左）
+                if (from.rightX <= to.leftX) {
+                    const midX = (from.rightX + to.leftX) / 2;
+                    ctx.moveTo(from.rightX, from.midY);
+                    ctx.lineTo(midX, from.midY);
+                    ctx.lineTo(midX, to.midY);
+                    ctx.lineTo(to.leftX, to.midY);
+                } else {
+                    const midX = (from.leftX + to.rightX) / 2;
+                    ctx.moveTo(from.leftX, from.midY);
+                    ctx.lineTo(midX, from.midY);
+                    ctx.lineTo(midX, to.midY);
+                    ctx.lineTo(to.rightX, to.midY);
+                }
                 ctx.stroke();
             });
         }
