@@ -40,11 +40,11 @@
         .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 14px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 2px 8px; border-radius: 4px; font-weight: bold; }
         
-        /* 四大品種標準淡色系配色 */
-        .breed-D  { background-color: #ffe4e6 !important; color: #9f1239 !important; border: 2px solid #f43f5e !important; } /* 淡紅 */
-        .breed-Y  { background-color: #fef3c7 !important; color: #92400e !important; border: 2px solid #f59e0b !important; } /* 淡黃 */
-        .breed-L  { background-color: #e0f2fe !important; color: #075985 !important; border: 2px solid #0ea5e9 !important; } /* 淡藍 */
-        .breed-LY { background-color: #d1fae5 !important; color: #065f46 !important; border: 2px solid #10b981 !important; } /* 淡綠 */
+        /* 四大品種淡色系配色 */
+        .breed-D  { background-color: #ffe4e6 !important; color: #9f1239 !important; border: 2px solid #f43f5e !important; }
+        .breed-Y  { background-color: #fef3c7 !important; color: #92400e !important; border: 2px solid #f59e0b !important; }
+        .breed-L  { background-color: #e0f2fe !important; color: #075985 !important; border: 2px solid #0ea5e9 !important; }
+        .breed-LY { background-color: #d1fae5 !important; color: #065f46 !important; border: 2px solid #10b981 !important; }
         
         .origin-target { border: 3px solid #f59e0b !important; background-color: #1d4ed8 !important; color: #ffffff !important; font-size: 12px !important; font-weight: 800 !important; box-shadow: 0 0 12px rgba(245, 158, 11, 0.6) !important; z-index: 20 !important; }
         .inbreeding-alert { outline: 3px dashed #dc2626 !important; animation: pulse 1.5s infinite; }
@@ -103,7 +103,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>耳號 / 美系名 / 配種公搜尋：</strong></label>
-            <input type="text" id="earInput" placeholder="例如：DD26002, D1062, D1400" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如：D1061, DD26002, D1400" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 展開系譜樹</button>
         </div>
         <div>
@@ -131,14 +131,14 @@
             <table class="excel-data-table">
                 <thead>
                     <tr>
-                        <th>個體耳號</th><th>品種</th><th>性別</th><th>真實生日</th><th>胎次</th><th>當胎配種公</th>
-                        <th>分娩日</th><th>總產仔</th><th>活產數</th><th>離乳數</th><th>生育重</th><th>均重</th>
+                        <th>個體耳號</th><th>品種</th><th>性別</th><th>真實生日 (DOB)</th><th>胎次</th><th>當胎配種公</th>
+                        <th>配種日期</th><th>當胎分娩日</th><th>總產仔</th><th>活產數</th><th>離乳數</th><th>生育重</th><th>均重</th>
                         <th>SPI</th><th>MLI</th><th>TSI</th><th>TNB</th><th>NBA</th><th>左乳</th><th>右乳</th>
                         <th>1代公(父)</th><th>1代母(母)</th>
                     </tr>
                 </thead>
                 <tbody id="excelTableBody">
-                    <tr><td colspan="21" class="placeholder-text">請於上方輸入耳號展開檢索...</td></tr>
+                    <tr><td colspan="22" class="placeholder-text">請於上方輸入耳號展開檢索...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -205,7 +205,6 @@
             searchPedigree();
         }
 
-        // 精準品種色彩分類器：Duroc (淡紅), Yorkshire (淡黃), Landrace (淡藍), Crossbred (淡綠)
         function getNodeBreedClass(targetBreed, nodeEar) {
             const clean = String(nodeEar || '').toUpperCase().trim();
             if (clean.includes('LY') || clean.includes('CROSSBREED')) return 'breed-LY';
@@ -213,7 +212,6 @@
             if (clean.startsWith('L') || clean.includes('LL') || clean.includes('LAND')) return 'breed-L';
             if (clean.startsWith('D') || clean.includes('DD') || clean.includes('DUROC')) return 'breed-D';
             
-            // 美系文字祖代繼承個體品種
             const tBreed = String(targetBreed || 'D').toUpperCase();
             if (tBreed.includes('LY')) return 'breed-LY';
             if (tBreed.includes('Y')) return 'breed-Y';
@@ -241,7 +239,7 @@
             });
 
             if (matched.length === 0) {
-                document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="21" class="placeholder-text">查無符合 "${term}" 之系譜數據</td></tr>`;
+                document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="22" class="placeholder-text">查無符合 "${term}" 之系譜數據</td></tr>`;
                 return;
             }
 
@@ -257,12 +255,12 @@
         }
 
         function renderTable(items, query) {
-            document.getElementById('cardTitle').innerHTML = `📌 育種性能與指數評定表: <span style="color:#2563eb;">檢索主體 "${query}" (${items.length} 筆胎次)</span>`;
+            document.getElementById('cardTitle').innerHTML = `📌 育種性能與評定表: <span style="color:#2563eb;">檢索主體 "${query}" (${items.length} 筆胎次)</span>`;
             let html = '';
             items.forEach(i => {
                 html += `<tr>
-                    <td><b>${i.ear}</b></td><td>${i.breed}</td><td>${i.sex}</td><td>${i.birth_date}</td><td>${i.parity}</td>
-                    <td><b>${i.mate}</b></td><td>${i.dob}</td><td>${i.total_born}</td><td>${i.born_alive}</td><td>${i.weaning}</td>
+                    <td><b>${i.ear}</b></td><td>${i.breed}</td><td>${i.sex}</td><td><b>${i.birth_date}</b></td><td>${i.parity}</td>
+                    <td><b>${i.mate}</b></td><td>${i.mating_date}</td><td>${i.dob}</td><td>${i.total_born}</td><td>${i.born_alive}</td><td>${i.weaning}</td>
                     <td>${i.mother_wt}</td><td>${i.weaning_wt}</td><td><b>${i.spi}</b></td><td><b>${i.mli}</b></td>
                     <td><b>${i.tsi}</b></td><td>${i.tnb}</td><td>${i.nba}</td><td>${i.lteat}</td><td>${i.rteat}</td>
                     <td>${i.gen1_sire}</td><td>${i.gen1_dam}</td>
@@ -272,7 +270,7 @@
         }
 
         /* ----------------------------------------------------
-           1. 三代直系演進圖 (父上母下、左親右配)
+           1. 三代直系演進圖
            ---------------------------------------------------- */
         function renderDirectTree(allItems, target) {
             const container = document.getElementById('singleBoxesContainer');
@@ -292,7 +290,7 @@
             container.style.height = `${totalHeight}px`;
             container.style.width = `940px`;
 
-            // 1. 核心目標 (Target)
+            // 1. 核心目標
             const targetX = 390, targetY = midY - (H / 2);
             nodes.push({ id: 'target', label: '🎯 Target Dam', ear: target.ear, breed: target.breed, x: targetX, y: targetY, isTarget: true });
 
@@ -345,7 +343,7 @@
         }
 
         /* ----------------------------------------------------
-           2. 蝴蝶形近親拓撲家族樹 (全系譜展開、零重疊)
+           2. 蝴蝶形近親拓撲家族樹
            ---------------------------------------------------- */
         function renderTopologyTree(allItems, target) {
             const container = document.getElementById('macroBoxesContainer');
@@ -446,9 +444,6 @@
             drawSmoothCurves(canvas, container, links, nodeMap);
         }
 
-        /* ----------------------------------------------------
-           流體貝茲曲線繪製 (Smooth Cubic Bezier Curves)
-           ---------------------------------------------------- */
         function drawSmoothCurves(canvas, container, links, nodeMap) {
             const w = parseInt(container.style.width) || 1200;
             const h = parseInt(container.style.height) || 500;
