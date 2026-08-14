@@ -432,7 +432,7 @@
             if (!nameStr || nameStr === '-' || nameStr === '未記載' || nameStr === '') return '-';
             let s = String(nameStr).trim();
             const parts = s.split(' ');
-            let keywords = parts.filter(p => !/^\d+[\-\d]*$/.test(p) && !['1CR1', '1CR2', 'CR1', 'CR2'].includes(p.toUpperCase()));
+            let keywords = parts.filter(p => !/^\d+[\-\d]*$', p) && !['1CR1', '1CR2', 'CR1', 'CR2'].includes(p.toUpperCase()));
             if (keywords.length > 0) {
                 let last = keywords[keywords.length - 1];
                 if (/\d/.test(last) && keywords.length > 1) keywords.pop();
@@ -481,33 +481,35 @@
         }
 
         function getHierarchyAncestors(items, targetItem) {
-            const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
-            const ear = String(targetItem.ear || '').toUpperCase();
-            
-            if (breed.includes('LY') || ear.startsWith('LY')) {
-                return {
-                    sireSide: [ { name: '-', label: '' }, { name: '-', label: '' }, { name: '-', label: '' } ],
-                    damSide: [ { name: '-', label: '' }, { name: '-', label: '' }, { name: '-', label: '' } ]
-                };
-            }
+            let sire = targetItem.gen1_sire || '-';
+            let dam  = targetItem.gen1_dam || '-';
+            let sSire = targetItem.sire_sire || '-';
+            let sDam  = targetItem.sire_dam || '-';
+            let dSire = targetItem.dam_sire || '-';
+            let dDam  = targetItem.dam_dam || '-';
 
-            let sire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['gen1_sire', '1st Sire', '父親']);
-            let dam  = targetItem.gen1_dam  || getValueFromMultiKeys(targetItem, ['gen1_dam', '1st Dam', '母親']);
-            let sSire = targetItem.sire_sire || getValueFromMultiKeys(targetItem, ['sire_sire', '祖父']);
-            let sDam  = targetItem.sire_dam  || getValueFromMultiKeys(targetItem, ['sire_dam', '祖母']);
-            let dSire = targetItem.dam_sire  || getValueFromMultiKeys(targetItem, ['dam_sire', '外公']);
-            let dDam  = targetItem.dam_dam   || getValueFromMultiKeys(targetItem, ['dam_dam', '外婆']);
+            if (sSire === '-' || sDam === '-' || dSire === '-' || dDam === '-') {
+                const sameEar = pedigreeList.find(i => String(i.ear).toUpperCase() === String(targetItem.ear).toUpperCase() && (i.sire_sire !== '-' || i.dam_sire !== '-'));
+                if (sameEar) {
+                    if (sSire === '-') sSire = sameEar.sire_sire;
+                    if (sDam === '-') sDam = sameEar.sire_dam;
+                    if (dSire === '-') dSire = sameEar.dam_sire;
+                    if (dDam === '-') dDam = sameEar.dam_dam;
+                    if (sire === '-') sire = sameEar.gen1_sire;
+                    if (dam === '-') dam = sameEar.gen1_dam;
+                }
+            }
 
             return {
                 sireSide: [
-                    { name: shortenAncestorName(sSire), label: '♂ 祖父 (Sire\'s Sire)' },
-                    { name: shortenAncestorName(sDam), label: '♀ 祖母 (Sire\'s Dam)' },
-                    { name: shortenAncestorName(sire), label: '♂ 父親 (1st Sire)' }
+                    { name: shortenAncestorName(sSire), label: "♂ 祖父 (Sire's Sire)" },
+                    { name: shortenAncestorName(sDam), label: "♀ 祖母 (Sire's Dam)" },
+                    { name: shortenAncestorName(sire), label: "♂ 父親 (1st Sire)" }
                 ],
                 damSide: [
-                    { name: shortenAncestorName(dam), label: '♀ 母親 (1st Dam)' },
-                    { name: shortenAncestorName(dSire), label: '♂ 外公 (Dam\'s Sire)' },
-                    { name: shortenAncestorName(dDam), label: '♀ 外婆 (Dam\'s Dam)' }
+                    { name: shortenAncestorName(dam), label: "♀ 母親 (1st Dam)" },
+                    { name: shortenAncestorName(dSire), label: "♂ 外公 (Dam's Sire)" },
+                    { name: shortenAncestorName(dDam), label: "♀ 外婆 (Dam's Dam)" }
                 ]
             };
         }
