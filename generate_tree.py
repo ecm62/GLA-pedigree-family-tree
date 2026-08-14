@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 SPREADSHEET_ID = "17TEL9lgV_3PzWUW0xj63LEiipyl5j_0W5BJjSVi89kA"
 
 def parse_date_value(val):
-    """將 Excel 序列號 (如 45665) 或正常日期字串統一轉為 YYYY-MM-DD"""
     if pd.isna(val) or str(val).strip() in ['', '-', 'nan', 'NaN', 'None', 'null']:
         return '-'
     val_str = str(val).replace('🔴', '').strip()
@@ -23,7 +22,6 @@ def parse_date_value(val):
     return val_str
 
 def extract_number(ear_str):
-    """擷取耳號中的純數字 (例如 DD26008 -> 26008, D1071 -> 1071)"""
     nums = re.findall(r'\d+', str(ear_str))
     if nums:
         return int(nums[0])
@@ -43,13 +41,13 @@ def shorten_name(name_str):
     return s
 
 def fetch_and_parse():
-    print("🚀 啟動分流與完整血統鏈結運算（目標與配種個體雙向三代追溯）...")
+    print("🚀 啟動統一個體出生日與全血統深度雙向關聯算碼...")
     headers = {'User-Agent': 'Mozilla/5.0'}
     
     target_gids = {
-        "us_source": "803517616",      # 美國原始種源數據 (四位數進口豬)
-        "gla_breeding": "1821811808",  # 🧬GLA 遺傳育種資訊
-        "main_prod": "0"               # 配種與分娩合併表
+        "us_source": "803517616",      # 美國原始種源數據
+        "gla_breeding": "1821811808",  # GLA 遺傳育種資訊
+        "main_prod": "0"               # 配種與分娩表
     }
     
     dfs = {}
@@ -63,13 +61,11 @@ def fetch_and_parse():
                 temp_df.columns = [str(c).replace('\n', '').replace('\r', '').strip() for c in temp_df.columns]
                 dfs[key] = temp_df.dropna(how='all')
         except Exception as e:
-            print(f"⚠️ 分頁 {key} 讀取失敗: {e}")
             dfs[key] = pd.DataFrame()
 
-    # 建立美系四位數個體資料庫 (包含完整祖代)
+    # 1. 建立美系種源庫
     us_identity_db = {}
     us_df = dfs.get("us_source", pd.DataFrame())
-    
     if not us_df.empty:
         for _, row in us_df.iterrows():
             ear_val = ""
@@ -106,25 +102,19 @@ def fetch_and_parse():
                     'dam_dam': dam_dam
                 }
 
+    # 2. 合併生產歷程
     gla_df = dfs.get("gla_breeding", pd.DataFrame())
     main_df = dfs.get("main_prod", pd.DataFrame())
     prod_df_list = [d for d in [gla_df, main_df] if not d.empty]
-    
-    if not prod_df_list:
-        print("❌ 無法取得生產歷程數據")
-        return
-    
-    prod_df = pd.concat(prod_df_list, ignore_index=True).drop_duplicates()
+    prod_df = pd.concat(prod_df_list, ignore_index=True).drop_duplicates() if prod_df_list else pd.DataFrame()
 
     def get_exact_col(df_target, exact_keywords):
         for kw in exact_keywords:
             for col in df_target.columns:
-                if col.strip().lower() == kw.lower():
-                    return col
+                if col.strip().lower() == kw.lower(): return col
         for kw in exact_keywords:
             for col in df_target.columns:
-                if kw.lower() in col.lower():
-                    return col
+                if kw.lower() in col.lower(): return col
         return None
 
     col_ear = get_exact_col(prod_df, ['Nombor Telinga 母豬耳號 Number', '母豬耳號', '耳號', 'Ear Tag']) or prod_df.columns[2]
@@ -132,7 +122,6 @@ def fetch_and_parse():
     col_parity = get_exact_col(prod_df, ['Parity', '胎次'])
     col_mate = get_exact_col(prod_df, ['Jantan 配種公豬 Boar', '配種公豬', '當胎配種公', 'Boar'])
     col_breed = get_exact_col(prod_df, ['Breed', '品種', '品種代號'])
-    
     col_mating_date = get_exact_col(prod_df, ['Tarikh Kahwin 配種日期 Date(YMD)', 'Mating Date', '配種日期'])
     col_farrow_date = get_exact_col(prod_df, ['Tarikh Farrowing date / Tarikh beranak (m/d)', 'Farrowing date', '分娩日期'])
     col_wean_date   = get_exact_col(prod_df, ['Weaning day / Hari cerai susu(m/d)', 'Weaning day', '離乳日'])
@@ -148,7 +137,7 @@ def fetch_and_parse():
     col_notch_start = get_exact_col(prod_df, ['Ear Notch Breeder (start)', 'Notch Breeder (start)'])
     col_notch_end   = get_exact_col(prod_df, ['Ear Notch Breeder (end)', 'Notch Breeder (end)'])
 
-    # 建立五位數耳號 LG:LH 快取庫
+    # 五位數耳號範圍對照表
     litter_range_db = []
     for _, row in prod_df.iterrows():
         farrow_c = parse_date_value(row.get(col_farrow_date, ''))
@@ -167,12 +156,13 @@ def fetch_and_parse():
                     'sire': mate_sire
                 })
 
-    pedigree_data = []
+    # 第一階段：提取與算碼
+    temp_list = []
+    ear_unique_birth_map = {} # 鎖定唯一出生日
 
     for idx, row in prod_df.iterrows():
         ear = str(row.get(col_ear, '')).strip() if pd.notna(row.get(col_ear)) else ""
-        if not ear or ear.lower() in ['nan', 'none', '-', '', 'null']:
-            continue
+        if not ear or ear.lower() in ['nan', 'none', '-', '', 'null']: continue
 
         ear_num = extract_number(ear)
         ear_upper = ear.upper()
@@ -186,13 +176,8 @@ def fetch_and_parse():
             return '-'
 
         def get_date_v(col_name):
-            if col_name and pd.notna(row.get(col_name)):
-                return parse_date_value(row.get(col_name))
+            if col_name and pd.notna(row.get(col_name)): return parse_date_value(row.get(col_name))
             return '-'
-
-        mating_date_x = get_date_v(col_mating_date)
-        farrow_date_c = get_date_v(col_farrow_date)
-        mate_boar_z   = get_v(col_mate)
 
         ind_birth_date = '-'
         ind_sire = '-'
@@ -202,7 +187,7 @@ def fetch_and_parse():
         d_sire = '-'
         d_dam = '-'
 
-        # 美系四位數追溯
+        # 四位數耳號判斷
         if ear_num is not None and (len(str(ear_num)) == 4 or ear_upper in us_identity_db):
             if ear_upper in us_identity_db:
                 info = us_identity_db[ear_upper]
@@ -214,7 +199,7 @@ def fetch_and_parse():
                 d_sire         = info['dam_sire']
                 d_dam          = info['dam_dam']
 
-        # 自產五位數追溯
+        # 五位數耳號判斷
         elif ear_num is not None and len(str(ear_num)) == 5:
             for litter in litter_range_db:
                 if litter['start'] <= ear_num <= litter['end']:
@@ -222,7 +207,6 @@ def fetch_and_parse():
                     ind_dam        = litter['dam']
                     ind_sire       = litter['sire']
                     
-                    # 遞迴二次尋找父母的血統
                     if ind_sire.upper() in us_identity_db:
                         s_info = us_identity_db[ind_sire.upper()]
                         s_sire = s_info['sire']
@@ -233,18 +217,22 @@ def fetch_and_parse():
                         d_dam  = d_info['dam']
                     break
 
+        # 收集唯一合法生日 (若非空且非 '-')
+        if ind_birth_date != '-' and ear_upper not in ear_unique_birth_map:
+            ear_unique_birth_map[ear_upper] = ind_birth_date
+
         if ind_sire.upper() == ear_upper: ind_sire = '-'
         if ind_dam.upper() == ear_upper: ind_dam = '-'
 
-        entry = {
+        temp_list.append({
             "ear": ear,
             "breed": breed,
             "sex": get_v(col_sex),
             "parity": get_v(col_parity),
-            "mate": mate_boar_z,
-            "birth_date": ind_birth_date,
-            "mating_date": mating_date_x,
-            "dob": farrow_date_c,
+            "mate": get_v(col_mate),
+            "raw_birth_date": ind_birth_date,
+            "mating_date": get_date_v(col_mating_date),
+            "dob": get_date_v(col_farrow_date),
             "weaning_date": get_date_v(col_wean_date),
             "spi": get_v(col_spi),
             "mli": get_v(col_mli),
@@ -259,23 +247,20 @@ def fetch_and_parse():
             "sire_dam": shorten_name(s_dam),
             "dam_sire": shorten_name(d_sire),
             "dam_dam": shorten_name(d_dam),
-            "details": {}
-        }
+            "details": {str(k).strip(): (parse_date_value(v) if '日期' in str(k) or 'date' in str(k).lower() else str(v).strip()) for k, v in row.items() if pd.notna(v)}
+        })
 
-        for k, v in row.items():
-            key_str = str(k).strip()
-            if pd.isna(v):
-                entry["details"][key_str] = ""
-            else:
-                val_str = str(v).strip()
-                if '日期' in key_str or 'date' in key_str.lower() or 'dob' in key_str.lower():
-                    entry["details"][key_str] = parse_date_value(val_str)
-                else:
-                    entry["details"][key_str] = val_str
+    # 第二階段：強制全表 Birth Date 100% 統一
+    pedigree_data = []
+    for item in temp_list:
+        ear_u = item["ear"].upper()
+        # 若有找到該耳號的唯一生日，全面強制覆蓋！
+        final_bdate = ear_unique_birth_map.get(ear_u, item["raw_birth_date"])
+        item["birth_date"] = final_bdate
+        del item["raw_birth_date"]
+        pedigree_data.append(item)
 
-        pedigree_data.append(entry)
-
-    print(f"🎉 資料運算與血統鏈全數完成！共處理 {len(pedigree_data)} 筆個體。")
+    print(f"🎉 唯一生日與血統鎖定完成！總計處理 {len(pedigree_data)} 筆紀錄。")
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
