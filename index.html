@@ -6,6 +6,32 @@
     <title>GLA Pedigree Family Tree Searching System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
+        /* 💀 死亡/淘汰 (DIE / Culled) 警示樣式 */
+        .node-dead {
+            border: 2.5px dashed #ef4444 !important;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.55) !important;
+            filter: grayscale(0.15);
+        }
+        .badge-dead {
+            display: inline-block;
+            background-color: #dc2626;
+            color: #ffffff !important;
+            font-size: 8px;
+            font-weight: 800;
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin-left: 3px;
+            letter-spacing: 0.5px;
+            animation: pulse-dead 2s infinite;
+        }
+        @keyframes pulse-dead {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        .row-dead { background-color: #fff1f2 !important; }
+        .row-dead td { color: #991b1b !important; }
+
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
         #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999; display: flex; align-items: center; justify-content: center; }
         .auth-card { background: #ffffff; padding: 32px 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; max-width: 380px; width: 90%; }
@@ -116,6 +142,7 @@
         <span class="color-badge breed-Y">Y (Yellow)</span>
         <span class="color-badge breed-L">L (Blue)</span>
         <span class="color-badge breed-D">D (Red)</span>
+        <span class="color-badge" style="background:#fee2e2; border-color:#ef4444; color:#991b1b;">💀 DIE (淘汰/死亡)</span>
     </div>
     <div id="permanentCard">
         <div class="card-header-bar">
@@ -180,6 +207,40 @@
         </div>
     </div>
     <script>
+        // 🌟 死亡/淘汰 (DIE) 狀態判定：檢查欄位是否包含「死亡、淘汰、死、cull、dead、mati」
+        function checkIsDead(itemOrEar) {
+            if (!itemOrEar) return false;
+            let targetItem = null;
+            if (typeof itemOrEar === 'string') {
+                const searchE = itemOrEar.trim().toLowerCase();
+                if (!searchE || searchE === '-' || searchE === '未記載') return false;
+                targetItem = pedigreeList.find(it => String(it.ear || (it.details && it.details['耳號']) || '').toLowerCase() === searchE);
+            } else {
+                targetItem = itemOrEar;
+            }
+            if (!targetItem) return false;
+
+            const keywords = ['死亡', '淘汰', '死', 'cull', 'dead', 'mati', 'afkir', 'culling'];
+            const checkFields = ['status', '狀態', '淘汰原因', '離場原因', '淘汰', '死亡日期', '淘汰日期', 'remarks', '備註'];
+            for (let f of checkFields) {
+                let v = targetItem[f] || (targetItem.details && targetItem.details[f]);
+                if (v && v !== '-') {
+                    const vLower = String(v).toLowerCase();
+                    if (keywords.some(kw => vLower.includes(kw))) return true;
+                }
+            }
+            if (targetItem.details) {
+                for (let k in targetItem.details) {
+                    const kl = k.toLowerCase();
+                    if (keywords.some(kw => kl.includes(kw))) {
+                        const vl = String(targetItem.details[k]).toLowerCase();
+                        if (vl && vl !== '-' && !vl.includes('在場') && !vl.includes('活')) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         let pedigreeList = [];
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
         let isAuthorized = false;
@@ -190,7 +251,6 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // 🌟 正確日齡計算：分娩日齡 = 分娩日 - 出生日
         function calculateAgeInDays(breed, birthDateStr, farrowDateStr, matingDateStr) {
             const bClean = String(breed || '').toUpperCase();
             if (bClean.includes('LY') || !birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
@@ -297,7 +357,6 @@
             return isNaN(num) ? '-' : num.toFixed(1);
         }
 
-        // 🌟 嚴格排除耳號欄位自身，杜絕親代抓出母豬自己的 Bug
         function getValueFromMultiKeys(obj, possibleKeys, excludeSelfEar = '') {
             if (!obj) return '-';
             const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
@@ -474,9 +533,11 @@
                 const mliVal = userRole === 'A' ? cleanVal(item.mli || getValueFromMultiKeys(item, ['mli'])) : '-';
                 const tsiVal = userRole === 'A' ? cleanVal(item.tsi || getValueFromMultiKeys(item, ['tsi'])) : '-';
 
+                const isDead = checkIsDead(item);
+                const deadBadge = isDead ? '<span class="badge-dead">💀 DIE</span>' : '';
                 html += `
-                    <tr class="${isPrimary ? 'main-row' : 'rel-row'}">
-                        <td><b>${cleanVal(itemEar)}</b></td>
+                    <tr class="${isPrimary ? 'main-row' : 'rel-row'} ${isDead ? 'row-dead' : ''}">
+                        <td><b>${cleanVal(itemEar)}</b>${deadBadge}</td>
                         <td>${breedVal}</td>
                         <td>${cleanVal(item.sex || getValueFromMultiKeys(item, ['性別']))}</td>
                         <td><b>${validBirthDate}</b></td>
@@ -586,9 +647,11 @@
                         p.exists = true;
                         const div = document.createElement('div');
                         div.className = `tree-node ${getBreedClass(p.name)}`;
+                        if (checkIsDead(p.name)) div.classList.add("node-dead");
                         div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
                         div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                        div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
+                        const pDead = checkIsDead(p.name) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                        div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDead}`;
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
                         linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: col1_X + boxW + colGap/2 });
@@ -608,9 +671,11 @@
                     const nodeY = ancYs[idx];
                     const div = document.createElement('div');
                     div.className = `tree-node ${getBreedClass(a.name)}`;
+                    if (checkIsDead(a.name)) div.classList.add("node-dead");
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                    div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
+                    const aDead = checkIsDead(a.name) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                    div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>${aDead}`;
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
 
@@ -632,7 +697,10 @@
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
             targetDiv.style.width = (boxW + 6) + 'px'; targetDiv.style.height = (boxH + 6) + 'px';
             const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
-            targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
+            const isTargetDead = checkIsDead(targetItem);
+            if (isTargetDead) targetDiv.classList.add("node-dead");
+            const targetDeadBadge = isTargetDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+            targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>${targetDeadBadge}`;
             container.appendChild(targetDiv);
 
             if (mateList.length > 0) {
@@ -649,7 +717,10 @@
                     if ((m.tnb && m.tnb !== '-') || (m.nba && m.nba !== '-') || (m.wn && m.wn !== '-')) {
                         perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
                     }
-                    mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>${perfBadge}`;
+                    const isMateDead = checkIsDead(m.name);
+                    if (isMateDead) mDiv.classList.add("node-dead");
+                    const mateDeadBadge = isMateDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+                    mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>${mateDeadBadge}${perfBadge}`;
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
@@ -766,9 +837,11 @@
                         p.exists = true;
                         const div = document.createElement('div');
                         div.className = `tree-node ${getBreedClass(p.name)}`;
+                        if (checkIsDead(p.name)) div.classList.add("node-dead");
                         div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
                         div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                        div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>`;
+                        const pDead = checkIsDead(p.name) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                        div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDead}`;
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
 
@@ -789,9 +862,11 @@
                     const nodeY = leftAncYs[idx];
                     const div = document.createElement('div');
                     div.className = `tree-node ${getBreedClass(a.name)}`;
+                    if (checkIsDead(a.name)) div.classList.add("node-dead");
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                    div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>`;
+                    const aDead = checkIsDead(a.name) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                    div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>${aDead}`;
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
 
@@ -813,7 +888,10 @@
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
             targetDiv.style.width = (boxW + 6) + 'px'; targetDiv.style.height = (boxH + 6) + 'px';
             const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
-            targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>`;
+            const isMacroTargetDead = checkIsDead(targetItem);
+            if (isMacroTargetDead) targetDiv.classList.add("node-dead");
+            const macroTargetDeadBadge = isMacroTargetDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+            targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>${macroTargetDeadBadge}`;
             container.appendChild(targetDiv);
 
             if (mateList.length > 0) {
@@ -830,7 +908,10 @@
                     if ((m.tnb && m.tnb !== '-') || (m.nba && m.nba !== '-') || (m.wn && m.wn !== '-')) {
                         perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
                     }
-                    mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>${perfBadge}`;
+                    const isMacroMateDead = checkIsDead(m.name);
+                    if (isMacroMateDead) mDiv.classList.add("node-dead");
+                    const macroMateDeadBadge = isMacroMateDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+                    mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>${macroMateDeadBadge}${perfBadge}`;
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
@@ -842,6 +923,7 @@
                         return String(itEar).toLowerCase() === String(m.name).toLowerCase();
                     });
 
+                    // 配種公直系親本
                     let curSireName = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Sire美系第0代父親名(祖父)', 'Sire 美系第0代父親名(祖父)', 'sire_sire', '1st Sire', 'Sire Name美系父親名'], m.name)) : '-';
                     let curDamName  = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name 美系第0代母親名(祖母)', 'sire_dam', '1st Dam', 'Dam Name美系母親名'], m.name)) : '-';
 
@@ -851,9 +933,11 @@
                     if (curSireName && curSireName !== '-') {
                         const sireDiv = document.createElement('div');
                         sireDiv.className = `tree-node ${getBreedClass(curSireName)}`;
+                        if (checkIsDead(curSireName)) sireDiv.classList.add("node-dead");
                         sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = sireY + 'px';
                         sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
-                        sireDiv.innerHTML = `<span class="sub-label">♂ Sire's Sire</span><b>${curSireName}</b>`;
+                        const sDead = checkIsDead(curSireName) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                        sireDiv.innerHTML = `<span class="sub-label">♂ Sire's Sire</span><b>${curSireName}</b>${sDead}`;
                         attachNodeClick(sireDiv, curSireName);
                         container.appendChild(sireDiv);
                         linesToDraw.push({ x1: col3_X + boxW + 10, y1: mateY + mateBoxH/2 + baseOffsetY, x2: col4_X, y2: sireY + boxH/2 + baseOffsetY, midX: col3_X + boxW + 10 + colGap/2 });
@@ -862,9 +946,11 @@
                     if (curDamName && curDamName !== '-') {
                         const damDiv = document.createElement('div');
                         damDiv.className = `tree-node ${getBreedClass(curDamName)}`;
+                        if (checkIsDead(curDamName)) damDiv.classList.add("node-dead");
                         damDiv.style.left = col4_X + 'px'; damDiv.style.top = damY + 'px';
                         damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
-                        damDiv.innerHTML = `<span class="sub-label">♀ Sire's Dam</span><b>${curDamName}</b>`;
+                        const dDead = checkIsDead(curDamName) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                        damDiv.innerHTML = `<span class="sub-label">♀ Sire's Dam</span><b>${curDamName}</b>${dDead}`;
                         attachNodeClick(damDiv, curDamName);
                         container.appendChild(damDiv);
                         linesToDraw.push({ x1: col3_X + boxW + 10, y1: mateY + mateBoxH/2 + baseOffsetY, x2: col4_X, y2: damY + boxH/2 + baseOffsetY, midX: col3_X + boxW + 10 + colGap/2 });
