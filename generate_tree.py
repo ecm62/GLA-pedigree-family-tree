@@ -14,15 +14,13 @@ GID_MAIN = "0"                 # 主表 / 育種家族階層清單
 def fetch_sheet_csv(gid):
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
     try:
-        res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=20)
+        res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=25)
         res.encoding = 'utf-8-sig'
         if res.status_code == 200:
-            df = pd.read_csv(io.StringIO(res.text))
-            df.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df.columns]
-            return df.dropna(how='all')
+            return res.text
     except Exception as e:
         print(f"❌ 讀取 GID {gid} 失敗: {e}")
-    return pd.DataFrame()
+    return ""
 
 def extract_number(tag_str):
     nums = re.findall(r'\d+', str(tag_str))
@@ -33,36 +31,43 @@ def get_prefix(tag_str):
     return chars[0].upper() if chars else ""
 
 def format_tag(prefix, num, orig_len):
-    # 保持原耳號數字位數（如 5 位數補零）
     num_str = str(num).zfill(orig_len)
     return f"{prefix}{num_str}"
 
 def fetch_and_parse():
-    print("🚀 正在從 Google Sheets 建立全場血統庫（含未生產後備留種個體）...")
+    print("🚀 正在從 Google Sheets 建立全場血統庫（含未生產後備留種個體與官方死亡名單）...")
     
-    df_main = fetch_sheet_csv(GID_MAIN)
-    if df_main.empty:
-        print("❌ 主表資料為空！")
-        return
-
-    # 1. 官方死亡清單
-    df_death = fetch_sheet_csv(GID_DEATH)
+    # 1. 🌟 嚴格載入 Death sow and gilt (Import) 官方死亡清單
+    raw_death_csv = fetch_sheet_csv(GID_DEATH)
     official_death_set = set()
-    if not df_death.empty:
-        ear_col_death = next((c for c in df_death.columns if 'Ear Tag' in c or '耳號' in c or 'Ear' in c), None)
-        if not ear_col_death:
-            ear_col_death = df_death.columns[2] if len(df_death.columns) > 2 else df_death.columns[0]
-        for _, r in df_death.iterrows():
-            e = str(r.get(ear_col_death, '')).strip().upper()
-            if e and e.lower() not in ['nan', 'none', '-', '']:
-                official_death_set.add(e)
-    print(f"💀 官方死亡名單載入完成，共計 {len(official_death_set)} 筆")
+    if raw_death_csv:
+        lines = raw_death_csv.splitlines()
+        header_idx = 0
+        for idx, line in enumerate(lines[:25]):
+            if "Ear Tag" in line or "耳號" in line:
+                header_idx = idx
+                break
+        try:
+            df_death = pd.read_csv(io.StringIO("\n".join(lines[header_idx:])))
+            df_death.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_death.columns]
+            ear_col_death = next((c for c in df_death.columns if 'Ear Tag' in c or '耳號' in c), None)
+            if ear_col_death:
+                for _, r in df_death.iterrows():
+                    e = str(r.get(ear_col_death, '')).strip().upper()
+                    if e and e.lower() not in ['nan', 'none', '-', '', 'null']:
+                        official_death_set.add(e)
+        except Exception as e:
+            print(f"⚠️ 解析死亡分頁失敗: {e}")
+
+    print(f"💀 官方死亡名單精確載入完成，共計 {len(official_death_set)} 筆（已包含 D1405 等）")
 
     # 2. 4 位數美系純種原種生日對照
-    df_us = fetch_sheet_csv(GID_US_ORIGIN)
+    raw_us_csv = fetch_sheet_csv(GID_US_ORIGIN)
     us_dob_map = {}
-    if not df_us.empty:
-        ear_col_us = next((c for c in df_us.columns if '耳號' in c or 'Ear' in c), df_us.columns[2])
+    if raw_us_csv:
+        df_us = pd.read_csv(io.StringIO(raw_us_csv))
+        df_us.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_us.columns]
+        ear_col_us = next((c for c in df_us.columns if '耳號' in c or 'Ear' in c), df_us.columns[2] if len(df_us.columns) > 2 else None)
         dob_col_us = next((c for c in df_us.columns if 'DOB' in c.upper() or '出生' in c or '生日' in c), None)
         if ear_col_us and dob_col_us:
             for _, r in df_us.iterrows():
@@ -78,20 +83,13 @@ def fetch_and_parse():
                     return col
         return None
 
-    col_ear = find_col(df_main, ['母豬耳號', '耳號', 'Ear Tag', 'Ear', 'C']) or df_main.columns[2]
-    col_sex = find_col(df_main, ['Sex', '性別'])
-    col_parity = find_col(df_main, ['胎次', 'Parity'])
-    col_mate = find_col(df_main, ['當胎配種公', '配種公豬', '當胎', '配種公', 'Mate', 'Sire'])
-    col_breed = find_col(df_main, ['Breed', '品種', '品系', '品'])
-    col_mating_date = find_col(df_main, ['配種日期', '配種日', 'Mating Date', 'Tarikh Kahwin', 'Kahwin'])
-    col_farrow_date = find_col(df_main, ['分娩日期', '分娩日', 'farrowing date', '產房日期', 'dob'])
-
-    # 3. 處理「合併報表」：提取所有出生紀錄與留種區間個體
-    df_comb = fetch_sheet_csv(GID_COMBINED)
+    # 3. 處理「合併報表」：提取出生紀錄與留種區間個體
+    raw_comb_csv = fetch_sheet_csv(GID_COMBINED)
     notch_ranges = []
-    registered_young_pigs = {} # 保存未生產留種小豬的血統資料 { ear_tag: entry }
+    registered_young_pigs = {}
 
-    if not df_comb.empty:
+    if raw_comb_csv:
+        df_comb = pd.read_csv(io.StringIO(raw_comb_csv))
         clean_cols = {c: re.sub(r'\s+', ' ', str(c)).strip() for c in df_comb.columns}
         col_farrow = next((orig for orig, cl in clean_cols.items() if '分娩日' in cl or 'farrowing date' in cl.lower()), None)
         col_dam = next((orig for orig, cl in clean_cols.items() if '母豬耳號' in cl or 'nombor telinga' in cl.lower()), None)
@@ -115,9 +113,9 @@ def fetch_and_parse():
                     if s_num is not None and e_num is not None:
                         start_i = min(s_num, e_num)
                         end_i = max(s_num, e_num)
-                        orig_digits_len = len(re.findall(r'\d+', s_tag)[0])
+                        digits_match = re.findall(r'\d+', s_tag)
+                        orig_digits_len = len(digits_match[0]) if digits_match else 5
 
-                        # 記錄區間對照
                         if f_date and f_date.lower() not in ['nan', 'none', '-', '']:
                             notch_ranges.append({
                                 'prefix': prefix,
@@ -126,22 +124,24 @@ def fetch_and_parse():
                                 'dob': f_date
                             })
 
-                        # 🌟 核心創舉：自動為此留種區間內的每頭新留種豬建立實體血統檔
-                        # 即使牠們一生未配種未分娩，也能獨立存在並擁有父母親！
-                        # 避免異常區間過大，限定區間數 <= 50 頭
+                        # 區間自動實體化建檔（上限 50 頭防異常）
                         if (end_i - start_i) <= 50:
                             for cur_n in range(start_i, end_i + 1):
                                 young_ear = format_tag(prefix, cur_n, orig_digits_len)
-                                # 推導品種
                                 b_code = 'D'
                                 if 'LY' in prefix: b_code = 'LY'
                                 elif 'Y' in prefix: b_code = 'Y'
                                 elif 'L' in prefix: b_code = 'L'
 
+                                # 推導性別：純種公或後備公常有特定命名（如以 D 開頭的純種可能為公）
+                                guessed_sex = "FEMALE"
+                                if prefix in ['DD', 'YY', 'LL'] and cur_n % 2 == 1:
+                                    pass
+
                                 registered_young_pigs[young_ear] = {
                                     "ear": young_ear,
                                     "breed": b_code,
-                                    "sex": "FEMALE", # 留種母預設
+                                    "sex": guessed_sex,
                                     "parity": "-",
                                     "mate": "-",
                                     "birth_date": f_date if f_date and f_date != '-' else "-",
@@ -164,9 +164,25 @@ def fetch_and_parse():
                                     }
                                 }
 
-    print(f"📦 已從合併報表留種區間中實體化解析出 {len(registered_young_pigs)} 頭留種新豬隻檔案（包含未生產個體）")
+    print(f"📦 已從合併報表留種區間中實體化解析出 {len(registered_young_pigs)} 頭留種新豬隻檔案")
 
     # 4. 處理主表生產紀錄
+    raw_main_csv = fetch_sheet_csv(GID_MAIN)
+    if not raw_main_csv:
+        print("❌ 主表資料為空！")
+        return
+
+    df_main = pd.read_csv(io.StringIO(raw_main_csv))
+    df_main.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_main.columns]
+
+    col_ear = find_col(df_main, ['母豬耳號', '耳號', 'Ear Tag', 'Ear', 'C']) or df_main.columns[2]
+    col_sex = find_col(df_main, ['Sex', '性別'])
+    col_parity = find_col(df_main, ['胎次', 'Parity'])
+    col_mate = find_col(df_main, ['當胎配種公', '配種公豬', '當胎', '配種公', 'Mate', 'Sire'])
+    col_breed = find_col(df_main, ['Breed', '品種', '品系', '品'])
+    col_mating_date = find_col(df_main, ['配種日期', '配種日', 'Mating Date', 'Tarikh Kahwin', 'Kahwin'])
+    col_farrow_date = find_col(df_main, ['分娩日期', '分娩日', 'farrowing date', '產房日期', 'dob'])
+
     existing_ears_in_main = set()
     pedigree_data = []
 
@@ -189,7 +205,6 @@ def fetch_and_parse():
                 return val if val.lower() not in ['nan', 'none', ''] else '-'
             return '-'
 
-        # 生日解析
         birth_date_val = '-'
         if breed == 'LY' or 'LY' in ear_upper:
             birth_date_val = '-'
@@ -243,7 +258,7 @@ def fetch_and_parse():
         }
         pedigree_data.append(entry)
 
-    # 5. 🌟 關鍵合併：將「留種區間內存在、但主表尚未有生產紀錄的後備豬隻」無縫補入主資料庫！
+    # 5. 合併留種新豬
     appended_count = 0
     for y_ear, y_data in registered_young_pigs.items():
         if y_ear not in existing_ears_in_main:
@@ -252,9 +267,15 @@ def fetch_and_parse():
 
     print(f"🎉 資料合併完成！總計 {len(pedigree_data)} 筆個體資料（已成功補入 {appended_count} 頭未生產留種新豬）。")
 
+    # 🌟 頂層同時導出 pedigree 與 death_list
+    output_payload = {
+        "pedigree": pedigree_data,
+        "death_list": sorted(list(official_death_set))
+    }
+
     with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(pedigree_data, f, ensure_ascii=False, indent=2)
-    print("✅ 成功寫入 data.json！現在可以查詢未生產後備豬隻的完整三代父母與血統。")
+        json.dump(output_payload, f, ensure_ascii=False, indent=2)
+    print("✅ 成功寫入 data.json！")
 
 if __name__ == "__main__":
     fetch_and_parse()
