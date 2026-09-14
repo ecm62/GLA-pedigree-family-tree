@@ -34,13 +34,12 @@ def get_prefix(tag_str):
 def fetch_and_parse():
     print("🚀 正在從多個 Google Sheets 分頁聯合抓取出生日、血統與淘汰/死亡狀態數據...")
     
-    # 1. 主表
     df_main = fetch_sheet_csv(GID_MAIN)
     if df_main.empty:
         print("❌ 主表資料為空！")
         return
 
-    # 2. 4 位數純種美系原種 DOB (美國原始種源數據)
+    # 美國原始種源數據
     df_us = fetch_sheet_csv(GID_US_ORIGIN)
     us_dob_map = {}
     if not df_us.empty:
@@ -51,15 +50,16 @@ def fetch_and_parse():
                 e = str(r.get(ear_col_us, '')).strip().upper()
                 d = str(r.get(dob_col_us, '')).strip()
                 if e and d and d.lower() not in ['nan', 'none', '-', '']:
-                    us_dob_map[e] = d
+                    us_dob_map[e] = d.replace('/', '-')
 
-    # 3. 5 位數自繁區間對照 (合併報表 Col KN ~ Col KO 與 Col BJ 分娩日)
+    # 合併報表(配種+產房) 區間比對
     df_comb = fetch_sheet_csv(GID_COMBINED)
     notch_ranges = []
     if not df_comb.empty:
-        col_farrow = next((c for c in df_comb.columns if '分娩日' in c or 'Farrowing date' in c), None)
-        col_start = next((c for c in df_comb.columns if 'Breeder (start)' in c or 'Breeder(start)' in c or 'Ear Notch Breeder (start)' in c), None)
-        col_end = next((c for c in df_comb.columns if 'Breeder (end)' in c or 'Breeder(end)' in c or 'Ear Notch Breeder (end)' in c), None)
+        clean_cols = {c: re.sub(r'\s+', ' ', str(c)).strip() for c in df_comb.columns}
+        col_farrow = next((orig for orig, cl in clean_cols.items() if '分娩日' in cl or 'farrowing date' in cl.lower()), None)
+        col_start = next((orig for orig, cl in clean_cols.items() if 'breeder (start)' in cl.lower() or 'breeder(start)' in cl.lower()), None)
+        col_end = next((orig for orig, cl in clean_cols.items() if 'breeder (end)' in cl.lower() or 'breeder(end)' in cl.lower()), None)
         
         if col_farrow and col_start and col_end:
             for _, r in df_comb.iterrows():
@@ -76,7 +76,7 @@ def fetch_and_parse():
                             'prefix': prefix,
                             'start': min(s_num, e_num),
                             'end': max(s_num, e_num),
-                            'dob': f_date
+                            'dob': f_date.replace('/', '-')
                         })
 
     def find_col(df, keywords):
@@ -113,7 +113,6 @@ def fetch_and_parse():
                 return val if val.lower() not in ['nan', 'none', ''] else '-'
             return '-'
 
-        # 🌟 精準雙軌出生日搜尋
         birth_date_val = '-'
         if breed == 'LY' or 'LY' in ear_upper:
             birth_date_val = '-'
@@ -133,7 +132,7 @@ def fetch_and_parse():
                 if main_dob_col and pd.notna(row.get(main_dob_col)):
                     v = str(row.get(main_dob_col)).strip()
                     if v and v.lower() not in ['nan', 'none', '-', '']:
-                        birth_date_val = v
+                        birth_date_val = v.replace('/', '-')
 
         entry = {
             "ear": ear,
