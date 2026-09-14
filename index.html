@@ -231,15 +231,13 @@
             return targetItem.is_dead === true;
         }
 
-        // 🌟 嚴格檢驗是否為有效的美系品種品系名（非耳缺號碼、非胎次純數字）
-        function isValidAncestorName(val) {
-            if (!val || val === '-' || val === '' || val === '未記載' || val === 'none' || val === 'nan' || val === 'null') return false;
+        // 🌟 判定是否為單純的無效代碼 (如純數字 1)
+        function isInvalidNoise(val) {
+            if (!val || val === '-' || val === '' || val === '未記載' || val === 'none' || val === 'nan' || val === 'null') return true;
             const str = String(val).trim();
-            // 排除純數字 (如 '1') 以及耳缺代碼 (如 '279-6', '470-6', '12-3')
-            if (/^\d+([-\.]\d+)*$/.test(str)) return false;
-            // 必須包含至少一個英文字母或漢字
-            if (!/[A-Za-z\u4e00-\u9fa5]/.test(str)) return false;
-            return true;
+            // 排除純單一數字 (如 '1', '0')
+            if (/^\d{1,2}$/.test(str)) return true;
+            return false;
         }
 
         let pedigreeList = [];
@@ -350,9 +348,8 @@
             return String(v).replace(/\n/g, ' ').replace(/🔴/g, '').trim();
         }
 
-        // 🌟 智慧縮短並提煉美系種豬品系英文名字 (例如 "ABF BACK ROADS" -> "BACK ROADS", "S TUCKER" -> "TUCKER")
         function shortenAncestorName(nameStr) {
-            if (!isValidAncestorName(nameStr)) return '-';
+            if (isInvalidNoise(nameStr)) return '-';
             let s = String(nameStr).trim();
             const parts = s.split(' ');
             let keywords = parts.filter(p => !/^\d+[\-\d]*$/.test(p) && !['1CR1', '1CR2', 'CR1', 'CR2'].includes(p.toUpperCase()));
@@ -370,13 +367,12 @@
             return isNaN(num) ? '-' : num.toFixed(1);
         }
 
-        // 🌟 嚴謹多鍵搜尋：排除耳缺、胎次等欄位誤抓
         function getValueFromMultiKeys(obj, possibleKeys, excludeSelfEar = '') {
             if (!obj) return '-';
             const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
             const selfEarClean = String(excludeSelfEar || '').toLowerCase().trim();
 
-            const forbiddenPatterns = ['耳缺', 'notch', '胎次', 'parity', '次數', '產次', '日齡', '天數', '重', 'weight', 'cull', 'die'];
+            const forbiddenPatterns = ['胎次', 'parity', '次數', '產次', '日齡', '天數', '重', 'weight', 'cull', 'die'];
 
             for (let kCandidate of possibleKeys) {
                 const targetK = sanitize(kCandidate);
@@ -384,7 +380,6 @@
                     const rawSan = sanitize(rawK);
                     if (rawSan.includes('母豬耳號') || rawSan.includes('個體耳號') || rawSan === 'ear' || rawSan === 'eartag' || rawSan === '耳號') continue;
 
-                    // 檢查排除名單
                     if (forbiddenPatterns.some(fp => rawSan.includes(fp))) continue;
 
                     if (rawSan.includes(targetK)) {
@@ -439,7 +434,7 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 建立 100% 精準的美系品系名字階層關聯（徹底杜絕耳缺 279-6 與數字 1）
+        // 🌟 核心親本與祖代解析（保留母親名稱，絕不抹除！）
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -460,37 +455,31 @@
                 directSire = getValueFromMultiKeys(targetItem, ['Sire Name美系父親名', 'Sire全名', 'sire_name'], ear);
                 directDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名', 'Dam全名', 'dam_name'], ear);
             } else {
-                // 第一代公母嚴格抓取「耳號」
                 directSire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire'], ear);
                 directDam  = targetItem.gen1_dam || getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam'], ear);
-                
-                // 防呆：如果 directDam 誤抓成英文名（如 S TUCKER），表示抓錯欄位，強制退回重查
-                if (isValidAncestorName(directDam) && !/^[A-Za-z]{1,2}\d+/.test(directDam)) {
-                    directDam = getValueFromMultiKeys(targetItem, ['母豬耳號', '當胎母豬', 'Dam Ear']);
-                }
             }
 
-            // 尋找品系名：嚴格搜尋「名 / Name」欄位
-            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', '祖父名', '祖父品系']);
-            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', '祖母名', '祖母品系']);
-            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire美系父親名(外公)', '外公名', 'MGS Name 美系MGS名']);
-            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name美系母親名(外婆)', '外婆名', '外婆品系']);
+            // 祖代品系讀取
+            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', '祖父名', '祖父品系', 'sire_sire']);
+            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', '祖母名', '祖母品系', 'sire_dam']);
+            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire美系父親名(外公)', '外公名', 'MGS Name 美系MGS名', 'dam_sire']);
+            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name美系母親名(外婆)', '外婆名', '外婆品系', 'dam_dam']);
 
-            // 🌟 嚴格檢驗：如果抓出的是純數字 (如 1) 或耳缺 (如 279-6)，視為無效
-            if (!isValidAncestorName(usSireSire)) usSireSire = '-';
-            if (!isValidAncestorName(usSireDam))  usSireDam  = '-';
-            if (!isValidAncestorName(usDamSire))  usDamSire  = '-';
-            if (!isValidAncestorName(usDamDam))   usDamDam   = '-';
+            // 排除純粹數字噪聲
+            if (isInvalidNoise(usSireSire)) usSireSire = '-';
+            if (isInvalidNoise(usSireDam))  usSireDam  = '-';
+            if (isInvalidNoise(usDamSire))  usDamSire  = '-';
+            if (isInvalidNoise(usDamDam))   usDamDam   = '-';
 
-            // 🌟 動態溯源：若祖代為空，往第一代父母個體身上抓取其真正的美系品系名
+            // 🌟 動態向上溯源：若祖代為空，向父母親節點反查
             if (usSireSire === '-' || usSireDam === '-') {
                 if (directSire !== '-') {
                     const pSireItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directSire.toUpperCase());
                     if (pSireItem) {
                         const s_s = getValueFromMultiKeys(pSireItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name']);
                         const s_d = getValueFromMultiKeys(pSireItem, ['Dam Name美系母親名', 'Dam Name美系第0代母親名(祖母)', 'dam_name']);
-                        if (isValidAncestorName(s_s)) usSireSire = s_s;
-                        if (isValidAncestorName(s_d)) usSireDam = s_d;
+                        if (!isInvalidNoise(s_s)) usSireSire = s_s;
+                        if (!isInvalidNoise(s_d)) usSireDam = s_d;
                     }
                 }
             }
@@ -499,10 +488,10 @@
                 if (directDam !== '-') {
                     const pDamItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directDam.toUpperCase());
                     if (pDamItem) {
-                        const d_s = getValueFromMultiKeys(pDamItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name']);
+                        const d_s = getValueFromMultiKeys(pDamItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name', 'MGS Name 美系MGS名']);
                         const d_d = getValueFromMultiKeys(pDamItem, ['Dam Name美系母親名', 'Dam Name美系第0代母親名(祖母)', 'dam_name']);
-                        if (isValidAncestorName(d_s)) usDamSire = d_s;
-                        if (isValidAncestorName(d_d)) usDamDam = d_d;
+                        if (!isInvalidNoise(d_s)) usDamSire = d_s;
+                        if (!isInvalidNoise(d_d)) usDamDam = d_d;
                     }
                 }
             }
@@ -977,10 +966,10 @@
                     const parityText = (m.parity && m.parity !== '-') ? ` (P.${m.parity})` : '';
                     let perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
                     
-                    const isMateDead = checkIsDead(m.name);
-                    if (isMateDead) mDiv.classList.add("node-dead");
-                    const mateDeadBadge = isMateDead ? '<span class="badge-dead">DIE</span>' : '';
-                    mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>${mateDeadBadge}${perfBadge}`;
+                    const isMacroMateDead = checkIsDead(m.name);
+                    if (isMacroMateDead) mDiv.classList.add("node-dead");
+                    const macroMateDeadBadge = isMacroMateDead ? '<span class="badge-dead">DIE</span>' : '';
+                    mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>${macroMateDeadBadge}${perfBadge}`;
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
@@ -997,7 +986,7 @@
                     const sireY = mateY - 18;
                     const damY = mateY + 18;
 
-                    if (isValidAncestorName(curSireName)) {
+                    if (!isInvalidNoise(curSireName)) {
                         const sireDiv = document.createElement('div');
                         sireDiv.className = `tree-node ${getBreedClass(curSireName)}`;
                         if (checkIsDead(curSireName)) sireDiv.classList.add("node-dead");
@@ -1010,7 +999,7 @@
                         linesToDraw.push({ x1: col3_X + boxW + 10, y1: mateY + mateBoxH/2 + baseOffsetY, x2: col4_X, y2: sireY + boxH/2 + baseOffsetY, midX: col3_X + boxW + 10 + colGap/2 });
                     }
 
-                    if (isValidAncestorName(curDamName)) {
+                    if (!isInvalidNoise(curDamName)) {
                         const damDiv = document.createElement('div');
                         damDiv.className = `tree-node ${getBreedClass(curDamName)}`;
                         if (checkIsDead(curDamName)) damDiv.classList.add("node-dead");
