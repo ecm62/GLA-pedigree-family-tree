@@ -47,7 +47,7 @@
         .excel-data-table tr:hover { background-color: #e0f2fe !important; }
         
         #singleTreeArea { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .single-tree-card { position: relative; width: 100%; min-height: 380px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .single-tree-card { position: relative; width: 100%; min-height: 420px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
         
         #macroTreePanel { background: #ffffff; border: 2px solid #0d6efd; border-radius: 8px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block !important; }
         .macro-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
@@ -70,13 +70,6 @@
         canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         .sub-label { font-size: 8px; opacity: 0.85; margin-bottom: 1px; font-weight: 600; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 50px 10px; font-size: 13px; font-weight: 500; }
-        @media screen and (max-width: 768px) {
-            body { padding: 6px; }
-            .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
-            input[type="text"] { width: 100% !important; font-size: 15px; padding: 8px 12px; }
-            .btn { width: 100%; padding: 10px; font-size: 14px; margin: 0; }
-            .btn-export { margin-left: 0; margin-top: 4px; }
-        }
     </style>
 </head>
 <body>
@@ -190,7 +183,6 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // 🌟 正確日齡計算：分娩日齡 = 分娩日 - 出生日
         function calculateAgeInDays(breed, birthDateStr, farrowDateStr, matingDateStr) {
             const bClean = String(breed || '').toUpperCase();
             if (bClean.includes('LY') || !birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
@@ -206,7 +198,7 @@
                     const mDate = new Date(matingDateStr.replace(/-/g, '/'));
                     if (!isNaN(mDate.getTime())) targetDate = mDate;
                 } else {
-                    targetDate = new Date(); // 當前總日齡
+                    targetDate = new Date();
                 }
 
                 if (!targetDate) return '-';
@@ -297,7 +289,6 @@
             return isNaN(num) ? '-' : num.toFixed(1);
         }
 
-        // 🌟 核心修正：嚴格排除「母豬耳號」欄位，且抓出值不能等於個體本身耳號，杜絕 Y1266 父母都是 Y1266 的荒謬 Bug
         function getValueFromMultiKeys(obj, possibleKeys, excludeSelfEar = '') {
             if (!obj) return '-';
             const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
@@ -307,7 +298,6 @@
                 const targetK = sanitize(kCandidate);
                 for (let rawK in obj) {
                     const rawSan = sanitize(rawK);
-                    // 絕對排除耳號欄位自身
                     if (rawSan.includes('母豬耳號') || rawSan.includes('個體耳號') || rawSan === 'ear' || rawSan === 'eartag' || rawSan === '耳號') continue;
 
                     if (rawSan.includes(targetK)) {
@@ -362,7 +352,6 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 正確獲取親代祖先：4 位數 G0 純種抓取自身的美系父母，5 位數抓取第一代公母
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -376,10 +365,10 @@
 
             const isG0USOrigin = (ear.length === 4 && (ear.startsWith('D') || ear.startsWith('Y') || ear.startsWith('L'))) || /^\d{4}$/.test(ear);
 
-            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系父親名(祖父)', 'Sire美系第0代父親名(祖父)', 'sire_sire', '祖父'], ear);
-            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(祖母)', 'Dam Name美系第0代母親名(祖母)', 'sire_dam', '祖母'], ear);
-            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系父親名(外公)', 'Sire 美系第0代父親名(外公)', 'dam_sire', '外公', 'MGS Name 美系MGS名'], ear);
-            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名(外婆)', 'Dam Name美系第0代母親名(外婆)', 'dam_dam', '外婆'], ear);
+            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire 美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'sire_sire', '祖父'], ear);
+            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name 美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', 'sire_dam', '祖母'], ear);
+            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire 美系第0代父親名(外公)', 'Sire美系父親名(外公)', 'dam_sire', '外公', 'MGS Name 美系MGS名'], ear);
+            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name 美系第0代母親名(外婆)', 'Dam Name美系母親名(外婆)', 'dam_dam', '外婆'], ear);
 
             let directSire = '-';
             let directDam = '-';
@@ -440,8 +429,8 @@
                 const targetItem = primaryMatches[0] || sortedItems[0];
 
                 renderExcelDataTable(sortedItems, primaryMatches, rawInput);
-                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error(e); }
-                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) { console.error(e); }
+                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
+                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
             } else {
                 document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:30px; text-align:center; color:#888;">No data found</div>';
                 document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:20px; text-align:center; color:#888;">No data found</td></tr>';
@@ -470,7 +459,6 @@
                 let matingDate = getMatingDateForParity(item, idx);
                 let farrowDate = cleanVal(item.dob);
 
-                // 🌟 正確計算各胎分娩日齡
                 const ageDaysVal = calculateAgeInDays(breedVal, validBirthDate !== '-' ? validBirthDate : null, farrowDate, matingDate);
 
                 const spiVal = userRole === 'A' ? cleanVal(item.spi || getValueFromMultiKeys(item, ['spi'])) : '-';
@@ -506,7 +494,6 @@
             tbody.innerHTML = html;
         }
 
-        // 🌟 正確折線繪製：中繼轉折正交線
         function drawOrthogonalLine(ctx, x1, y1, x2, y2, midX) {
             ctx.beginPath();
             ctx.moveTo(x1, y1);
@@ -537,23 +524,29 @@
             const col3_X = col2_X + boxW + colGap;
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
 
-            // 🌟 嚴格過濾：配種公絕不能等於主角自己
+            // 🌟 每一胎次獨立列出，配種重複絕不略過
             let mateList = [];
-            items.forEach(i => {
+            items.forEach((i, idx) => {
                 const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag']);
                 const boar = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i, targetEar);
-                if (boar && boar !== '-' && boar !== '未記載公豬' && String(boar).trim().toUpperCase() !== String(targetEar).trim().toUpperCase() && checkBreedAllowed('', boar)) {
+                const pVal = cleanParityVal(i.parity !== '-' ? i.parity : getValueFromMultiKeys(i, ['胎次', 'Parity']));
+                
+                if (boar && boar !== '-' && boar !== '未記載公豬' && String(boar).trim().toUpperCase() !== String(targetEar).trim().toUpperCase()) {
                     String(boar).split(' ').forEach(sb => {
                         const cb = sb.trim();
-                        if (cb && cb.toUpperCase() !== targetEar.toUpperCase() && !mateList.some(m => m.name === cb)) {
-                            mateList.push({ name: cb, label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', parity: cleanParityVal(i.parity) });
+                        if (cb && cb.toUpperCase() !== targetEar.toUpperCase() && checkBreedAllowed('', cb)) {
+                            mateList.push({ 
+                                name: cb, 
+                                label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', 
+                                parity: pVal !== '-' ? pVal : String(idx + 1)
+                            });
                         }
                     });
                 }
             });
 
             const totalMates = Math.max(mateList.length, 1);
-            const cardHeight = Math.max(totalMates * rowGap + 90, 380);
+            const cardHeight = Math.max(totalMates * rowGap + 90, 400);
             const totalWidth = Math.max(col3_X + boxW + 80, cardContainer.clientWidth || 800);
 
             cardContainer.style.height = cardHeight + 'px';
@@ -570,8 +563,8 @@
                 const col1_X = col0_X + boxW + colGap;
 
                 const parents = [
-                    { name: ancData.sireSide[2].name, label: ancData.sireSide[2].label, y: parentY_Sire, fallbackBreed: targetItem.breed || 'LY', exists: false },
-                    { name: ancData.damSide[0].name,  label: ancData.damSide[0].label,  y: parentY_Dam,  fallbackBreed: targetItem.breed || 'LY', exists: false }
+                    { name: ancData.sireSide[2].name, label: ancData.sireSide[2].label, y: parentY_Sire, exists: false },
+                    { name: ancData.damSide[0].name,  label: ancData.damSide[0].label,  y: parentY_Dam,  exists: false }
                 ];
 
                 parents.forEach(p => {
@@ -607,11 +600,16 @@
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
 
+                    let targetDestX = col1_X;
                     let targetDestY = (idx < 2) 
                         ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + boxH/2)
                         : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + boxH/2);
+                    
+                    if ((idx < 2 && !parents[0].exists) || (idx >= 2 && !parents[1].exists)) {
+                        targetDestX = col2_X;
+                    }
 
-                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: col1_X, y2: targetDestY, midX: col0_X + boxW + colGap/2 });
+                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: targetDestX, y2: targetDestY, midX: col0_X + boxW + colGap/2 });
                 });
             }
 
@@ -649,7 +647,7 @@
             });
         }
 
-        // 🌳 2. 近親比對拓撲家族樹 (徹底修正 Y 軸偏移與連線斷裂)
+        // 🌳 2. 近親比對拓撲家族樹 (精確四欄拓撲，徹底去除重複虛假世代)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -661,9 +659,9 @@
             container.innerHTML = '';
             headerBar.innerHTML = '';
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
-            countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ Mating Sires ➔ Sire Ancestors)`;
+            countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ Mating Sires ➔ Sire Parents)`;
 
-            const boxW = 120, boxH = 34, colGap = 45, mateBlockHeight = 85;
+            const boxW = 120, boxH = 34, colGap = 45, mateBlockHeight = 75;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
@@ -673,20 +671,18 @@
             const col2_X = hasLeftAncestors ? 30 + (boxW + colGap) * 2 : 50;
             const col3_X = col2_X + boxW + colGap;
             const col4_X = col3_X + boxW + colGap;
-            const col5_X = col4_X + boxW + colGap;
 
+            // 🌟 嚴格精簡為四欄架構，不再虛構出重複一代
             const headers = hasLeftAncestors ? [
                 { text: 'Grandparents (祖代)', x: 30 },
                 { text: 'Parents (親本)', x: 30 + boxW + colGap },
                 { text: 'Target (個體)', x: col2_X },
                 { text: isMale ? 'Mating Dam' : 'Mating Sire', x: col3_X },
-                { text: 'Sire Parents', x: col4_X },
-                { text: 'Sire Grandparents 👉', x: col5_X }
+                { text: 'Sire Parents (公豬親本)', x: col4_X }
             ] : [
                 { text: 'Target (個體)', x: col2_X },
                 { text: isMale ? 'Mating Dam' : 'Mating Sire', x: col3_X },
-                { text: 'Sire Parents', x: col4_X },
-                { text: 'Sire Grandparents 👉', x: col5_X }
+                { text: 'Sire Parents (公豬親本)', x: col4_X }
             ];
 
             headers.forEach(h => {
@@ -696,18 +692,22 @@
                 headerBar.appendChild(div);
             });
 
-            // 🌟 嚴格排除母豬自己
+            // 🌟 每一胎次獨立列出，配種重複絕不略過
             let mateList = [];
-            items.forEach(i => {
+            items.forEach((i, idx) => {
                 const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag']);
                 const boarRaw = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i, targetEar);
+                const pVal = cleanParityVal(i.parity !== '-' ? i.parity : getValueFromMultiKeys(i, ['胎次', 'Parity']));
+                
                 if (boarRaw && boarRaw !== '-' && boarRaw !== '未記載公豬' && String(boarRaw).trim().toUpperCase() !== String(targetEar).trim().toUpperCase()) {
                     String(boarRaw).split(' ').forEach(sb => {
-                        const cleanBoar = sb.trim();
-                        if (cleanBoar && cleanBoar.toUpperCase() !== targetEar.toUpperCase() && checkBreedAllowed('', cleanBoar)) {
-                            if (!mateList.some(m => m.name.toLowerCase() === cleanBoar.toLowerCase())) {
-                                mateList.push({ name: cleanBoar, label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', parity: cleanParityVal(i.parity) });
-                            }
+                        const cb = sb.trim();
+                        if (cb && cb.toUpperCase() !== targetEar.toUpperCase() && checkBreedAllowed('', cb)) {
+                            mateList.push({ 
+                                name: cb, 
+                                label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', 
+                                parity: pVal !== '-' ? pVal : String(idx + 1)
+                            });
                         }
                     });
                 }
@@ -715,15 +715,14 @@
 
             const totalMates = Math.max(mateList.length, 1);
             const totalContentHeight = Math.max(totalMates * mateBlockHeight + 60, 520);
-            const finalCanvasHeight = totalContentHeight + 40; // 包含頂部 40px 的 header 偏移
-            const totalWidth = Math.max(col5_X + boxW + 80, scrollArea.clientWidth || 1000);
+            const finalCanvasHeight = totalContentHeight + 40;
+            const totalWidth = Math.max(col4_X + boxW + 80, scrollArea.clientWidth || 900);
 
             scrollArea.style.height = finalCanvasHeight + 'px';
             container.style.height = totalContentHeight + 'px';
             container.style.width = totalWidth + 'px';
 
             const linesToDraw = [];
-            // 注意：container 的 top 是 40px，因此 canvas 上的 Y 座標需加上 40px
             const baseOffsetY = 40;
             const targetY = totalContentHeight / 2 - boxH / 2;
             const parentY_Sire = targetY - 45;
@@ -738,7 +737,8 @@
                     { name: ancData.damSide[0].name,  label: ancData.damSide[0].label,  y: parentY_Dam,  exists: false }
                 ];
 
-                leftParents.forEach(p => {
+                parents = leftParents;
+                parents.forEach(p => {
                     if (p.name && p.name !== '' && p.name !== '-') {
                         p.exists = true;
                         const div = document.createElement('div');
@@ -772,11 +772,16 @@
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
 
+                    let targetDestX = col1_X;
                     let targetDestY = (idx < 2) 
-                        ? (leftParents[0].exists ? parentY_Sire + boxH/2 : targetY + (boxH+6)/2)
-                        : (leftParents[1].exists ? parentY_Dam + boxH/2  : targetY + (boxH+6)/2);
+                        ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + (boxH+6)/2)
+                        : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + (boxH+6)/2);
 
-                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2 + baseOffsetY, x2: col1_X, y2: targetDestY + baseOffsetY, midX: col0_X + boxW + colGap/2 });
+                    if ((idx < 2 && !parents[0].exists) || (idx >= 2 && !parents[1].exists)) {
+                        targetDestX = col2_X;
+                    }
+
+                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2 + baseOffsetY, x2: targetDestX, y2: targetDestY + baseOffsetY, midX: col0_X + boxW + colGap/2 });
                 });
             }
 
@@ -809,20 +814,19 @@
                         return String(itEar).toLowerCase() === String(m.name).toLowerCase();
                     });
 
-                    let curSireName = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['sire_sire', '1st Sire', 'Sire Name美系父親名', '父親'], m.name)) : '-';
-                    let curDamName  = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['gen1_dam', '1st Dam', 'Dam Name美系母親名', '母親'], m.name)) : '-';
-                    let curG1 = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'sire_sire', '祖父'], m.name)) : '-';
-                    let curG2 = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', 'sire_dam', '祖母'], m.name)) : '-';
+                    // 🌟 配種公直系親本（Col AH 祖父/父親, Col AN 祖母/母親）
+                    let curSireName = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Sire美系第0代父親名(祖父)', 'Sire 美系第0代父親名(祖父)', 'sire_sire', '1st Sire', 'Sire Name美系父親名'], m.name)) : '-';
+                    let curDamName  = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name 美系第0代母親名(祖母)', 'sire_dam', '1st Dam', 'Dam Name美系母親名'], m.name)) : '-';
 
-                    const sireY = mateY - 20;
-                    const damY = mateY + 20;
+                    const sireY = mateY - 18;
+                    const damY = mateY + 18;
 
                     if (curSireName && curSireName !== '-') {
                         const sireDiv = document.createElement('div');
                         sireDiv.className = `tree-node ${getBreedClass(curSireName)}`;
                         sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = sireY + 'px';
                         sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
-                        sireDiv.innerHTML = `<span class="sub-label">♂ 1st Sire</span><b>${curSireName}</b>`;
+                        sireDiv.innerHTML = `<span class="sub-label">♂ Sire's Sire</span><b>${curSireName}</b>`;
                         attachNodeClick(sireDiv, curSireName);
                         container.appendChild(sireDiv);
                         linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2 + baseOffsetY, x2: col4_X, y2: sireY + boxH/2 + baseOffsetY, midX: col3_X + boxW + colGap/2 });
@@ -833,35 +837,10 @@
                         damDiv.className = `tree-node ${getBreedClass(curDamName)}`;
                         damDiv.style.left = col4_X + 'px'; damDiv.style.top = damY + 'px';
                         damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
-                        damDiv.innerHTML = `<span class="sub-label">♀ 1st Dam</span><b>${curDamName}</b>`;
+                        damDiv.innerHTML = `<span class="sub-label">♀ Sire's Dam</span><b>${curDamName}</b>`;
                         attachNodeClick(damDiv, curDamName);
                         container.appendChild(damDiv);
                         linesToDraw.push({ x1: col3_X + boxW, y1: mateY + boxH/2 + baseOffsetY, x2: col4_X, y2: damY + boxH/2 + baseOffsetY, midX: col3_X + boxW + colGap/2 });
-                    }
-
-                    const g1Y = mateY - 38;
-                    const g2Y = mateY - 2;
-
-                    if (curG1 && curG1 !== '-') {
-                        const g1Div = document.createElement('div');
-                        g1Div.className = `tree-node ${getBreedClass(curG1)}`;
-                        g1Div.style.left = col5_X + 'px'; g1Div.style.top = g1Y + 'px';
-                        g1Div.style.width = boxW + 'px'; g1Div.style.height = boxH + 'px';
-                        g1Div.innerHTML = `<span class="sub-label">♂ Sire's Sire</span><b>${curG1}</b>`;
-                        attachNodeClick(g1Div, curG1);
-                        container.appendChild(g1Div);
-                        linesToDraw.push({ x1: col4_X + boxW, y1: sireY + boxH/2 + baseOffsetY, x2: col5_X, y2: g1Y + boxH/2 + baseOffsetY, midX: col4_X + boxW + colGap/2 });
-                    }
-
-                    if (curG2 && curG2 !== '-') {
-                        const g2Div = document.createElement('div');
-                        g2Div.className = `tree-node ${getBreedClass(curG2)}`;
-                        g2Div.style.left = col5_X + 'px'; g2Div.style.top = g2Y + 'px';
-                        g2Div.style.width = boxW + 'px'; g2Div.style.height = boxH + 'px';
-                        g2Div.innerHTML = `<span class="sub-label">♀ Sire's Dam</span><b>${curG2}</b>`;
-                        attachNodeClick(g2Div, curG2);
-                        container.appendChild(g2Div);
-                        linesToDraw.push({ x1: col4_X + boxW, y1: sireY + boxH/2 + baseOffsetY, x2: col5_X, y2: g2Y + boxH/2 + baseOffsetY, midX: col4_X + boxW + colGap/2 });
                     }
                 });
             }
