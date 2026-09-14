@@ -8,9 +8,9 @@
     <style>
         /* 💀 死亡/淘汰 (DIE / Culled) 警示樣式 */
         .node-dead {
-            border: 2.5px dashed #ef4444 !important;
-            box-shadow: 0 0 12px rgba(239, 68, 68, 0.55) !important;
-            filter: grayscale(0.15);
+            border: 2px dashed #ef4444 !important;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.45) !important;
+            filter: grayscale(0.2);
         }
         .badge-dead {
             display: inline-block;
@@ -207,6 +207,9 @@
         </div>
     </div>
     <script>
+        let pedigreeList = [];
+        let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
+
         // 🌟 死亡/淘汰 (DIE) 狀態判定：檢查欄位是否包含「死亡、淘汰、死、cull、dead、mati」
         function checkIsDead(itemOrEar) {
             if (!itemOrEar) return false;
@@ -241,8 +244,6 @@
             return false;
         }
 
-        let pedigreeList = [];
-        let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
         let isAuthorized = false;
         let userRole = 'B';
 
@@ -575,7 +576,6 @@
             ctx.stroke();
         }
 
-        // 🌿 1. 單純三代直系演進圖 (公豬耳號下方增加 TNB, NBA, WN)
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -737,7 +737,6 @@
             });
         }
 
-        // 🌳 2. 近親比對拓撲家族樹 (公豬耳號下方增加 TNB, NBA, WN)
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -923,7 +922,6 @@
                         return String(itEar).toLowerCase() === String(m.name).toLowerCase();
                     });
 
-                    // 配種公直系親本
                     let curSireName = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Sire美系第0代父親名(祖父)', 'Sire 美系第0代父親名(祖父)', 'sire_sire', '1st Sire', 'Sire Name美系父親名'], m.name)) : '-';
                     let curDamName  = boarItem ? shortenAncestorName(getValueFromMultiKeys(boarItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name 美系第0代母親名(祖母)', 'sire_dam', '1st Dam', 'Dam Name美系母親名'], m.name)) : '-';
 
