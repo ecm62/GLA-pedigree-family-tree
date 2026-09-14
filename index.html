@@ -236,8 +236,26 @@
 
         let pedigreeList = [];
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
-        let isAuthorized = true;
-        let userRole = 'A';
+        let isAuthorized = false;
+        let userRole = 'B';
+
+        function verifyPassword() {
+            const pwdInput = document.getElementById('authPassword').value.trim();
+            const errorDiv = document.getElementById('authError');
+            if (!pwdInput) return;
+            let authSuccess = false;
+            if (pwdInput === 'gnay' || pwdInput === 'yang3746' || pwdInput === 'rendy223269') { userRole = 'A'; authSuccess = true; }
+            else if (pwdInput === 'yang' || pwdInput === 'gla8888' || pwdInput === 'paul1234' || pwdInput === 'michael2345') { userRole = 'B'; authSuccess = true; }
+            if (authSuccess) {
+                isAuthorized = true;
+                document.getElementById('authOverlay').style.display = 'none';
+                loadPedigreeData();
+            } else {
+                errorDiv.style.display = 'block';
+                document.getElementById('authPassword').value = '';
+                document.getElementById('authPassword').focus();
+            }
+        }
 
         function getTodayDateStr() {
             const d = new Date();
@@ -269,7 +287,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            loadPedigreeData();
+            // Do not auto-load until authorized by verifyPassword
         });
 
         function loadPedigreeData() {
@@ -290,6 +308,7 @@
         }
 
         function toggleBreedFilter(breedKey) {
+            if (!isAuthorized) return;
             if (breedKey === 'ALL') {
                 selectedBreeds = selectedBreeds.size === 4 ? new Set() : new Set(['LY', 'Y', 'L', 'D']);
             } else {
@@ -449,6 +468,7 @@
 
         // 🌟 嚴格精準搜尋：防止模糊匹配抓出不相關個體
         function searchPedigree() {
+            if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
             if (!rawInput) return;
 
@@ -888,7 +908,6 @@
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
-                    // Target 連到配種公
                     linesToDraw.push({ x1: col2_X + boxW + 6, y1: targetY + (boxH+6)/2 + baseOffsetY, x2: col3_X, y2: mateY + mateBoxH/2 + baseOffsetY, midX: col2_X + boxW + colGap/2 });
 
                     const boarItem = pedigreeList.find(it => {
