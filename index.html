@@ -231,11 +231,9 @@
             return targetItem.is_dead === true;
         }
 
-        // 🌟 判定是否為單純的無效代碼 (如純數字 1)
         function isInvalidNoise(val) {
             if (!val || val === '-' || val === '' || val === '未記載' || val === 'none' || val === 'nan' || val === 'null') return true;
             const str = String(val).trim();
-            // 排除純單一數字 (如 '1', '0')
             if (/^\d{1,2}$/.test(str)) return true;
             return false;
         }
@@ -434,7 +432,6 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
-        // 🌟 核心親本與祖代解析（保留母親名稱，絕不抹除！）
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -459,19 +456,16 @@
                 directDam  = targetItem.gen1_dam || getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam'], ear);
             }
 
-            // 祖代品系讀取
             let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', '祖父名', '祖父品系', 'sire_sire']);
             let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', '祖母名', '祖母品系', 'sire_dam']);
             let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire美系父親名(外公)', '外公名', 'MGS Name 美系MGS名', 'dam_sire']);
             let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name美系母親名(外婆)', '外婆名', '外婆品系', 'dam_dam']);
 
-            // 排除純粹數字噪聲
             if (isInvalidNoise(usSireSire)) usSireSire = '-';
             if (isInvalidNoise(usSireDam))  usSireDam  = '-';
             if (isInvalidNoise(usDamSire))  usDamSire  = '-';
             if (isInvalidNoise(usDamDam))   usDamDam   = '-';
 
-            // 🌟 動態向上溯源：若祖代為空，向父母親節點反查
             if (usSireSire === '-' || usSireDam === '-') {
                 if (directSire !== '-') {
                     const pSireItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directSire.toUpperCase());
@@ -563,8 +557,35 @@
                     try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
                     try { drawUniversalDescendantTree(rawInput, sortedItems); } catch(e) {}
                 } else {
-                    document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:30px; text-align:center; color:#888;">No data found for "' + rawInput + '"</div>';
-                    document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:20px; text-align:center; color:#888;">No data found</td></tr>';
+                    document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:20px; text-align:center; color:#888;">No data found for "' + rawInput + '"</td></tr>';
+
+                    const singleContainer = document.getElementById('singleBoxesContainer');
+                    const singleCanvas = document.getElementById('singleCanvas');
+                    if (singleContainer) singleContainer.innerHTML = '<div style="padding:30px; text-align:center; color:#888;">No data found for "' + rawInput + '"</div>';
+                    if (singleCanvas) {
+                        const ctx1 = singleCanvas.getContext('2d');
+                        ctx1.clearRect(0, 0, singleCanvas.width, singleCanvas.height);
+                    }
+
+                    const macroContainer = document.getElementById('macroBoxesContainer');
+                    const macroCanvas = document.getElementById('macroCanvas');
+                    const genHeaderBar = document.getElementById('genHeaderBar');
+                    const macroCount = document.getElementById('macroHeaderCount');
+                    if (macroContainer) macroContainer.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">No data found for "' + rawInput + '"</div>';
+                    if (genHeaderBar) genHeaderBar.innerHTML = '';
+                    if (macroCount) macroCount.innerText = '';
+                    if (macroCanvas) {
+                        const ctx2 = macroCanvas.getContext('2d');
+                        ctx2.clearRect(0, 0, macroCanvas.width, macroCanvas.height);
+                    }
+
+                    const descendantContainer = document.getElementById('descendantBoxesContainer');
+                    const descendantCanvas = document.getElementById('descendantCanvas');
+                    if (descendantContainer) descendantContainer.innerHTML = '<div style="padding:40px; text-align:center; color:#888;">No direct descendants found for "' + rawInput + '"</div>';
+                    if (descendantCanvas) {
+                        const ctx3 = descendantCanvas.getContext('2d');
+                        ctx3.clearRect(0, 0, descendantCanvas.width, descendantCanvas.height);
+                    }
                 }
                 showLoading(false);
             }, 50);
