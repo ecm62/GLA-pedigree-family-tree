@@ -9,6 +9,7 @@
         .node-dead { border: 2px dashed #ef4444 !important; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45) !important; filter: grayscale(0.2); }
         .badge-dead { display: inline-block; background-color: #dc2626; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; letter-spacing: 0.5px; }
         .badge-active { display: inline-block; background-color: #10b981; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
+        .badge-gilt { display: inline-block; background-color: #8b5cf6; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
         .row-dead { background-color: #fff1f2 !important; }
         .row-dead td { color: #991b1b !important; }
 
@@ -113,7 +114,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. L1101, D1400, Y1266" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. LL20030, DD26002, L1091, D1400" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
         <div>
@@ -134,6 +135,7 @@
         <span class="color-badge breed-L">L (Blue)</span>
         <span class="color-badge breed-D">D (Red)</span>
         <span class="color-badge" style="background:#fee2e2; border-color:#ef4444; color:#991b1b;">DIE (官方死亡紀錄)</span>
+        <span class="color-badge" style="background:#ede9fe; border-color:#8b5cf6; color:#6d28d9;">後備留種 (未生產)</span>
     </div>
     <div id="permanentCard">
         <div class="card-header-bar">
@@ -206,7 +208,7 @@
         </div>
         <div class="single-tree-card" id="descendantCard" style="min-height: 480px;">
             <canvas class="lineCanvas" id="descendantCanvas"></canvas>
-            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. L1101 or D1400) to view descendant generation working status...</div></div>
+            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. LL20030 or D1400) to view descendant generation working status...</div></div>
         </div>
     </div>
 
@@ -255,7 +257,7 @@
                     const mDate = new Date(matingDateStr.replace(/-/g, '/'));
                     if (!isNaN(mDate.getTime())) targetDate = mDate;
                 } else {
-                    targetDate = new Date();
+                    targetDate = new Date(); // 當前年齡 (適用於未生產後備豬)
                 }
 
                 if (!targetDate) return '-';
@@ -420,6 +422,7 @@
             return (earStr.startsWith('D') && !earStr.startsWith('DD'));
         }
 
+        // 🌟 向上追溯三代親本（即使是未生產的新留種豬也能找到父母與祖父母）
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -433,11 +436,6 @@
 
             const isG0USOrigin = (ear.length === 4 && (ear.startsWith('D') || ear.startsWith('Y') || ear.startsWith('L'))) || /^\d{4}$/.test(ear);
 
-            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire 美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'sire_sire', '祖父'], ear);
-            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name 美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', 'sire_dam', '祖母'], ear);
-            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire 美系第0代父親名(外公)', 'Sire美系父親名(外公)', 'dam_sire', '外公', 'MGS Name 美系MGS名'], ear);
-            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name 美系第0代母親名(外婆)', 'Dam Name美系母親名(外婆)', 'dam_dam', '外婆'], ear);
-
             let directSire = '-';
             let directDam = '-';
 
@@ -445,8 +443,30 @@
                 directSire = getValueFromMultiKeys(targetItem, ['Sire Name美系父親名', 'Sire全名', 'sire_name'], ear);
                 directDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名', 'Dam全名', 'dam_name'], ear);
             } else {
-                directSire = getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire'], ear);
-                directDam  = getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam'], ear);
+                directSire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire'], ear);
+                directDam  = targetItem.gen1_dam || getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam'], ear);
+            }
+
+            // 祖代讀取：若個體本身記載祖父母，直接讀取；若未記載，向父母節點動態向上追溯！
+            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire 美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'sire_sire', '祖父'], ear);
+            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name 美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', 'sire_dam', '祖母'], ear);
+            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire 美系第0代父親名(外公)', 'Sire美系父親名(外公)', 'dam_sire', '外公', 'MGS Name 美系MGS名'], ear);
+            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name 美系第0代母親名(外婆)', 'Dam Name美系母親名(外婆)', 'dam_dam', '外婆'], ear);
+
+            // 若後備留種豬無記載祖父母，從父母身上繼承祖代美系姓名
+            if (usSireSire === '-' && directSire !== '-') {
+                const pSireItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directSire.toUpperCase());
+                if (pSireItem) {
+                    usSireSire = getValueFromMultiKeys(pSireItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'Sire Name美系父親名', 'sire_name']);
+                    usSireDam  = getValueFromMultiKeys(pSireItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', 'Dam Name美系母親名', 'dam_name']);
+                }
+            }
+            if (usDamSire === '-' && directDam !== '-') {
+                const pDamItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directDam.toUpperCase());
+                if (pDamItem) {
+                    usDamSire = getValueFromMultiKeys(pDamItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'Sire Name美系父親名', 'sire_name']);
+                    usDamDam  = getValueFromMultiKeys(pDamItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', 'Dam Name美系母親名', 'dam_name']);
+                }
             }
 
             return {
@@ -503,7 +523,7 @@
                     let relatedMatches = [];
                     matchedItems.forEach(item => {
                         const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
-                        if (itemEar.includes(targetTerm)) primaryMatches.push(item);
+                        if (itemEar === targetTerm) primaryMatches.push(item);
                         else relatedMatches.push(item);
                     });
 
@@ -520,7 +540,7 @@
                     document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:20px; text-align:center; color:#888;">No data found</td></tr>';
                 }
                 showLoading(false);
-            }, 100);
+            }, 50);
         }
 
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
@@ -552,10 +572,16 @@
                 const tsiVal = userRole === 'A' ? cleanVal(item.tsi || getValueFromMultiKeys(item, ['tsi'])) : '-';
 
                 const isDead = checkIsDead(item);
-                const deadBadge = isDead ? '<span class="badge-dead">DIE</span>' : '';
+                let badgeHtml = '';
+                if (isDead) {
+                    badgeHtml = '<span class="badge-dead">DIE</span>';
+                } else if (item.parity === '-' && (!matingDate || matingDate === '-')) {
+                    badgeHtml = '<span class="badge-gilt">後備留種</span>';
+                }
+
                 html += `
                     <tr class="${isPrimary ? 'main-row' : 'rel-row'} ${isDead ? 'row-dead' : ''}">
-                        <td><b>${cleanVal(itemEar)}</b>${deadBadge}</td>
+                        <td><b>${cleanVal(itemEar)}</b>${badgeHtml}</td>
                         <td>${breedVal}</td>
                         <td>${cleanVal(item.sex || getValueFromMultiKeys(item, ['性別']))}</td>
                         <td><b>${validBirthDate}</b></td>
@@ -593,7 +619,6 @@
             ctx.stroke();
         }
 
-        // 🌟 修正：只要有配種紀錄（Mating Date 或 Boar）就必須列出，即使 TNB/NBA 為空（如死胎、流產、或剛配種）
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -618,7 +643,6 @@
                 const boar = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i, targetEar);
                 const pVal = cleanParityVal(i.parity !== '-' ? i.parity : getValueFromMultiKeys(i, ['胎次', 'Parity']));
                 
-                // 只要該列有配種公豬，或有胎次/配種日紀錄，就必須列出（不論生產數據是否為空）
                 if (boar && boar !== '-' && boar !== '未記載公豬' && String(boar).trim().toUpperCase() !== String(targetEar).trim().toUpperCase()) {
                     String(boar).split(' ').forEach(sb => {
                         const cb = sb.trim();
@@ -992,9 +1016,9 @@
 
                 let parentMatch = false;
                 if (isTargetMale) {
-                    if (mate === targetClean) parentMatch = true;
+                    if (mate === targetClean || g1Sire === targetClean) parentMatch = true;
                 } else {
-                    if (g1Dam === targetClean || mate === targetClean || g1Sire === targetClean) parentMatch = true;
+                    if (g1Dam === targetClean || mate === targetClean) parentMatch = true;
                 }
 
                 if (parentMatch && itemEar !== targetClean) {
@@ -1014,7 +1038,7 @@
             }
 
             if (descendantsMap.length === 0) {
-                container.innerHTML = `<div style="padding:40px; text-align:center; color:#64748b; font-weight:600;">No direct descendants found for "${targetClean}"</div>`;
+                container.innerHTML = `<div style="padding:40px; text-align:center; color:#64748b; font-weight:600;">"${targetClean}" 尚未有直系子代配種或留種記錄 (No direct descendants)</div>`;
                 return;
             }
 
@@ -1051,8 +1075,16 @@
                 f1Div.style.width = boxW + 'px'; f1Div.style.height = boxH + 'px';
                 
                 const genderIcon = f1.isMale ? '♂ F1 Sire (公)' : '♀ F1 Dam (母)';
-                const workingBadge = f1.isDead ? '<span class="badge-dead">DIE</span>' : '<span class="badge-active">留種工作</span>';
-                f1Div.innerHTML = `<span class="sub-label">${genderIcon} (P.${f1.parity})</span><b>${f1.ear}</b>${workingBadge}`;
+                let workingBadge = '';
+                if (f1.isDead) {
+                    workingBadge = '<span class="badge-dead">DIE</span>';
+                } else if (f1.parity && f1.parity !== '-') {
+                    workingBadge = `<span class="badge-active">P.${f1.parity} 留種生產</span>`;
+                } else {
+                    workingBadge = '<span class="badge-gilt">後備留種中</span>';
+                }
+
+                f1Div.innerHTML = `<span class="sub-label">${genderIcon}</span><b>${f1.ear}</b>${workingBadge}`;
                 attachNodeClick(f1Div, f1.ear);
                 container.appendChild(f1Div);
 
