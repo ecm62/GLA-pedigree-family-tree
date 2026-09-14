@@ -114,7 +114,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. DD26081, LL20030, D1400" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. D1405, DD26081, LL20030" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
         <div>
@@ -177,7 +177,7 @@
     </div>
     <div id="singleTreeArea">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
-            <div style="font-weight:bold; font-size:14px; color:#0d6efd;">🌿 1. Single Lineage 3-Generation Direct Tree (單純三代個體直系演進圖 - 父上母下、左親右配)</div>
+            <div style="font-weight:bold; font-size:14px; color:#0d6efd;">🌿 1. Single Lineage Direct Tree (個體直系演進圖 - 美國原種直連親代品系)</div>
             <div><button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Direct_Tree')">📸 Export PNG</button></div>
         </div>
         <div class="single-tree-card" id="singleTreeCard">
@@ -207,7 +207,7 @@
         </div>
         <div class="single-tree-card" id="descendantCard" style="min-height: 480px;">
             <canvas class="lineCanvas" id="descendantCanvas"></canvas>
-            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. DD26081 or D1400) to view descendant generation working status...</div></div>
+            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. D1405 or DD26081) to view descendant generation working status...</div></div>
         </div>
     </div>
 
@@ -239,7 +239,7 @@
         }
 
         let pedigreeList = [];
-        let knownBoarSet = new Set(); // 🌟 全場已知配種公豬名單庫
+        let knownBoarSet = new Set();
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
         let isAuthorized = true;
         let userRole = 'A';
@@ -301,7 +301,6 @@
                 .then(res => res.json())
                 .then(data => {
                     pedigreeList = Array.isArray(data) ? data : Object.values(data || {});
-                    // 🌟 建立全場配種公豬反向名單庫 (只要曾擔任配種公或登錄為公豬)
                     knownBoarSet.clear();
                     pedigreeList.forEach(it => {
                         const m = it.mate || (it.details && it.details['當胎配種公']);
@@ -437,7 +436,6 @@
             return boar;
         }
 
-        // 🌟 嚴謹且精準的性別判定：結合 Sex 欄位、配種公名冊與命名規則
         function checkIsMale(itemOrEar) {
             if (!itemOrEar) return false;
             let earStr = '';
@@ -454,89 +452,106 @@
                 sexStr = (itemOrEar.sex || getValueFromMultiKeys(itemOrEar, ['Sex', '性別']) || '').toUpperCase();
             }
 
-            // 1. 如果明確記載性別
             if (sexStr.includes('MALE') || sexStr.includes('公') || sexStr === 'M') return true;
             if (sexStr.includes('FEMALE') || sexStr.includes('母') || sexStr === 'F') return false;
-
-            // 2. 如果曾擔任過當胎配種公豬，必定為公豬
             if (earStr && knownBoarSet.has(earStr)) return true;
-
-            // 3. 單字母 D/Y/L 開頭且 4 位數（如 D1400, Y1446）通常為原種公
             if (/^[DYL]\d{4}$/.test(earStr)) return true;
 
             return false;
         }
 
+        // 🌟 嚴謹區分：美國進口原種（4位數）vs 自繁豬（5位數）
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
 
             if (breed.includes('LY') || ear.startsWith('LY')) {
                 return {
+                    isG0USOrigin: false,
                     sireSide: [ { name: '-', label: '' }, { name: '-', label: '' }, { name: '-', label: '' } ],
                     damSide: [ { name: '-', label: '' }, { name: '-', label: '' }, { name: '-', label: '' } ]
                 };
             }
 
-            const isG0USOrigin = (ear.length === 4 && (ear.startsWith('D') || ear.startsWith('Y') || ear.startsWith('L'))) || /^\d{4}$/.test(ear);
-
-            let directSire = '-';
-            let directDam = '-';
+            // 判斷是否為美國原種豬 (4 位數純種，如 D1405, Y1446, L1091)
+            const isG0USOrigin = (/^[DYL]\d{4}$/.test(ear)) || (/^\d{4}$/.test(ear));
 
             if (isG0USOrigin) {
-                directSire = getValueFromMultiKeys(targetItem, ['Sire Name美系父親名', 'Sire全名', 'sire_name'], ear);
-                directDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名', 'Dam全名', 'dam_name'], ear);
+                // 🌟 美國原種豬：直接就是美系父母品系（Sire Name / Dam Name），沒有場內 1st Sire/Dam！
+                let usSire = getValueFromMultiKeys(targetItem, ['Sire Name美系父親名', 'Sire美系父親名', 'Sire全名', 'sire_name'], ear);
+                let usDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系母親名', 'Dam美系母親名', 'Dam全名', 'dam_name'], ear);
+
+                // 如果直接欄位寫在祖父祖母欄位中，自動對應為其父母
+                if (isInvalidNoise(usSire)) {
+                    usSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'sire_sire']);
+                }
+                if (isInvalidNoise(usDam)) {
+                    usDam = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', 'sire_dam']);
+                }
+
+                return {
+                    isG0USOrigin: true,
+                    sireSide: [
+                        { name: shortenAncestorName(usSire), label: "♂ US Sire (美國父親品系)" }
+                    ],
+                    damSide: [
+                        { name: shortenAncestorName(usDam),  label: "♀ US Dam (美國母親品系)" }
+                    ]
+                };
             } else {
-                directSire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire'], ear);
-                directDam  = targetItem.gen1_dam || getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam'], ear);
-            }
+                // 🌟 自繁豬（5位數）：三代血統（祖代 -> 場內父母 1st Sire/Dam -> 目標）
+                let directSire = targetItem.gen1_sire || getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire', 'gen1_sire'], ear);
+                let directDam  = targetItem.gen1_dam || getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam', 'gen1_dam'], ear);
 
-            let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', '祖父名', '祖父品系', 'sire_sire']);
-            let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', '祖母名', '祖母品系', 'sire_dam']);
-            let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire美系父親名(外公)', '外公名', 'MGS Name 美系MGS名', 'dam_sire']);
-            let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name美系母親名(外婆)', '外婆名', '外婆品系', 'dam_dam']);
+                let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'sire_sire']);
+                let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名(祖母)', 'sire_dam']);
+                let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire美系父親名(外公)', 'dam_sire', 'MGS Name']);
+                let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name美系母親名(外婆)', 'dam_dam']);
 
-            if (isInvalidNoise(usSireSire)) usSireSire = '-';
-            if (isInvalidNoise(usSireDam))  usSireDam  = '-';
-            if (isInvalidNoise(usDamSire))  usDamSire  = '-';
-            if (isInvalidNoise(usDamDam))   usDamDam   = '-';
+                if (isInvalidNoise(usSireSire)) usSireSire = '-';
+                if (isInvalidNoise(usSireDam))  usSireDam  = '-';
+                if (isInvalidNoise(usDamSire))  usDamSire  = '-';
+                if (isInvalidNoise(usDamDam))   usDamDam   = '-';
 
-            if (usSireSire === '-' || usSireDam === '-') {
-                if (directSire !== '-') {
-                    const pSireItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directSire.toUpperCase());
-                    if (pSireItem) {
-                        const s_s = getValueFromMultiKeys(pSireItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name']);
-                        const s_d = getValueFromMultiKeys(pSireItem, ['Dam Name美系母親名', 'Dam Name美系第0代母親名(祖母)', 'dam_name']);
-                        if (!isInvalidNoise(s_s)) usSireSire = s_s;
-                        if (!isInvalidNoise(s_d)) usSireDam = s_d;
+                // 動態向上反查
+                if (usSireSire === '-' || usSireDam === '-') {
+                    if (directSire !== '-') {
+                        const pSireItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directSire.toUpperCase());
+                        if (pSireItem) {
+                            const s_s = getValueFromMultiKeys(pSireItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name']);
+                            const s_d = getValueFromMultiKeys(pSireItem, ['Dam Name美系母親名', 'Dam Name美系第0代母親名(祖母)', 'dam_name']);
+                            if (!isInvalidNoise(s_s)) usSireSire = s_s;
+                            if (!isInvalidNoise(s_d)) usSireDam = s_d;
+                        }
                     }
                 }
-            }
 
-            if (usDamSire === '-' || usDamDam === '-') {
-                if (directDam !== '-') {
-                    const pDamItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directDam.toUpperCase());
-                    if (pDamItem) {
-                        const d_s = getValueFromMultiKeys(pDamItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name', 'MGS Name 美系MGS名']);
-                        const d_d = getValueFromMultiKeys(pDamItem, ['Dam Name美系母親名', 'Dam Name美系第0代母親名(祖母)', 'dam_name']);
-                        if (!isInvalidNoise(d_s)) usDamSire = d_s;
-                        if (!isInvalidNoise(d_d)) usDamDam = d_d;
+                if (usDamSire === '-' || usDamDam === '-') {
+                    if (directDam !== '-') {
+                        const pDamItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directDam.toUpperCase());
+                        if (pDamItem) {
+                            const d_s = getValueFromMultiKeys(pDamItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name', 'MGS Name']);
+                            const d_d = getValueFromMultiKeys(pDamItem, ['Dam Name美系母親名', 'Dam Name美系第0代母親名(祖母)', 'dam_name']);
+                            if (!isInvalidNoise(d_s)) usDamSire = d_s;
+                            if (!isInvalidNoise(d_d)) usDamDam = d_d;
+                        }
                     }
                 }
-            }
 
-            return {
-                sireSide: [
-                    { name: shortenAncestorName(usSireSire), label: "♂ Sire's Sire (祖父品系)" },
-                    { name: shortenAncestorName(usSireDam),  label: "♀ Sire's Dam (祖母品系)" },
-                    { name: directSire, label: isG0USOrigin ? "♂ US Sire (美系父親)" : "♂ 1st Sire (父親)" }
-                ],
-                damSide: [
-                    { name: directDam,  label: isG0USOrigin ? "♀ US Dam (美系母親)" : "♀ 1st Dam (母親)" },
-                    { name: shortenAncestorName(usDamSire),  label: "♂ Dam's Sire (外公平系)" },
-                    { name: shortenAncestorName(usDamDam),   label: "♀ Dam's Dam (外婆品系)" }
-                ]
-            };
+                return {
+                    isG0USOrigin: false,
+                    sireSide: [
+                        { name: shortenAncestorName(usSireSire), label: "♂ Sire's Sire (祖父品系)" },
+                        { name: shortenAncestorName(usSireDam),  label: "♀ Sire's Dam (祖母品系)" },
+                        { name: directSire, label: "♂ 1st Sire (父親)" }
+                    ],
+                    damSide: [
+                        { name: directDam,  label: "♀ 1st Dam (母親)" },
+                        { name: shortenAncestorName(usDamSire),  label: "♂ Dam's Sire (外公平系)" },
+                        { name: shortenAncestorName(usDamDam),   label: "♀ Dam's Dam (外婆品系)" }
+                    ]
+                };
+            }
         }
 
         function attachNodeClick(divNode, earName) {
@@ -704,6 +719,7 @@
             ctx.stroke();
         }
 
+        // 🌟 核心升級：精準繪製直系血統樹（美國原種豬直連父母品系，不虛設中間代）
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -714,12 +730,6 @@
             const boxW = 120, boxH = 34, colGap = 50, rowGap = 55;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
-            const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
-            const ear = String(targetItem.ear || '').toUpperCase();
-            const hasLeftAncestors = !(breed.includes('LY') || ear.startsWith('LY'));
-
-            const col2_X = hasLeftAncestors ? 30 + (boxW + colGap) * 2 : 50;
-            const col3_X = col2_X + boxW + colGap;
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
 
             let mateList = [];
@@ -748,6 +758,12 @@
                 }
             });
 
+            // 根據是否為美國原種豬，決定樹狀圖層級 X 軸位置
+            let col0_X = 30;
+            let col1_X = 30 + boxW + colGap;
+            let col2_X = ancData.isG0USOrigin ? col1_X : (col1_X + boxW + colGap);
+            let col3_X = col2_X + boxW + colGap;
+
             const totalMates = Math.max(mateList.length, 1);
             const cardHeight = Math.max(totalMates * (rowGap + 6) + 90, 420);
             const totalWidth = Math.max(col3_X + boxW + 90, cardContainer.clientWidth || 800);
@@ -758,12 +774,33 @@
 
             const targetY = cardHeight / 2 - boxH / 2;
             const linesToDraw = [];
-            const parentY_Sire = targetY - 45;
-            const parentY_Dam  = targetY + 45;
 
-            if (hasLeftAncestors) {
-                const col0_X = 30;
-                const col1_X = col0_X + boxW + colGap;
+            if (ancData.isG0USOrigin) {
+                // 🌟 美國原種豬（如 D1405）：只有一代父母品系（Sire/Dam），直連 Target！
+                const usParents = [
+                    { name: ancData.sireSide[0].name, label: ancData.sireSide[0].label, y: targetY - 45 },
+                    { name: ancData.damSide[0].name,  label: ancData.damSide[0].label,  y: targetY + 45 }
+                ];
+
+                usParents.forEach(p => {
+                    if (p.name && p.name !== '' && p.name !== '-') {
+                        const div = document.createElement('div');
+                        div.className = `tree-node ${getBreedClass(p.name)}`;
+                        if (checkIsDead(p.name)) div.classList.add("node-dead");
+                        div.style.left = col0_X + 'px'; div.style.top = p.y + 'px';
+                        div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                        const pDead = checkIsDead(p.name) ? '<span class="badge-dead">DIE</span>' : '';
+                        div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDead}`;
+                        attachNodeClick(div, p.name);
+                        container.appendChild(div);
+
+                        linesToDraw.push({ x1: col0_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + (boxH+6)/2, midX: col0_X + boxW + colGap/2 });
+                    }
+                });
+            } else {
+                // 🌟 自繁豬（如 DD26081）：三代完整結構
+                const parentY_Sire = targetY - 45;
+                const parentY_Dam  = targetY + 45;
 
                 const parents = [
                     { name: ancData.sireSide[2].name, label: ancData.sireSide[2].label, y: parentY_Sire, exists: false },
@@ -782,7 +819,7 @@
                         div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDead}`;
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
-                        linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: col1_X + boxW + colGap/2 });
+                        linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + (boxH+6)/2, midX: col1_X + boxW + colGap/2 });
                     }
                 });
 
@@ -802,19 +839,16 @@
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
 
-                    let targetDestX = col1_X;
+                    let targetDestX = parents[(idx < 2 ? 0 : 1)].exists ? col1_X : col2_X;
                     let targetDestY = (idx < 2) 
-                        ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + boxH/2)
-                        : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + boxH/2);
-                    
-                    if ((idx < 2 && !parents[0].exists) || (idx >= 2 && !parents[1].exists)) {
-                        targetDestX = col2_X;
-                    }
+                        ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + (boxH+6)/2)
+                        : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + (boxH+6)/2);
 
                     linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: targetDestX, y2: targetDestY, midX: col0_X + boxW + colGap/2 });
                 });
             }
 
+            // 繪製 Target 個體節點
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -826,6 +860,7 @@
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>${targetDeadBadge}`;
             container.appendChild(targetDiv);
 
+            // 繪製右側當胎配種公
             if (mateList.length > 0) {
                 const mateBoxH = 48;
                 mateList.forEach((m, idx) => {
@@ -845,7 +880,7 @@
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
-                    linesToDraw.push({ x1: col2_X + boxW + 6, y1: targetY + (boxH+6)/2 + baseOffsetY, x2: col3_X, y2: currentY + mateBoxH/2, midX: col2_X + boxW + colGap/2 });
+                    linesToDraw.push({ x1: col2_X + boxW + 6, y1: targetY + (boxH+6)/2, x2: col3_X, y2: currentY + mateBoxH/2, midX: col2_X + boxW + colGap/2 });
                 });
             }
 
@@ -878,19 +913,22 @@
             const ear = String(targetItem.ear || '').toUpperCase();
             const hasLeftAncestors = !(breed.includes('LY') || ear.startsWith('LY'));
 
-            const col2_X = hasLeftAncestors ? 30 + (boxW + colGap) * 2 : 50;
-            const col3_X = col2_X + boxW + colGap;
-            const col4_X = col3_X + boxW + colGap;
-            const col5_X = col4_X + boxW + colGap;
+            let col0_X = 30;
+            let col1_X = 30 + boxW + colGap;
+            let col2_X = ancData.isG0USOrigin ? col1_X : (col1_X + boxW + colGap);
+            let col3_X = col2_X + boxW + colGap;
+            let col4_X = col3_X + boxW + colGap;
+            let col5_X = col4_X + boxW + colGap;
 
-            const headers = hasLeftAncestors ? [
-                { text: 'Grandparents (祖代品系)', x: 30 },
-                { text: 'Parents (親本)', x: 30 + boxW + colGap },
+            const headers = ancData.isG0USOrigin ? [
+                { text: 'US Parents (美國親本品系)', x: 30 },
                 { text: 'Target (個體)', x: col2_X },
                 { text: isMale ? 'Mating Dam' : 'Mating Sire', x: col3_X },
                 { text: 'Sire Parents', x: col4_X },
                 { text: 'Sire Grandparents 👉', x: col5_X }
             ] : [
+                { text: 'Grandparents (祖代品系)', x: 30 },
+                { text: 'Parents (親本)', x: 30 + boxW + colGap },
                 { text: 'Target (個體)', x: col2_X },
                 { text: isMale ? 'Mating Dam' : 'Mating Sire', x: col3_X },
                 { text: 'Sire Parents', x: col4_X },
@@ -942,19 +980,39 @@
             const linesToDraw = [];
             const baseOffsetY = 40;
             const targetY = totalContentHeight / 2 - boxH / 2;
-            const parentY_Sire = targetY - 45;
-            const parentY_Dam  = targetY + 45;
 
-            if (hasLeftAncestors) {
-                const col0_X = 30;
-                const col1_X = col0_X + boxW + colGap;
+            if (ancData.isG0USOrigin) {
+                // 美國原種直連
+                const usParents = [
+                    { name: ancData.sireSide[0].name, label: ancData.sireSide[0].label, y: targetY - 45 },
+                    { name: ancData.damSide[0].name,  label: ancData.damSide[0].label,  y: targetY + 45 }
+                ];
 
-                const leftParents = [
+                usParents.forEach(p => {
+                    if (p.name && p.name !== '' && p.name !== '-') {
+                        const div = document.createElement('div');
+                        div.className = `tree-node ${getBreedClass(p.name)}`;
+                        if (checkIsDead(p.name)) div.classList.add("node-dead");
+                        div.style.left = col0_X + 'px'; div.style.top = p.y + 'px';
+                        div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                        const pDead = checkIsDead(p.name) ? '<span class="badge-dead">DIE</span>' : '';
+                        div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDead}`;
+                        attachNodeClick(div, p.name);
+                        container.appendChild(div);
+
+                        linesToDraw.push({ x1: col0_X + boxW, y1: p.y + boxH/2 + baseOffsetY, x2: col2_X, y2: targetY + (boxH+6)/2 + baseOffsetY, midX: col0_X + boxW + colGap/2 });
+                    }
+                });
+            } else if (hasLeftAncestors) {
+                // 自繁豬三代
+                const parentY_Sire = targetY - 45;
+                const parentY_Dam  = targetY + 45;
+
+                const parents = [
                     { name: ancData.sireSide[2].name, label: ancData.sireSide[2].label, y: parentY_Sire, exists: false },
                     { name: ancData.damSide[0].name,  label: ancData.damSide[0].label,  y: parentY_Dam,  exists: false }
                 ];
 
-                parents = leftParents;
                 parents.forEach(p => {
                     if (p.name && p.name !== '' && p.name !== '-') {
                         p.exists = true;
@@ -988,19 +1046,16 @@
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
 
-                    let targetDestX = col1_X;
+                    let targetDestX = parents[(idx < 2 ? 0 : 1)].exists ? col1_X : col2_X;
                     let targetDestY = (idx < 2) 
                         ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + (boxH+6)/2)
                         : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + (boxH+6)/2);
-
-                    if ((idx < 2 && !parents[0].exists) || (idx >= 2 && !parents[1].exists)) {
-                        targetDestX = col2_X;
-                    }
 
                     linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2 + baseOffsetY, x2: targetDestX, y2: targetDestY + baseOffsetY, midX: col0_X + boxW + colGap/2 });
                 });
             }
 
+            // Target
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -1012,6 +1067,7 @@
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>${macroTargetDeadBadge}`;
             container.appendChild(targetDiv);
 
+            // 右側配種公
             if (mateList.length > 0) {
                 const mateBoxH = 48;
                 mateList.forEach((m, idx) => {
@@ -1019,7 +1075,7 @@
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
                     mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name)}`;
-                    mDiv.style.left = col3_X + 'px'; mDiv.style.top = currentY + 'px';
+                    mDiv.style.left = col3_X + 'px'; mDiv.style.top = mateY + 'px';
                     mDiv.style.width = (boxW + 10) + 'px'; mDiv.style.height = mateBoxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (P.${m.parity})` : '';
                     let perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
@@ -1081,7 +1137,6 @@
             });
         }
 
-        // 🌟 核心升級：第 3 張圖支援公豬與母豬雙向完整識別
         function drawUniversalDescendantTree(targetEarTag, matchedItems) {
             const container = document.getElementById('descendantBoxesContainer');
             const canvas = document.getElementById('descendantCanvas');
@@ -1109,7 +1164,6 @@
 
                 if (parentMatch && itemEar !== targetClean) {
                     if (!descendantsMap.some(d => d.ear === itemEar && d.parity === item.parity)) {
-                        // 🌟 精準識別該後代是公還是母
                         const isChildMale = checkIsMale(item);
                         descendantsMap.push({
                             ear: itemEar,
