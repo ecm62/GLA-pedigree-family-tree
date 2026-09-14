@@ -61,6 +61,7 @@
         .macro-title { font-size: 15px; font-weight: 700; color: #0d6efd; display: flex; align-items: center; gap: 8px; }
         #macroScrollArea { width: 100%; min-height: 560px; position: relative; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow-x: auto; overflow-y: hidden; }
         #macroBoxesContainer { position: absolute; top: 40px; left: 0; width: 100%; min-height: 520px; }
+        #descendantBoxesContainer { position: relative; width: 100%; min-height: 420px; }
         .gen-header-bar { position: absolute; top: 8px; left: 0; right: 0; height: 28px; display: flex; pointer-events: none; z-index: 3; }
         .gen-header-title { position: absolute; font-size: 11px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
@@ -1083,7 +1084,7 @@
 
             requestAnimationFrame(() => {
                 canvas.width = totalWidth;
-                canvas.height = cardHeight;
+                canvas.height = finalCanvasHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 linesToDraw.forEach(l => { drawOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
