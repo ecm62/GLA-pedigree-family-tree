@@ -6,8 +6,7 @@
     <title>GLA Pedigree Family Tree Searching System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        /* 💀 穩定顯示的死亡標記（無閃爍） */
-        .node-dead { border: 2px dashed #ef4444 !important; box-shadow: 0 0 8px rgba(239, 68, 68, 0.35) !important; filter: grayscale(0.2); }
+        .node-dead { border: 2px dashed #ef4444 !important; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45) !important; filter: grayscale(0.2); }
         .badge-dead { display: inline-block; background-color: #dc2626; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; letter-spacing: 0.5px; }
         .badge-active { display: inline-block; background-color: #10b981; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
         .row-dead { background-color: #fff1f2 !important; }
@@ -114,7 +113,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. L1091, D1400, Y1266" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. L1101, D1400, Y1266" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
         <div>
@@ -207,7 +206,7 @@
         </div>
         <div class="single-tree-card" id="descendantCard" style="min-height: 480px;">
             <canvas class="lineCanvas" id="descendantCanvas"></canvas>
-            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. L1091 or D1400) to view descendant generation working status...</div></div>
+            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. L1101 or D1400) to view descendant generation working status...</div></div>
         </div>
     </div>
 
@@ -217,7 +216,6 @@
             if (overlay) overlay.style.display = show ? 'flex' : 'none';
         }
 
-        // 🌟 嚴格對應後端從 Death sow and gilt (Import) 匯入的官方死亡標記
         function checkIsDead(itemOrEar) {
             if (!itemOrEar) return false;
             let targetItem = null;
@@ -471,7 +469,6 @@
             divNode.onclick = () => { document.getElementById('earInput').value = earName; searchPedigree(); };
         }
 
-        // 🌟 支援未生產後備豬（如 LL20030 / LL20100）血統追溯
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
@@ -535,7 +532,7 @@
             allSortedItems.forEach((item, idx) => {
                 const itemEar = item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']);
                 const mateBoar = getMatingBoar(item, itemEar);
-                const isPrimary = String(itemEar).toLowerCase().includes(searchTerm.toLowerCase());
+                const isPrimary = String(itemEar).toLowerCase() === searchTerm.toLowerCase();
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
                 const breedVal = cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']));
 
@@ -596,6 +593,7 @@
             ctx.stroke();
         }
 
+        // 🌟 修正：只要有配種紀錄（Mating Date 或 Boar）就必須列出，即使 TNB/NBA 為空（如死胎、流產、或剛配種）
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -620,6 +618,7 @@
                 const boar = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i, targetEar);
                 const pVal = cleanParityVal(i.parity !== '-' ? i.parity : getValueFromMultiKeys(i, ['胎次', 'Parity']));
                 
+                // 只要該列有配種公豬，或有胎次/配種日紀錄，就必須列出（不論生產數據是否為空）
                 if (boar && boar !== '-' && boar !== '未記載公豬' && String(boar).trim().toUpperCase() !== String(targetEar).trim().toUpperCase()) {
                     String(boar).split(' ').forEach(sb => {
                         const cb = sb.trim();
@@ -631,9 +630,9 @@
                                 name: cb, 
                                 label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', 
                                 parity: pVal !== '-' ? pVal : String(idx + 1),
-                                tnb: tnbVal,
-                                nba: nbaVal,
-                                wn: wnVal
+                                tnb: tnbVal !== '-' ? tnbVal : '0(無產/死胎)',
+                                nba: nbaVal !== '-' ? nbaVal : '0',
+                                wn: wnVal !== '-' ? wnVal : '0'
                             });
                         }
                     });
@@ -728,10 +727,8 @@
                     mDiv.style.left = col3_X + 'px'; mDiv.style.top = currentY + 'px';
                     mDiv.style.width = (boxW + 10) + 'px'; mDiv.style.height = mateBoxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (P.${m.parity})` : '';
-                    let perfBadge = '';
-                    if ((m.tnb && m.tnb !== '-') || (m.nba && m.nba !== '-') || (m.wn && m.wn !== '-')) {
-                        perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
-                    }
+                    let perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
+                    
                     const isMateDead = checkIsDead(m.name);
                     if (isMateDead) mDiv.classList.add("node-dead");
                     const mateDeadBadge = isMateDead ? '<span class="badge-dead">DIE</span>' : '';
@@ -815,9 +812,9 @@
                                 name: cb, 
                                 label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', 
                                 parity: pVal !== '-' ? pVal : String(idx + 1),
-                                tnb: tnbVal,
-                                nba: nbaVal,
-                                wn: wnVal
+                                tnb: tnbVal !== '-' ? tnbVal : '0(無產/死胎)',
+                                nba: nbaVal !== '-' ? nbaVal : '0',
+                                wn: wnVal !== '-' ? wnVal : '0'
                             });
                         }
                     });
@@ -916,10 +913,8 @@
                     mDiv.style.left = col3_X + 'px'; mDiv.style.top = mateY + 'px';
                     mDiv.style.width = (boxW + 10) + 'px'; mDiv.style.height = mateBoxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (P.${m.parity})` : '';
-                    let perfBadge = '';
-                    if ((m.tnb && m.tnb !== '-') || (m.nba && m.nba !== '-') || (m.wn && m.wn !== '-')) {
-                        perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
-                    }
+                    let perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
+                    
                     const isMacroMateDead = checkIsDead(m.name);
                     if (isMacroMateDead) mDiv.classList.add("node-dead");
                     const macroMateDeadBadge = isMacroMateDead ? '<span class="badge-dead">DIE</span>' : '';
