@@ -6,9 +6,10 @@ import re
 
 SPREADSHEET_ID = "1MlhcSXitL_jWYvXVfmo6bQfQqDPIDgUt0VGIZVaB5aw"
 
-GID_US_ORIGIN = "1267648620"  # 美國原始種源數據 (4 位數純種生日 DOB)
-GID_COMBINED = "84920994"     # 合併報表(配種+產房) (5 位數自繁區間 KN~KO 與分娩日 BJ)
-GID_MAIN = "0"                # 主表 / 育種家族階層清單
+GID_US_ORIGIN = "1267648620"   # 美國原始種源數據 (4 位數純種生日)
+GID_COMBINED = "84920994"      # 合併報表(配種+產房) (5 位數自繁區間 KN~KO 與分娩日 BJ)
+GID_DEATH = "1606643507"       # Death sow and gilt (Import) 官方死亡分頁
+GID_MAIN = "0"                 # 主表 / 育種家族階層清單
 
 def fetch_sheet_csv(gid):
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
@@ -32,14 +33,26 @@ def get_prefix(tag_str):
     return chars[0].upper() if chars else ""
 
 def fetch_and_parse():
-    print("🚀 正在從多個 Google Sheets 分頁聯合抓取出生日、血統與淘汰/死亡狀態數據...")
+    print("🚀 正在從 Google Sheets 抓取主檔、血統與官方死亡名單...")
     
     df_main = fetch_sheet_csv(GID_MAIN)
     if df_main.empty:
         print("❌ 主表資料為空！")
         return
 
-    # 美國原始種源數據
+    # 1. 載入官方死亡清單 (Death sow and gilt Import)
+    df_death = fetch_sheet_csv(GID_DEATH)
+    official_death_set = set()
+    if not df_death.empty:
+        ear_col_death = next((c for c in df_death.columns if 'Ear Tag' in c or '耳號' in c or 'Nombor' in c), df_death.columns[2])
+        if ear_col_death:
+            for _, r in df_death.iterrows():
+                e = str(r.get(ear_col_death, '')).strip().upper()
+                if e and e.lower() not in ['nan', 'none', '-', '']:
+                    official_death_set.add(e)
+    print(f"💀 已成功載入官方死亡名單共 {len(official_death_set)} 筆（如 L1091 不在此名單中將被判定為活體）")
+
+    # 2. 4 位數純種美系原種 DOB
     df_us = fetch_sheet_csv(GID_US_ORIGIN)
     us_dob_map = {}
     if not df_us.empty:
@@ -52,7 +65,7 @@ def fetch_and_parse():
                 if e and d and d.lower() not in ['nan', 'none', '-', '']:
                     us_dob_map[e] = d.replace('/', '-')
 
-    # 合併報表(配種+產房) 區間比對
+    # 3. 5 位數自繁區間對照 (合併報表 KN~KO 與 BJ 分娩日)
     df_comb = fetch_sheet_csv(GID_COMBINED)
     notch_ranges = []
     if not df_comb.empty:
@@ -93,7 +106,6 @@ def fetch_and_parse():
     col_breed = find_col(df_main, ['Breed', '品種', '品系', '品'])
     col_mating_date = find_col(df_main, ['配種日期', '配種日', 'Mating Date', 'Tarikh Kahwin', 'Kahwin'])
     col_farrow_date = find_col(df_main, ['分娩日期', '分娩日', 'farrowing date', '產房日期', 'dob'])
-    col_status = find_col(df_main, ['狀態', 'Status', '淘汰原因', '離場原因', '淘汰', '死亡'])
 
     pedigree_data = []
     for _, row in df_main.iterrows():
@@ -134,6 +146,9 @@ def fetch_and_parse():
                     if v and v.lower() not in ['nan', 'none', '-', '']:
                         birth_date_val = v.replace('/', '-')
 
+        # 🌟 官方死亡精確對照判定
+        is_truly_dead = ear_upper in official_death_set
+
         entry = {
             "ear": ear,
             "breed": breed,
@@ -143,7 +158,7 @@ def fetch_and_parse():
             "birth_date": birth_date_val,
             "mating_date": get_v(col_mating_date),
             "dob": get_v(col_farrow_date),
-            "status": get_v(col_status),
+            "is_dead": is_truly_dead,  # 🌟 唯一依據官方死亡清單
             "spi": get_v(find_col(df_main, ['SPI'])),
             "mli": get_v(find_col(df_main, ['MLI'])),
             "tsi": get_v(find_col(df_main, ['TSI'])),
