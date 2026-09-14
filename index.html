@@ -6,12 +6,17 @@
     <title>GLA Pedigree Family Tree Searching System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        .node-dead { border: 2px dashed #ef4444 !important; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45) !important; filter: grayscale(0.2); }
-        .badge-dead { display: inline-block; background-color: #dc2626; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; letter-spacing: 0.5px; animation: pulse-dead 2s infinite; }
+        /* 💀 穩定顯示的死亡標記（無閃爍） */
+        .node-dead { border: 2px dashed #ef4444 !important; box-shadow: 0 0 8px rgba(239, 68, 68, 0.35) !important; filter: grayscale(0.2); }
+        .badge-dead { display: inline-block; background-color: #dc2626; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; letter-spacing: 0.5px; }
         .badge-active { display: inline-block; background-color: #10b981; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
-        @keyframes pulse-dead { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
         .row-dead { background-color: #fff1f2 !important; }
         .row-dead td { color: #991b1b !important; }
+
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); z-index: 99998; display: none; align-items: center; justify-content: center; flex-direction: column; color: white; }
+        .pig-loader { font-size: 42px; animation: bounce-pig 0.8s infinite alternate; margin-bottom: 12px; }
+        @keyframes bounce-pig { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-16px) scale(1.1); } }
+        .loader-text { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #e2e8f0; }
 
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f4f6f9; color: #333; }
         #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); z-index: 99999; display: flex; align-items: center; justify-content: center; }
@@ -88,6 +93,11 @@
     </style>
 </head>
 <body>
+    <div id="loadingOverlay">
+        <div class="pig-loader">🐖</div>
+        <div class="loader-text">GLA 育種資料運算與血統追溯中...</div>
+    </div>
+
     <div id="authOverlay">
         <div class="auth-card">
             <h2>🔒 System Authentication (安全身分驗證)</h2>
@@ -104,7 +114,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. DD26002, D1400, Y1266" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. L1091, D1400, Y1266" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
         <div>
@@ -124,7 +134,7 @@
         <span class="color-badge breed-Y">Y (Yellow)</span>
         <span class="color-badge breed-L">L (Blue)</span>
         <span class="color-badge breed-D">D (Red)</span>
-        <span class="color-badge" style="background:#fee2e2; border-color:#ef4444; color:#991b1b;">💀 DIE (淘汰/死亡)</span>
+        <span class="color-badge" style="background:#fee2e2; border-color:#ef4444; color:#991b1b;">DIE (官方死亡紀錄)</span>
     </div>
     <div id="permanentCard">
         <div class="card-header-bar">
@@ -192,16 +202,22 @@
     <!-- 🌳 3. 全血統後代世代留種與工作狀態追蹤樹 -->
     <div id="descendantTreeArea">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
-            <div style="font-weight:bold; font-size:14px; color:#0d6efd;">🌳 3. Universal Descendant & Generation Working Status Tree (全血統後代世代留種與工作狀態追蹤樹 - 完整呈現所有後代)</div>
+            <div style="font-weight:bold; font-size:14px; color:#0d6efd;">🌳 3. Universal Descendant & Generation Working Status Tree (全血統後代世代留種與工作狀態追蹤樹)</div>
             <div><button class="btn btn-export" onclick="exportTreeAsHighResPNG('descendantCard', 'descendantCanvas', 'GLA_Descendant_Tree')">📸 Export PNG</button></div>
         </div>
         <div class="single-tree-card" id="descendantCard" style="min-height: 480px;">
             <canvas class="lineCanvas" id="descendantCanvas"></canvas>
-            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. D1400 or Y1266) to view descendant generation working status...</div></div>
+            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. L1091 or D1400) to view descendant generation working status...</div></div>
         </div>
     </div>
 
     <script>
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        // 🌟 嚴格對應後端從 Death sow and gilt (Import) 匯入的官方死亡標記
         function checkIsDead(itemOrEar) {
             if (!itemOrEar) return false;
             let targetItem = null;
@@ -213,26 +229,7 @@
                 targetItem = itemOrEar;
             }
             if (!targetItem) return false;
-
-            const keywords = ['死亡', '淘汰', '死', 'cull', 'dead', 'mati', 'afkir', 'culling'];
-            const checkFields = ['status', '狀態', '淘汰原因', '離場原因', '淘汰', '死亡日期', '淘汰日期', 'remarks', '備註'];
-            for (let f of checkFields) {
-                let v = targetItem[f] || (targetItem.details && targetItem.details[f]);
-                if (v && v !== '-') {
-                    const vLower = String(v).toLowerCase();
-                    if (keywords.some(kw => vLower.includes(kw))) return true;
-                }
-            }
-            if (targetItem.details) {
-                for (let k in targetItem.details) {
-                    const kl = k.toLowerCase();
-                    if (keywords.some(kw => kl.includes(kw))) {
-                        const vl = String(targetItem.details[k]).toLowerCase();
-                        if (vl && vl !== '-' && !vl.includes('在場') && !vl.includes('活')) return true;
-                    }
-                }
-            }
-            return false;
+            return targetItem.is_dead === true;
         }
 
         let pedigreeList = [];
@@ -292,10 +289,17 @@
         }
 
         function loadPedigreeData() {
+            showLoading(true);
             fetch('data.json?nocache=' + new Date().getTime())
                 .then(res => res.json())
-                .then(data => { pedigreeList = Array.isArray(data) ? data : Object.values(data || {}); })
-                .catch(err => console.error("Load failed"));
+                .then(data => {
+                    pedigreeList = Array.isArray(data) ? data : Object.values(data || {});
+                    showLoading(false);
+                })
+                .catch(err => {
+                    console.error("Load failed");
+                    showLoading(false);
+                });
         }
 
         function getBreedClass(nameStr) {
@@ -467,45 +471,59 @@
             divNode.onclick = () => { document.getElementById('earInput').value = earName; searchPedigree(); };
         }
 
-        // 🌟 嚴格精準搜尋：防止模糊匹配抓出不相關個體
+        // 🌟 支援未生產後備豬（如 LL20030 / LL20100）血統追溯
         function searchPedigree() {
             if (!isAuthorized) return;
             const rawInput = document.getElementById('earInput').value.trim();
             if (!rawInput) return;
 
-            const targetTerm = rawInput.toLowerCase();
-            let matchedItems = pedigreeList.filter(item => {
-                const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
-                const mateBoar = String(getMatingBoar(item, itemEar)).toLowerCase();
-                
-                const isExactEar = itemEar === targetTerm;
-                const isExactMate = mateBoar === targetTerm || mateBoar.split(' ').includes(targetTerm);
-                const isBreedMatch = checkBreedAllowed(item.breed, item.ear);
-                
-                return (isExactEar || isExactMate) && isBreedMatch;
-            });
-
-            if (matchedItems.length > 0) {
-                let primaryMatches = [];
-                let relatedMatches = [];
-                matchedItems.forEach(item => {
+            showLoading(true);
+            setTimeout(() => {
+                const targetTerm = rawInput.toLowerCase();
+                let matchedItems = pedigreeList.filter(item => {
                     const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
-                    if (itemEar === targetTerm) primaryMatches.push(item);
-                    else relatedMatches.push(item);
+                    const mateBoar = String(getMatingBoar(item, itemEar)).toLowerCase();
+                    
+                    const isExactEar = itemEar === targetTerm;
+                    const isExactMate = mateBoar === targetTerm || mateBoar.split(' ').includes(targetTerm);
+                    const isBreedMatch = checkBreedAllowed(item.breed, item.ear);
+                    
+                    return (isExactEar || isExactMate) && isBreedMatch;
                 });
 
-                primaryMatches.sort((a, b) => (parseFloat(a.parity) || 0) - (parseFloat(b.parity) || 0));
-                const sortedItems = [...primaryMatches, ...relatedMatches];
-                const targetItem = primaryMatches[0] || sortedItems[0];
+                if (matchedItems.length === 0) {
+                    const fallbackItem = pedigreeList.find(item => {
+                        const fullJson = JSON.stringify(item).toLowerCase();
+                        return fullJson.includes(targetTerm);
+                    });
+                    if (fallbackItem) {
+                        matchedItems = [fallbackItem];
+                    }
+                }
 
-                renderExcelDataTable(sortedItems, primaryMatches, rawInput);
-                try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
-                try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
-                try { drawUniversalDescendantTree(rawInput, sortedItems); } catch(e) {}
-            } else {
-                document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:30px; text-align:center; color:#888;">No data found</div>';
-                document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:20px; text-align:center; color:#888;">No data found</td></tr>';
-            }
+                if (matchedItems.length > 0) {
+                    let primaryMatches = [];
+                    let relatedMatches = [];
+                    matchedItems.forEach(item => {
+                        const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
+                        if (itemEar.includes(targetTerm)) primaryMatches.push(item);
+                        else relatedMatches.push(item);
+                    });
+
+                    primaryMatches.sort((a, b) => (parseFloat(a.parity) || 0) - (parseFloat(b.parity) || 0));
+                    const sortedItems = [...primaryMatches, ...relatedMatches];
+                    const targetItem = primaryMatches[0] || sortedItems[0];
+
+                    renderExcelDataTable(sortedItems, primaryMatches, rawInput);
+                    try { drawSingleLineageTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
+                    try { drawButterflyFamilyTree(primaryMatches.length > 0 ? primaryMatches : sortedItems, targetItem); } catch(e) {}
+                    try { drawUniversalDescendantTree(rawInput, sortedItems); } catch(e) {}
+                } else {
+                    document.getElementById('singleBoxesContainer').innerHTML = '<div style="padding:30px; text-align:center; color:#888;">No data found for "' + rawInput + '"</div>';
+                    document.getElementById('excelTableBody').innerHTML = '<tr><td colspan="21" style="padding:20px; text-align:center; color:#888;">No data found</td></tr>';
+                }
+                showLoading(false);
+            }, 100);
         }
 
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
@@ -517,7 +535,7 @@
             allSortedItems.forEach((item, idx) => {
                 const itemEar = item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag']);
                 const mateBoar = getMatingBoar(item, itemEar);
-                const isPrimary = String(itemEar).toLowerCase() === searchTerm.toLowerCase();
+                const isPrimary = String(itemEar).toLowerCase().includes(searchTerm.toLowerCase());
                 const parityClean = cleanParityVal(item.parity !== '-' ? item.parity : getValueFromMultiKeys(item, ['胎次', 'Parity']));
                 const breedVal = cleanVal(item.breed || getValueFromMultiKeys(item, ['品種']));
 
@@ -537,7 +555,7 @@
                 const tsiVal = userRole === 'A' ? cleanVal(item.tsi || getValueFromMultiKeys(item, ['tsi'])) : '-';
 
                 const isDead = checkIsDead(item);
-                const deadBadge = isDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+                const deadBadge = isDead ? '<span class="badge-dead">DIE</span>' : '';
                 html += `
                     <tr class="${isPrimary ? 'main-row' : 'rel-row'} ${isDead ? 'row-dead' : ''}">
                         <td><b>${cleanVal(itemEar)}</b>${deadBadge}</td>
@@ -652,7 +670,7 @@
                         if (checkIsDead(p.name)) div.classList.add("node-dead");
                         div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
                         div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                        const pDead = checkIsDead(p.name) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                        const pDead = checkIsDead(p.name) ? '<span class="badge-dead">DIE</span>' : '';
                         div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDead}`;
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
@@ -671,7 +689,7 @@
                     if (checkIsDead(a.name)) div.classList.add("node-dead");
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                    const aDead = checkIsDead(a.name) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                    const aDead = checkIsDead(a.name) ? '<span class="badge-dead">DIE</span>' : '';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>${aDead}`;
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
@@ -696,7 +714,7 @@
             const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
             const isTargetDead = checkIsDead(targetItem);
             if (isTargetDead) targetDiv.classList.add("node-dead");
-            const targetDeadBadge = isTargetDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+            const targetDeadBadge = isTargetDead ? '<span class="badge-dead">DIE</span>' : '';
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>${targetDeadBadge}`;
             container.appendChild(targetDiv);
 
@@ -716,7 +734,7 @@
                     }
                     const isMateDead = checkIsDead(m.name);
                     if (isMateDead) mDiv.classList.add("node-dead");
-                    const mateDeadBadge = isMateDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+                    const mateDeadBadge = isMateDead ? '<span class="badge-dead">DIE</span>' : '';
                     mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>${mateDeadBadge}${perfBadge}`;
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
@@ -839,7 +857,7 @@
                         if (checkIsDead(p.name)) div.classList.add("node-dead");
                         div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
                         div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                        const pDead = checkIsDead(p.name) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                        const pDead = checkIsDead(p.name) ? '<span class="badge-dead">DIE</span>' : '';
                         div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDead}`;
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
@@ -859,7 +877,7 @@
                     if (checkIsDead(a.name)) div.classList.add("node-dead");
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
-                    const aDead = checkIsDead(a.name) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                    const aDead = checkIsDead(a.name) ? '<span class="badge-dead">DIE</span>' : '';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>${aDead}`;
                     attachNodeClick(div, a.name);
                     container.appendChild(div);
@@ -884,7 +902,7 @@
             const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
             const isMacroTargetDead = checkIsDead(targetItem);
             if (isMacroTargetDead) targetDiv.classList.add("node-dead");
-            const macroTargetDeadBadge = isMacroTargetDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+            const macroTargetDeadBadge = isMacroTargetDead ? '<span class="badge-dead">DIE</span>' : '';
             targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">${sexLabel}</span><b>${cleanVal(targetEar)}</b>${macroTargetDeadBadge}`;
             container.appendChild(targetDiv);
 
@@ -904,7 +922,7 @@
                     }
                     const isMacroMateDead = checkIsDead(m.name);
                     if (isMacroMateDead) mDiv.classList.add("node-dead");
-                    const macroMateDeadBadge = isMacroMateDead ? '<span class="badge-dead">💀 DIE</span>' : '';
+                    const macroMateDeadBadge = isMacroMateDead ? '<span class="badge-dead">DIE</span>' : '';
                     mDiv.innerHTML = `<span class="sub-label">${m.label}${parityText}</span><b>${cleanVal(m.name)}</b>${macroMateDeadBadge}${perfBadge}`;
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
@@ -928,7 +946,7 @@
                         if (checkIsDead(curSireName)) sireDiv.classList.add("node-dead");
                         sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = sireY + 'px';
                         sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
-                        const sDead = checkIsDead(curSireName) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                        const sDead = checkIsDead(curSireName) ? '<span class="badge-dead">DIE</span>' : '';
                         sireDiv.innerHTML = `<span class="sub-label">♂ Sire's Sire</span><b>${curSireName}</b>${sDead}`;
                         attachNodeClick(sireDiv, curSireName);
                         container.appendChild(sireDiv);
@@ -941,7 +959,7 @@
                         if (checkIsDead(curDamName)) damDiv.classList.add("node-dead");
                         damDiv.style.left = col4_X + 'px'; damDiv.style.top = damY + 'px';
                         damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
-                        const dDead = checkIsDead(curDamName) ? '<span class="badge-dead">💀 DIE</span>' : '';
+                        const dDead = checkIsDead(curDamName) ? '<span class="badge-dead">DIE</span>' : '';
                         damDiv.innerHTML = `<span class="sub-label">♀ Sire's Dam</span><b>${curDamName}</b>${dDead}`;
                         attachNodeClick(damDiv, curDamName);
                         container.appendChild(damDiv);
@@ -959,7 +977,6 @@
             });
         }
 
-        // 🌳 3. 全血統後代世代留種與工作狀態追蹤樹 (Universal Descendant Tree - 完整呈現所有後代)
         function drawUniversalDescendantTree(targetEarTag, matchedItems) {
             const container = document.getElementById('descendantBoxesContainer');
             const canvas = document.getElementById('descendantCanvas');
@@ -1027,7 +1044,7 @@
             targetDiv.style.width = boxW + 'px'; targetDiv.style.height = boxH + 'px';
             const isTargetDead = checkIsDead(targetClean);
             if (isTargetDead) targetDiv.classList.add("node-dead");
-            targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">🎯 Target (${isTargetMale ? '♂ Boar 公豬' : '♀ Sow 母豬'})</span><b>${targetClean}</b>${isTargetDead ? '<span class="badge-dead">💀 DIE</span>' : '<span class="badge-active">ACTIVE</span>'}`;
+            targetDiv.innerHTML = `<span class="sub-label" style="color:#fef08a;">🎯 Target (${isTargetMale ? '♂ Boar 公豬' : '♀ Sow 母豬'})</span><b>${targetClean}</b>${isTargetDead ? '<span class="badge-dead">DIE</span>' : '<span class="badge-active">ACTIVE</span>'}`;
             container.appendChild(targetDiv);
 
             descendantsMap.forEach((f1, idx) => {
@@ -1039,7 +1056,7 @@
                 f1Div.style.width = boxW + 'px'; f1Div.style.height = boxH + 'px';
                 
                 const genderIcon = f1.isMale ? '♂ F1 Sire (公)' : '♀ F1 Dam (母)';
-                const workingBadge = f1.isDead ? '<span class="badge-dead">💀 DIE</span>' : '<span class="badge-active">留種工作</span>';
+                const workingBadge = f1.isDead ? '<span class="badge-dead">DIE</span>' : '<span class="badge-active">留種工作</span>';
                 f1Div.innerHTML = `<span class="sub-label">${genderIcon} (P.${f1.parity})</span><b>${f1.ear}</b>${workingBadge}`;
                 attachNodeClick(f1Div, f1.ear);
                 container.appendChild(f1Div);
