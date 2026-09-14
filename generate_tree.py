@@ -32,7 +32,7 @@ def get_prefix(tag_str):
     return chars[0].upper() if chars else ""
 
 def fetch_and_parse():
-    print("🚀 正在從多個 Google Sheets 分頁聯合抓取出生日與血統數據...")
+    print("🚀 正在從多個 Google Sheets 分頁聯合抓取出生日、血統與淘汰/死亡狀態數據...")
     
     # 1. 主表
     df_main = fetch_sheet_csv(GID_MAIN)
@@ -93,6 +93,7 @@ def fetch_and_parse():
     col_breed = find_col(df_main, ['Breed', '品種', '品系', '品'])
     col_mating_date = find_col(df_main, ['配種日期', '配種日', 'Mating Date', 'Tarikh Kahwin', 'Kahwin'])
     col_farrow_date = find_col(df_main, ['分娩日期', '分娩日', 'farrowing date', '產房日期', 'dob'])
+    col_status = find_col(df_main, ['狀態', 'Status', '淘汰原因', '離場原因', '淘汰', '死亡'])
 
     pedigree_data = []
     for _, row in df_main.iterrows():
@@ -143,6 +144,7 @@ def fetch_and_parse():
             "birth_date": birth_date_val,
             "mating_date": get_v(col_mating_date),
             "dob": get_v(col_farrow_date),
+            "status": get_v(col_status),
             "spi": get_v(find_col(df_main, ['SPI'])),
             "mli": get_v(find_col(df_main, ['MLI'])),
             "tsi": get_v(find_col(df_main, ['TSI'])),
