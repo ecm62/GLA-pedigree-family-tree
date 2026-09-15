@@ -275,6 +275,7 @@
             }
         }
 
+        // 🌟 強制加上時間戳記讀取最新 data.json，徹底避免瀏覽器快取
         function loadPedigreeData() {
             showLoading(true);
             fetch('data.json?t=' + new Date().getTime())
@@ -292,7 +293,7 @@
                         pedigreeList = Array.isArray(data) ? data : Object.values(data || {});
                     }
 
-                    // 備援：若物件自帶 dod 亦同步登記
+                    // 備援：若個別物件本身帶有 dod，同步寫入 Map
                     pedigreeList.forEach(it => {
                         const e = String(it.ear || (it.details && it.details['耳號']) || '').trim().toUpperCase();
                         if (it.dod && it.dod !== '-' && it.dod !== '未記載') {
@@ -322,6 +323,7 @@
                 });
         }
 
+        // 🌟 嚴格取得 Col L 淘汰日期字串
         function getDeathStatusStr(itemOrEar) {
             if (!itemOrEar) return null;
             let earStr = '';
@@ -866,7 +868,7 @@
                 });
             }
 
-            // 🌟 目標個體方框：下方白底區塊直接呈現死亡日期狀態 (例如 2024-04-11 ⚫ (Die))
+            // 🌟 目標個體方框：下方白底區塊直接呈現淘汰/死亡日期狀態
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -1077,7 +1079,7 @@
                         ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + (boxH+6)/2)
                         : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + (boxH+6)/2);
 
-                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2 + baseOffsetY, x2: targetDestX, y2: targetDestY, midX: col0_X + boxW + colGap/2 });
+                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2 + baseOffsetY, x2: targetDestX, y2: targetDestY + baseOffsetY, midX: col0_X + boxW + colGap/2 });
                 });
             }
 
