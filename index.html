@@ -868,7 +868,7 @@
                 });
             }
 
-            // 🌟 目標個體方框：下方白底區塊直接呈現淘汰/死亡日期狀態
+            // 🌟 目標個體方框：下方白底區塊直接呈現淘汰/死亡日期狀態 (例如 2024-04-11 ⚫ (Die))
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -1065,8 +1065,7 @@
                     const nodeY = leftAncYs[idx];
                     const div = document.createElement('div');
                     div.className = `tree-node ${getBreedClass(a.name)}`;
-                    const dStr = getDeathStatusStr(a.name);
-                    if (dStr) div.classList.add("node-dead");
+                    if (checkIsDead(a.name)) div.classList.add("node-dead");
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     const aDeadSub = dStr ? `<span style="font-size:7.5px; color:#dc2626; font-weight:700;">${dStr}</span>` : '';
