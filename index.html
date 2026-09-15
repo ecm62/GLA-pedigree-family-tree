@@ -229,7 +229,6 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // 🌟 嚴謹日齡計算：公豬、已死亡/淘汰者、無真實分娩事件者一律回傳 '-'
         function calculateAgeInDays(breed, sex, birthDateStr, farrowDateStr, matingDateStr, isDead) {
             const bClean = String(breed || '').toUpperCase();
             const sClean = String(sex || '').toUpperCase();
@@ -283,7 +282,6 @@
             }
         }
 
-        // 從物件深層 details 提取 DOD 淘汰日期
         function extractDodFromItem(it) {
             if (!it) return null;
             if (it.dod && it.dod !== '-' && it.dod !== '未記載') return String(it.dod).trim();
@@ -708,7 +706,6 @@
                 const isDeadFlag = (deathStr !== null) || item.is_dead;
                 const displaySex = checkIsMale(item) ? 'MALE' : 'FEMALE';
 
-                // 🌟 正確日齡計算
                 const ageDaysVal = calculateAgeInDays(
                     breedVal,
                     displaySex,
@@ -842,7 +839,7 @@
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
 
-                        linesToDraw.push({ x1: col0_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + (boxH+6)/2, midX: col0_X + boxW + colGap/2 });
+                        linesToDraw.push({ x1: col0_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + (boxH+12)/2, midX: col0_X + boxW + colGap/2 });
                     }
                 });
             } else {
@@ -867,7 +864,7 @@
                         div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDeadSub}`;
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
-                        linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: col1_X + boxW + colGap/2 });
+                        linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + (boxH+12)/2, midX: col1_X + boxW + colGap/2 });
                     }
                 });
 
@@ -890,14 +887,13 @@
 
                     let targetDestX = parents[(idx < 2 ? 0 : 1)].exists ? col1_X : col2_X;
                     let targetDestY = (idx < 2) 
-                        ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + (boxH+6)/2)
-                        : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + (boxH+6)/2);
+                        ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + (boxH+12)/2)
+                        : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + (boxH+12)/2);
 
                     linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2, x2: targetDestX, y2: targetDestY, midX: col0_X + boxW + colGap/2 });
                 });
             }
 
-            // 🌟 目標個體方框：下方直接標註 Col L 淘汰日期 (例如 2024-04-11 ⚫ (Die))
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -936,7 +932,7 @@
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
-                    linesToDraw.push({ x1: col2_X + boxW + 6, y1: targetY + (boxH+6)/2, x2: col3_X, y2: currentY + mateBoxH/2, midX: col2_X + boxW + colGap/2 });
+                    linesToDraw.push({ x1: col2_X + boxW + 6, y1: targetY + (boxH+12)/2, x2: col3_X, y2: currentY + mateBoxH/2, midX: col2_X + boxW + colGap/2 });
                 });
             }
 
@@ -955,14 +951,14 @@
             const countTag = document.getElementById('macroHeaderCount');
             const headerBar = document.getElementById('genHeaderBar');
             const scrollArea = document.getElementById('macroScrollArea');
-            if (!container || !canvas) return;
+            if (!container || !canvas || !scrollArea) return;
 
             container.innerHTML = '';
             headerBar.innerHTML = '';
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
-            countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ Mating Sires ➔ Sire Parents)`;
+            if (countTag) countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ Mating Sires ➔ Sire Parents)`;
 
-            const boxW = 125, boxH = 46, colGap = 45, mateBlockHeight = 85;
+            const boxW = 125, boxH = 46, colGap = 45;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
@@ -970,21 +966,21 @@
             const hasLeftAncestors = !(breed.includes('LY') || ear.startsWith('LY'));
 
             let col0_X = 30;
-            let col1_X = 30 + boxW + colGap;
+            let col1_X = col0_X + boxW + colGap;
             let col2_X = ancData.isG0USOrigin ? col1_X : (col1_X + boxW + colGap);
             let col3_X = col2_X + boxW + colGap;
             let col4_X = col3_X + boxW + colGap;
             let col5_X = col4_X + boxW + colGap;
 
             const headers = ancData.isG0USOrigin ? [
-                { text: 'US Parents (美國親本品系)', x: 30 },
+                { text: 'US Parents (美國親本品系)', x: col0_X },
                 { text: 'Target (個體)', x: col2_X },
                 { text: isMale ? 'Mating Dam' : 'Mating Sire', x: col3_X },
                 { text: 'Sire Parents', x: col4_X },
                 { text: 'Sire Grandparents 👉', x: col5_X }
             ] : [
-                { text: 'Grandparents (祖代品系)', x: 30 },
-                { text: 'Parents (親本)', x: 30 + boxW + colGap },
+                { text: 'Grandparents (祖代品系)', x: col0_X },
+                { text: 'Parents (親本)', x: col1_X },
                 { text: 'Target (個體)', x: col2_X },
                 { text: isMale ? 'Mating Dam' : 'Mating Sire', x: col3_X },
                 { text: 'Sire Parents', x: col4_X },
@@ -994,7 +990,9 @@
             headers.forEach(h => {
                 const div = document.createElement('div');
                 div.className = 'gen-header-title';
-                div.style.left = h.x + 'px'; div.style.width = boxW + 'px'; div.innerText = h.text;
+                div.style.left = h.x + 'px';
+                div.style.width = boxW + 'px';
+                div.innerText = h.text;
                 headerBar.appendChild(div);
             });
 
@@ -1024,18 +1022,18 @@
                 }
             });
 
-            const totalMates = Math.max(mateList.length, 1);
-            const totalContentHeight = Math.max(totalMates * mateBlockHeight + 60, 520);
-            const finalCanvasHeight = totalContentHeight + 40;
+            const mateBlockHeight = 85;
+            const totalMates = mateList.length;
+            const minTreeHeight = 440;
+            const contentHeight = Math.max(totalMates * mateBlockHeight + 60, minTreeHeight);
             const totalWidth = Math.max(col5_X + boxW + 80, scrollArea.clientWidth || 1000);
 
-            scrollArea.style.height = finalCanvasHeight + 'px';
-            container.style.height = totalContentHeight + 'px';
+            scrollArea.style.height = (contentHeight + 50) + 'px';
+            container.style.height = contentHeight + 'px';
             container.style.width = totalWidth + 'px';
 
+            const targetY = contentHeight / 2 - boxH / 2;
             const linesToDraw = [];
-            const baseOffsetY = 40;
-            const targetY = totalContentHeight / 2 - boxH / 2;
 
             if (ancData.isG0USOrigin) {
                 const usParents = [
@@ -1049,14 +1047,22 @@
                         div.className = `tree-node ${getBreedClass(p.name)}`;
                         const dStr = getDeathStatusStr(p.name);
                         if (dStr) div.classList.add("node-dead");
-                        div.style.left = col0_X + 'px'; div.style.top = p.y + 'px';
-                        div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                        div.style.left = col0_X + 'px';
+                        div.style.top = p.y + 'px';
+                        div.style.width = boxW + 'px';
+                        div.style.height = boxH + 'px';
                         const pDeadSub = dStr ? `<span style="font-size:7.5px; color:#dc2626; font-weight:700;">${dStr}</span>` : '';
                         div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDeadSub}`;
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
 
-                        linesToDraw.push({ x1: col0_X + boxW, y1: p.y + boxH/2 + baseOffsetY, x2: col2_X, y2: targetY + (boxH+6)/2 + baseOffsetY, midX: col0_X + boxW + colGap/2 });
+                        linesToDraw.push({ 
+                            x1: col0_X + boxW, 
+                            y1: p.y + boxH / 2, 
+                            x2: col2_X, 
+                            y2: targetY + (boxH + 12) / 2, 
+                            midX: col0_X + boxW + colGap / 2 
+                        });
                     }
                 });
             } else if (hasLeftAncestors) {
@@ -1075,14 +1081,22 @@
                         div.className = `tree-node ${getBreedClass(p.name)}`;
                         const dStr = getDeathStatusStr(p.name);
                         if (dStr) div.classList.add("node-dead");
-                        div.style.left = col1_X + 'px'; div.style.top = p.y + 'px';
-                        div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                        div.style.left = col1_X + 'px';
+                        div.style.top = p.y + 'px';
+                        div.style.width = boxW + 'px';
+                        div.style.height = boxH + 'px';
                         const pDeadSub = dStr ? `<span style="font-size:7.5px; color:#dc2626; font-weight:700;">${dStr}</span>` : '';
                         div.innerHTML = `<span class="sub-label">${p.label}</span><b>${cleanVal(p.name)}</b>${pDeadSub}`;
                         attachNodeClick(div, p.name);
                         container.appendChild(div);
 
-                        linesToDraw.push({ x1: col1_X + boxW, y1: p.y + boxH/2 + baseOffsetY, x2: col2_X, y2: targetY + (boxH+6)/2 + baseOffsetY, midX: col1_X + boxW + colGap/2 });
+                        linesToDraw.push({ 
+                            x1: col1_X + boxW, 
+                            y1: p.y + boxH / 2, 
+                            x2: col2_X, 
+                            y2: targetY + (boxH + 12) / 2, 
+                            midX: col1_X + boxW + colGap / 2 
+                        });
                     }
                 });
 
@@ -1094,9 +1108,12 @@
                     const nodeY = leftAncYs[idx];
                     const div = document.createElement('div');
                     div.className = `tree-node ${getBreedClass(a.name)}`;
-                    if (checkIsDead(a.name)) div.classList.add("node-dead");
-                    div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
-                    div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
+                    const dStr = getDeathStatusStr(a.name);
+                    if (dStr) div.classList.add("node-dead");
+                    div.style.left = col0_X + 'px';
+                    div.style.top = nodeY + 'px';
+                    div.style.width = boxW + 'px';
+                    div.style.height = boxH + 'px';
                     const aDeadSub = dStr ? `<span style="font-size:7.5px; color:#dc2626; font-weight:700;">${dStr}</span>` : '';
                     div.innerHTML = `<span class="sub-label">${a.label}</span><b>${cleanVal(a.name)}</b>${aDeadSub}`;
                     attachNodeClick(div, a.name);
@@ -1104,17 +1121,25 @@
 
                     let targetDestX = parents[(idx < 2 ? 0 : 1)].exists ? col1_X : col2_X;
                     let targetDestY = (idx < 2) 
-                        ? (parents[0].exists ? parentY_Sire + boxH/2 : targetY + (boxH+6)/2)
-                        : (parents[1].exists ? parentY_Dam + boxH/2  : targetY + (boxH+6)/2);
+                        ? (parents[0].exists ? parentY_Sire + boxH / 2 : targetY + (boxH + 12) / 2)
+                        : (parents[1].exists ? parentY_Dam + boxH / 2  : targetY + (boxH + 12) / 2);
 
-                    linesToDraw.push({ x1: col0_X + boxW, y1: nodeY + boxH/2 + baseOffsetY, x2: targetDestX, y2: targetDestY + baseOffsetY, midX: col0_X + boxW + colGap/2 });
+                    linesToDraw.push({ 
+                        x1: col0_X + boxW, 
+                        y1: nodeY + boxH / 2, 
+                        x2: targetDestX, 
+                        y2: targetDestY, 
+                        midX: col0_X + boxW + colGap / 2 
+                    });
                 });
             }
 
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
-            targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
-            targetDiv.style.width = (boxW + 6) + 'px'; targetDiv.style.height = (boxH + 12) + 'px';
+            targetDiv.style.left = col2_X + 'px';
+            targetDiv.style.top = targetY + 'px';
+            targetDiv.style.width = (boxW + 6) + 'px';
+            targetDiv.style.height = (boxH + 12) + 'px';
             const sexLabel = isMale ? '🎯 Target Sire' : '🎯 Target Dam';
             const targetDeathStr = getDeathStatusStr(targetItem);
             if (targetDeathStr) targetDiv.classList.add("node-dead");
@@ -1137,8 +1162,10 @@
                     const mDiv = document.createElement('div');
                     const nodeClass = isMale ? 'mate-node-dam' : 'mate-node-sire';
                     mDiv.className = `tree-node ${nodeClass} ${getBreedClass(m.name)}`;
-                    mDiv.style.left = col3_X + 'px'; mDiv.style.top = mateY + 'px';
-                    mDiv.style.width = (boxW + 10) + 'px'; mDiv.style.height = mateBoxH + 'px';
+                    mDiv.style.left = col3_X + 'px';
+                    mDiv.style.top = mateY + 'px';
+                    mDiv.style.width = (boxW + 10) + 'px';
+                    mDiv.style.height = mateBoxH + 'px';
                     const parityText = (m.parity && m.parity !== '-') ? ` (P.${m.parity})` : '';
                     let perfBadge = `<span style="font-size:8.5px; font-weight:700; color:#0f172a; margin-top:2px; background:rgba(255,255,255,0.85); padding:1px 4px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); display:block; line-height:1.1;">TNB:${m.tnb} BA:${m.nba} W:${m.wn}</span>`;
                     
@@ -1149,7 +1176,13 @@
                     attachNodeClick(mDiv, m.name);
                     container.appendChild(mDiv);
 
-                    linesToDraw.push({ x1: col2_X + boxW + 6, y1: targetY + (boxH+6)/2 + baseOffsetY, x2: col3_X, y2: mateY + mateBoxH/2 + baseOffsetY, midX: col2_X + boxW + colGap/2 });
+                    linesToDraw.push({ 
+                        x1: col2_X + boxW + 6, 
+                        y1: targetY + (boxH + 12) / 2, 
+                        x2: col3_X, 
+                        y2: mateY + mateBoxH / 2, 
+                        midX: col2_X + boxW + colGap / 2 
+                    });
 
                     const boarItem = pedigreeList.find(it => {
                         const itEar = it.ear || getValueFromMultiKeys(it, ['耳號', 'Ear Tag']);
@@ -1167,13 +1200,21 @@
                         sireDiv.className = `tree-node ${getBreedClass(curSireName)}`;
                         const sDStr = getDeathStatusStr(curSireName);
                         if (sDStr) sireDiv.classList.add("node-dead");
-                        sireDiv.style.left = col4_X + 'px'; sireDiv.style.top = sireY + 'px';
-                        sireDiv.style.width = boxW + 'px'; sireDiv.style.height = boxH + 'px';
+                        sireDiv.style.left = col4_X + 'px';
+                        sireDiv.style.top = sireY + 'px';
+                        sireDiv.style.width = boxW + 'px';
+                        sireDiv.style.height = boxH + 'px';
                         const sSub = sDStr ? `<span style="font-size:7px; color:#dc2626;">${sDStr}</span>` : '';
                         sireDiv.innerHTML = `<span class="sub-label">♂ Sire's Sire</span><b>${curSireName}</b>${sSub}`;
                         attachNodeClick(sireDiv, curSireName);
                         container.appendChild(sireDiv);
-                        linesToDraw.push({ x1: col3_X + boxW + 10, y1: mateY + mateBoxH/2 + baseOffsetY, x2: col4_X, y2: sireY + boxH/2 + baseOffsetY, midX: col3_X + boxW + 10 + colGap/2 });
+                        linesToDraw.push({ 
+                            x1: col3_X + boxW + 10, 
+                            y1: mateY + mateBoxH / 2, 
+                            x2: col4_X, 
+                            y2: sireY + boxH / 2, 
+                            midX: col3_X + boxW + 10 + colGap / 2 
+                        });
                     }
 
                     if (!isInvalidNoise(curDamName)) {
@@ -1181,27 +1222,36 @@
                         damDiv.className = `tree-node ${getBreedClass(curDamName)}`;
                         const dDStr = getDeathStatusStr(curDamName);
                         if (dDStr) damDiv.classList.add("node-dead");
-                        damDiv.style.left = col4_X + 'px'; damDiv.style.top = damY + 'px';
-                        damDiv.style.width = boxW + 'px'; damDiv.style.height = boxH + 'px';
+                        damDiv.style.left = col4_X + 'px';
+                        damDiv.style.top = damY + 'px';
+                        damDiv.style.width = boxW + 'px';
+                        damDiv.style.height = boxH + 'px';
                         const dSub = dDStr ? `<span style="font-size:7px; color:#dc2626;">${dDStr}</span>` : '';
                         damDiv.innerHTML = `<span class="sub-label">♀ Sire's Dam</span><b>${curDamName}</b>${dSub}`;
                         attachNodeClick(damDiv, curDamName);
                         container.appendChild(damDiv);
-                        linesToDraw.push({ x1: col3_X + boxW + 10, y1: mateY + mateBoxH/2 + baseOffsetY, x2: col4_X, y2: damY + boxH/2 + baseOffsetY, midX: col3_X + boxW + 10 + colGap/2 });
+                        linesToDraw.push({ 
+                            x1: col3_X + boxW + 10, 
+                            y1: mateY + mateBoxH / 2, 
+                            x2: col4_X, 
+                            y2: damY + boxH / 2, 
+                            midX: col3_X + boxW + 10 + colGap / 2 
+                        });
                     }
                 });
             }
 
             requestAnimationFrame(() => {
                 canvas.width = totalWidth;
-                canvas.height = finalCanvasHeight;
+                canvas.height = contentHeight + 40;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                linesToDraw.forEach(l => { drawOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+                linesToDraw.forEach(l => { 
+                    drawOrthogonalLine(ctx, l.x1, l.y1 + 35, l.x2, l.y2 + 35, l.midX); 
+                });
             });
         }
 
-        // 🌟 3. 嚴謹後代追蹤樹：僅認 1st Sire / 1st Dam 為生父生母之直系子代
         function drawUniversalDescendantTree(targetEarTag, matchedItems) {
             const container = document.getElementById('descendantBoxesContainer');
             const canvas = document.getElementById('descendantCanvas');
