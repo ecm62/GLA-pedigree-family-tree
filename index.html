@@ -229,9 +229,15 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        function calculateAgeInDays(breed, birthDateStr, farrowDateStr, matingDateStr) {
+        // 🌟 嚴謹日齡計算：公豬、已死亡/淘汰者、無真實分娩事件者一律回傳 '-'
+        function calculateAgeInDays(breed, sex, birthDateStr, farrowDateStr, matingDateStr, isDead) {
             const bClean = String(breed || '').toUpperCase();
-            if (bClean.includes('LY') || !birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
+            const sClean = String(sex || '').toUpperCase();
+
+            if (bClean.includes('LY') || sClean.includes('MALE') || sClean.includes('公') || isDead || !birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') {
+                return '-';
+            }
+
             try {
                 const bDate = new Date(birthDateStr.replace(/-/g, '/'));
                 if (isNaN(bDate.getTime())) return '-';
@@ -244,13 +250,15 @@
                     const mDate = new Date(matingDateStr.replace(/-/g, '/'));
                     if (!isNaN(mDate.getTime())) targetDate = mDate;
                 } else {
-                    targetDate = new Date();
+                    return '-';
                 }
 
                 if (!targetDate) return '-';
                 const diffDays = Math.floor((targetDate.getTime() - bDate.getTime()) / (1000 * 60 * 60 * 24));
-                return (diffDays > 0 && diffDays < 5000) ? `${diffDays}d` : '-';
-            } catch(e) { return '-'; }
+                return (diffDays > 0 && diffDays < 4000) ? `${diffDays}d` : '-';
+            } catch(e) { 
+                return '-'; 
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -275,6 +283,7 @@
             }
         }
 
+        // 從物件深層 details 提取 DOD 淘汰日期
         function extractDodFromItem(it) {
             if (!it) return null;
             if (it.dod && it.dod !== '-' && it.dod !== '未記載') return String(it.dod).trim();
@@ -695,21 +704,30 @@
                 let matingDate = getMatingDateForParity(item, idx);
                 let farrowDate = cleanVal(item.dob);
 
-                const ageDaysVal = calculateAgeInDays(breedVal, validBirthDate !== '-' ? validBirthDate : null, farrowDate, matingDate);
+                const deathStr = getDeathStatusStr(item);
+                const isDeadFlag = (deathStr !== null) || item.is_dead;
+                const displaySex = checkIsMale(item) ? 'MALE' : 'FEMALE';
+
+                // 🌟 正確日齡計算
+                const ageDaysVal = calculateAgeInDays(
+                    breedVal,
+                    displaySex,
+                    validBirthDate !== '-' ? validBirthDate : null,
+                    farrowDate,
+                    matingDate,
+                    isDeadFlag
+                );
 
                 const spiVal = userRole === 'A' ? cleanVal(item.spi || getValueFromMultiKeys(item, ['spi'])) : '-';
                 const mliVal = userRole === 'A' ? cleanVal(item.mli || getValueFromMultiKeys(item, ['mli'])) : '-';
                 const tsiVal = userRole === 'A' ? cleanVal(item.tsi || getValueFromMultiKeys(item, ['tsi'])) : '-';
 
-                const deathStr = getDeathStatusStr(item);
                 let badgeHtml = '';
                 if (deathStr) {
                     badgeHtml = `<span class="badge-dead" title="${deathStr}">${deathStr}</span>`;
                 } else if (item.parity === '-' && (!matingDate || matingDate === '-')) {
                     badgeHtml = '<span class="badge-gilt">後備留種</span>';
                 }
-
-                const displaySex = checkIsMale(item) ? 'MALE' : 'FEMALE';
 
                 html += `
                     <tr class="${isPrimary ? 'main-row' : 'rel-row'} ${deathStr ? 'row-dead' : ''}">
@@ -1076,8 +1094,7 @@
                     const nodeY = leftAncYs[idx];
                     const div = document.createElement('div');
                     div.className = `tree-node ${getBreedClass(a.name)}`;
-                    const dStr = getDeathStatusStr(a.name);
-                    if (dStr) div.classList.add("node-dead");
+                    if (checkIsDead(a.name)) div.classList.add("node-dead");
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     const aDeadSub = dStr ? `<span style="font-size:7.5px; color:#dc2626; font-weight:700;">${dStr}</span>` : '';
@@ -1184,6 +1201,7 @@
             });
         }
 
+        // 🌟 3. 嚴謹後代追蹤樹：僅認 1st Sire / 1st Dam 為生父生母之直系子代
         function drawUniversalDescendantTree(targetEarTag, matchedItems) {
             const container = document.getElementById('descendantBoxesContainer');
             const canvas = document.getElementById('descendantCanvas');
@@ -1195,28 +1213,38 @@
             const isTargetMale = checkIsMale(targetClean);
 
             let descendantsMap = [];
+            
             for (let i = 0; i < pedigreeList.length; i++) {
                 const item = pedigreeList[i];
                 const itemEar = String(item.ear || (item.details && (item.details['耳號'] || item.details['母豬耳號'])) || '').trim().toUpperCase();
-                const mate = String(getMatingBoar(item, itemEar)).trim().toUpperCase();
-                const g1Sire = String(item.gen1_sire || getValueFromMultiKeys(item, ['第一代公', '1st Sire', 'gen1_sire'])).trim().toUpperCase();
-                const g1Dam  = String(item.gen1_dam || getValueFromMultiKeys(item, ['第一代母', '1st Dam', 'gen1_dam'])).trim().toUpperCase();
+                
+                if (!itemEar || itemEar === targetClean) continue;
 
-                let parentMatch = false;
+                const g1Sire = String(item.gen1_sire || getValueFromMultiKeys(item, ['第一代公', '1st Sire', 'gen1_sire', 'Sire美系第0代父親名(祖父)'])).trim().toUpperCase();
+                const g1Dam  = String(item.gen1_dam || getValueFromMultiKeys(item, ['第一代母', '1st Dam', 'gen1_dam', 'Dam Name美系第0代母親名(祖母)'])).trim().toUpperCase();
+
+                let isRealChild = false;
+
                 if (isTargetMale) {
-                    if (mate === targetClean || g1Sire === targetClean) parentMatch = true;
+                    if (g1Sire === targetClean) isRealChild = true;
                 } else {
-                    if (g1Dam === targetClean || mate === targetClean) parentMatch = true;
+                    if (g1Dam === targetClean) isRealChild = true;
                 }
 
-                if (parentMatch && itemEar !== targetClean) {
-                    if (!descendantsMap.some(d => d.ear === itemEar && d.parity === item.parity)) {
-                        const isChildMale = checkIsMale(item);
+                if (isRealChild) {
+                    if (!descendantsMap.some(d => d.ear === itemEar)) {
+                        let isChildMale = false;
+                        if (itemEar.startsWith('LY')) {
+                            isChildMale = false;
+                        } else {
+                            isChildMale = checkIsMale(item);
+                        }
+
                         descendantsMap.push({
                             ear: itemEar,
                             breed: cleanVal(item.breed),
                             parity: cleanVal(item.parity),
-                            dob: cleanVal(item.dob),
+                            dob: cleanVal(item.birth_date !== '-' ? item.birth_date : item.dob),
                             isMale: isChildMale,
                             isDead: checkIsDead(item),
                             itemRef: item
@@ -1226,7 +1254,11 @@
             }
 
             if (descendantsMap.length === 0) {
-                container.innerHTML = `<div style="padding:40px; text-align:center; color:#64748b; font-weight:600;">"${targetClean}" 尚未有直系子代配種或留種記錄 (No direct descendants)</div>`;
+                container.innerHTML = `<div style="padding:40px; text-align:center; color:#64748b; font-weight:600;">"${targetClean}" 尚未有直系二代/留種子代個體建檔 (No registered direct offspring)</div>`;
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
                 return;
             }
 
@@ -1249,6 +1281,7 @@
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col0_X + 'px'; targetDiv.style.top = targetY + 'px';
             targetDiv.style.width = boxW + 'px'; targetDiv.style.height = (boxH + 12) + 'px';
+            
             const targetDeathStr = getDeathStatusStr(targetClean);
             if (targetDeathStr) targetDiv.classList.add("node-dead");
             
