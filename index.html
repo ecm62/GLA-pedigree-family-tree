@@ -134,7 +134,7 @@
         <span class="color-badge breed-Y">Y (Yellow)</span>
         <span class="color-badge breed-L">L (Blue)</span>
         <span class="color-badge breed-D">D (Red)</span>
-        <span class="color-badge" style="background:#fee2e2; border-color:#ef4444; color:#991b1b;">2024-04-11 ⚫ (Die)</span>
+        <span class="color-badge" style="background:#fee2e2; border-color:#ef4444; color:#991b1b;">DIE (淘汰/死亡)</span>
         <span class="color-badge" style="background:#ede9fe; border-color:#8b5cf6; color:#6d28d9;">後備留種 (未生產)</span>
     </div>
     <div id="permanentCard">
@@ -177,7 +177,7 @@
     </div>
     <div id="singleTreeArea">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="card-header-bar">
-            <div style="font-weight:bold; font-size:14px; color:#0d6efd;">🌿 1. Single Lineage Direct Tree (個體直系演進圖 - 死亡狀態與日期直接標註)</div>
+            <div style="font-weight:bold; font-size:14px; color:#0d6efd;">🌿 1. Single Lineage Direct Tree (個體直系演進圖 - 目標方框下方直接標註死亡日期與狀態)</div>
             <div><button class="btn btn-export" onclick="exportTreeAsHighResPNG('singleTreeCard', 'singleCanvas', 'GLA_Direct_Tree')">📸 Export PNG</button></div>
         </div>
         <div class="single-tree-card" id="singleTreeCard">
@@ -218,7 +218,7 @@
         }
 
         let pedigreeList = [];
-        let deathInfoMap = new Map(); // 🌟 儲存耳號對應的詳細死亡日期字串 (例如 "2024-04-11 ⚫ (Die)")
+        let deathInfoMap = new Map();
         let knownBoarSet = new Set();
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
         let isAuthorized = true;
@@ -318,7 +318,6 @@
                 });
         }
 
-        // 🌟 檢查是否死亡，並回傳格式化死亡字串 (如 "2024-04-11 ⚫ (Die)")
         function getDeathStatusStr(itemOrEar) {
             if (!itemOrEar) return null;
             let earStr = '';
@@ -523,7 +522,7 @@
                 let usSireSire = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire美系父親名(祖父)', 'sire_sire']);
                 let usSireDam  = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系第0代母親名(祖母)', 'sire_dam']);
                 let usDamSire  = getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire美系父親名(外公)', 'dam_sire', 'MGS Name']);
-                let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name美系第0代母親名(外婆)', 'dam_dam']);
+                let usDamDam   = getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name 美系第0代母親名(外婆)', 'dam_dam']);
 
                 if (isInvalidNoise(usSireSire)) usSireSire = '-';
                 if (isInvalidNoise(usSireDam))  usSireDam  = '-';
@@ -742,7 +741,7 @@
             if (!container || !canvas) return;
 
             container.innerHTML = '';
-            const boxW = 120, boxH = 48, colGap = 50, rowGap = 55; // 增加方框高度以容納死亡日期
+            const boxW = 120, boxH = 48, colGap = 50, rowGap = 55;
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
@@ -863,7 +862,7 @@
                 });
             }
 
-            // 🌟 核心：在 Target 方框下方白底區塊標註死亡日期（例如 2024-04-11 ⚫ (Die)）
+            // 🌟 核心：在 Target 方框下方白底區塊標註死亡日期與狀態（例如 2024-04-11 ⚫ (Die)）
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -1225,7 +1224,6 @@
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col0_X + 'px'; targetDiv.style.top = targetY + 'px';
             targetDiv.style.width = boxW + 'px'; targetDiv.style.height = (boxH + 4) + 'px';
-            const isTargetDead = checkIsDead(targetClean);
             const targetDeathStr = getDeathStatusStr(targetClean);
             if (targetDeathStr) targetDiv.classList.add("node-dead");
             
