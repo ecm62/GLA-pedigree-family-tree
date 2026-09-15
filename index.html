@@ -6,7 +6,7 @@
     <title>GLA Pedigree Family Tree Searching System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        .node-dead { border: 2px dashed #ef4444 !important; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45) !important; filter: grayscale(0.15); background-color: #fff1f2 !important; }
+        .node-dead { border: 2.5px dashed #ef4444 !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.55) !important; filter: grayscale(0.1); background-color: #fff1f2 !important; }
         .badge-dead { display: inline-block; background-color: #dc2626; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; letter-spacing: 0.5px; }
         .badge-active { display: inline-block; background-color: #10b981; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
         .badge-gilt { display: inline-block; background-color: #8b5cf6; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
@@ -275,7 +275,20 @@
             }
         }
 
-        // 🌟 強制加上時間戳記讀取最新 data.json，徹底避免瀏覽器快取
+        function extractDodFromItem(it) {
+            if (!it) return null;
+            if (it.dod && it.dod !== '-' && it.dod !== '未記載') return String(it.dod).trim();
+            if (it.details) {
+                for (let k in it.details) {
+                    if (k.includes('DOD') || k.includes('淘汰日期') || k.includes('死亡日期')) {
+                        let v = String(it.details[k]).trim();
+                        if (v && v !== '-' && v.toLowerCase() !== 'nan' && v.toLowerCase() !== 'none') return v;
+                    }
+                }
+            }
+            return null;
+        }
+
         function loadPedigreeData() {
             showLoading(true);
             fetch('data.json?t=' + new Date().getTime())
@@ -293,13 +306,13 @@
                         pedigreeList = Array.isArray(data) ? data : Object.values(data || {});
                     }
 
-                    // 備援：若個別物件本身帶有 dod，同步寫入 Map
                     pedigreeList.forEach(it => {
-                        const e = String(it.ear || (it.details && it.details['耳號']) || '').trim().toUpperCase();
-                        if (it.dod && it.dod !== '-' && it.dod !== '未記載') {
-                            deathInfoMap.set(e, it.dod);
-                        } else if (it.is_dead) {
-                            if (!deathInfoMap.has(e)) deathInfoMap.set(e, 'Die');
+                        const ear = String(it.ear || (it.details && (it.details['耳號'] || it.details['母豬耳號'])) || '').trim().toUpperCase();
+                        const dodStr = extractDodFromItem(it);
+                        if (dodStr) {
+                            deathInfoMap.set(ear, dodStr);
+                            it.is_dead = true;
+                            it.dod = dodStr;
                         }
                     });
 
@@ -318,20 +331,20 @@
                     showLoading(false);
                 })
                 .catch(err => {
-                    console.error("Load failed");
+                    console.error("Load failed", err);
                     showLoading(false);
                 });
         }
 
-        // 🌟 嚴格取得 Col L 淘汰日期字串
         function getDeathStatusStr(itemOrEar) {
             if (!itemOrEar) return null;
             let earStr = '';
             if (typeof itemOrEar === 'string') {
                 earStr = itemOrEar.trim().toUpperCase();
             } else {
-                if (itemOrEar.dod && itemOrEar.dod !== '-' && itemOrEar.dod !== '未記載') return String(itemOrEar.dod).trim();
-                earStr = String(itemOrEar.ear || (itemOrEar.details && itemOrEar.details['耳號']) || '').trim().toUpperCase();
+                const dodDirect = extractDodFromItem(itemOrEar);
+                if (dodDirect) return dodDirect;
+                earStr = String(itemOrEar.ear || (itemOrEar.details && (itemOrEar.details['耳號'] || itemOrEar.details['母豬耳號'])) || '').trim().toUpperCase();
             }
             if (!earStr || earStr === '-' || earStr === '未記載') return null;
             return deathInfoMap.get(earStr) || null;
@@ -409,7 +422,6 @@
             if (!obj) return '-';
             const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
             const selfEarClean = String(excludeSelfEar || '').toLowerCase().trim();
-
             const forbiddenPatterns = ['胎次', 'parity', '次數', '產次', '日齡', '天數', '重', 'weight', 'cull', 'die'];
 
             for (let kCandidate of possibleKeys) {
@@ -417,7 +429,6 @@
                 for (let rawK in obj) {
                     const rawSan = sanitize(rawK);
                     if (rawSan.includes('母豬耳號') || rawSan.includes('個體耳號') || rawSan === 'ear' || rawSan === 'eartag' || rawSan === '耳號') continue;
-
                     if (forbiddenPatterns.some(fp => rawSan.includes(fp))) continue;
 
                     if (rawSan.includes(targetK)) {
@@ -470,7 +481,7 @@
 
             if (typeof itemOrEar === 'string') {
                 earStr = itemOrEar.trim().toUpperCase();
-                const found = pedigreeList.find(it => String(it.ear || '').toUpperCase() === earStr);
+                const found = pedigreeList.find(it => String(it.ear || (it.details && it.details['耳號']) || '').toUpperCase() === earStr);
                 if (found) {
                     sexStr = (found.sex || getValueFromMultiKeys(found, ['Sex', '性別']) || '').toUpperCase();
                 }
@@ -489,7 +500,7 @@
 
         function getHierarchyAncestors(items, targetItem) {
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
-            const ear = String(targetItem.ear || '').toUpperCase();
+            const ear = String(targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號'])).toUpperCase();
 
             if (breed.includes('LY') || ear.startsWith('LY')) {
                 return {
@@ -537,7 +548,7 @@
 
                 if (usSireSire === '-' || usSireDam === '-') {
                     if (directSire !== '-') {
-                        const pSireItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directSire.toUpperCase());
+                        const pSireItem = pedigreeList.find(it => String(it.ear || (it.details && it.details['耳號']) || '').toUpperCase() === directSire.toUpperCase());
                         if (pSireItem) {
                             const s_s = getValueFromMultiKeys(pSireItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name']);
                             const s_d = getValueFromMultiKeys(pSireItem, ['Dam Name美系母親名', 'Dam Name美系第0代母親名(祖母)', 'dam_name']);
@@ -549,7 +560,7 @@
 
                 if (usDamSire === '-' || usDamDam === '-') {
                     if (directDam !== '-') {
-                        const pDamItem = pedigreeList.find(it => String(it.ear || '').toUpperCase() === directDam.toUpperCase());
+                        const pDamItem = pedigreeList.find(it => String(it.ear || (it.details && it.details['耳號']) || '').toUpperCase() === directDam.toUpperCase());
                         if (pDamItem) {
                             const d_s = getValueFromMultiKeys(pDamItem, ['Sire Name美系父親名', 'Sire美系第0代父親名(祖父)', 'sire_name', 'MGS Name']);
                             const d_d = getValueFromMultiKeys(pDamItem, ['Dam Name美系母親名', 'Dam Name美系第0代母親名(祖母)', 'dam_name']);
@@ -590,7 +601,7 @@
             setTimeout(() => {
                 const targetTerm = rawInput.toLowerCase();
                 let matchedItems = pedigreeList.filter(item => {
-                    const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
+                    const itemEar = String(item.ear || (item.details && (item.details['耳號'] || item.details['母豬耳號'])) || '').toLowerCase();
                     const mateBoar = String(getMatingBoar(item, itemEar)).toLowerCase();
                     
                     const isExactEar = itemEar === targetTerm;
@@ -614,7 +625,7 @@
                     let primaryMatches = [];
                     let relatedMatches = [];
                     matchedItems.forEach(item => {
-                        const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
+                        const itemEar = String(item.ear || (item.details && (item.details['耳號'] || item.details['母豬耳號'])) || '').toLowerCase();
                         if (itemEar.includes(targetTerm)) primaryMatches.push(item);
                         else relatedMatches.push(item);
                     });
@@ -868,7 +879,7 @@
                 });
             }
 
-            // 🌟 目標個體方框：下方白底區塊直接呈現淘汰/死亡日期狀態 (例如 2024-04-11 ⚫ (Die))
+            // 🌟 目標個體方框：下方直接標註 Col L 淘汰日期 (例如 2024-04-11 ⚫ (Die))
             const targetDiv = document.createElement('div');
             targetDiv.className = `tree-node origin-target`;
             targetDiv.style.left = col2_X + 'px'; targetDiv.style.top = targetY + 'px';
@@ -883,7 +894,7 @@
 
             targetDiv.innerHTML = `
                 <span class="sub-label" style="color:#fef08a;">${sexLabel}</span>
-                <b style="font-size:12px;">${cleanVal(targetEar)}</b>
+                <b style="font-size:12px; letter-spacing:0.5px;">${cleanVal(targetEar)}</b>
                 ${targetSubContent}
             `;
             container.appendChild(targetDiv);
@@ -1065,7 +1076,8 @@
                     const nodeY = leftAncYs[idx];
                     const div = document.createElement('div');
                     div.className = `tree-node ${getBreedClass(a.name)}`;
-                    if (checkIsDead(a.name)) div.classList.add("node-dead");
+                    const dStr = getDeathStatusStr(a.name);
+                    if (dStr) div.classList.add("node-dead");
                     div.style.left = col0_X + 'px'; div.style.top = nodeY + 'px';
                     div.style.width = boxW + 'px'; div.style.height = boxH + 'px';
                     const aDeadSub = dStr ? `<span style="font-size:7.5px; color:#dc2626; font-weight:700;">${dStr}</span>` : '';
@@ -1096,7 +1108,7 @@
 
             targetDiv.innerHTML = `
                 <span class="sub-label" style="color:#fef08a;">${sexLabel}</span>
-                <b style="font-size:12px;">${cleanVal(targetEar)}</b>
+                <b style="font-size:12px; letter-spacing:0.5px;">${cleanVal(targetEar)}</b>
                 ${targetSubContent}
             `;
             container.appendChild(targetDiv);
@@ -1185,7 +1197,7 @@
             let descendantsMap = [];
             for (let i = 0; i < pedigreeList.length; i++) {
                 const item = pedigreeList[i];
-                const itemEar = String(item.ear || getValueFromMultiKeys(item, ['耳號', 'Ear Tag'])).trim().toUpperCase();
+                const itemEar = String(item.ear || (item.details && (item.details['耳號'] || item.details['母豬耳號'])) || '').trim().toUpperCase();
                 const mate = String(getMatingBoar(item, itemEar)).trim().toUpperCase();
                 const g1Sire = String(item.gen1_sire || getValueFromMultiKeys(item, ['第一代公', '1st Sire', 'gen1_sire'])).trim().toUpperCase();
                 const g1Dam  = String(item.gen1_dam || getValueFromMultiKeys(item, ['第一代母', '1st Dam', 'gen1_dam'])).trim().toUpperCase();
