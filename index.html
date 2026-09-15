@@ -114,7 +114,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. D1405, DD26081, LL20030" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="e.g. D1053, D1405, DD26074" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" id="searchBtn" onclick="searchPedigree()">🔍 Expand Tree (展開血統樹)</button>
         </div>
         <div>
@@ -207,7 +207,7 @@
         </div>
         <div class="single-tree-card" id="descendantCard" style="min-height: 480px;">
             <canvas class="lineCanvas" id="descendantCanvas"></canvas>
-            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. D1405 or DD26081) to view descendant generation working status...</div></div>
+            <div id="descendantBoxesContainer"><div class="placeholder-text">Search any animal (e.g. D1053, D1405, DD26074) to view descendant generation working status...</div></div>
         </div>
     </div>
 
@@ -229,6 +229,7 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
+        // 🌟 嚴謹日齡計算：公豬、已死亡/淘汰者、無真實分娩事件者一律回傳 '-'
         function calculateAgeInDays(breed, sex, birthDateStr, farrowDateStr, matingDateStr, isDead) {
             const bClean = String(breed || '').toUpperCase();
             const sClean = String(sex || '').toUpperCase();
@@ -282,6 +283,7 @@
             }
         }
 
+        // 從物件深層 details 提取 DOD 淘汰日期
         function extractDodFromItem(it) {
             if (!it) return null;
             if (it.dod && it.dod !== '-' && it.dod !== '未記載') return String(it.dod).trim();
@@ -481,26 +483,41 @@
             return boar;
         }
 
+        // 🌟 嚴謹生物學生產性別判定：只要有分娩、產子、胎次紀錄，100% 是母豬！
         function checkIsMale(itemOrEar) {
             if (!itemOrEar) return false;
             let earStr = '';
             let sexStr = '';
+            let targetItem = null;
 
             if (typeof itemOrEar === 'string') {
                 earStr = itemOrEar.trim().toUpperCase();
-                const found = pedigreeList.find(it => String(it.ear || (it.details && it.details['耳號']) || '').toUpperCase() === earStr);
-                if (found) {
-                    sexStr = (found.sex || getValueFromMultiKeys(found, ['Sex', '性別']) || '').toUpperCase();
-                }
+                targetItem = pedigreeList.find(it => String(it.ear || (it.details && it.details['耳號']) || '').toUpperCase() === earStr);
             } else {
+                targetItem = itemOrEar;
                 earStr = String(itemOrEar.ear || getValueFromMultiKeys(itemOrEar, ['耳號', 'Ear Tag']) || '').trim().toUpperCase();
-                sexStr = (itemOrEar.sex || getValueFromMultiKeys(itemOrEar, ['Sex', '性別']) || '').toUpperCase();
             }
 
+            if (targetItem) {
+                // 1. 若該個體有實際胎次紀錄且大於 0，必定為經產母豬 (FEMALE)
+                const pVal = parseFloat(targetItem.parity || getValueFromMultiKeys(targetItem, ['胎次', 'Parity']));
+                if (!isNaN(pVal) && pVal > 0) return false;
+
+                // 2. 若有分娩日或總產、活胎數，必定為母豬
+                const farrowD = targetItem.dob || (targetItem.details && targetItem.details['當胎分娩日']);
+                const bornAlive = parseFloat(targetItem.born_alive || targetItem.nba || (targetItem.details && targetItem.details['Born alive同胎次活胎數量']));
+                if ((farrowD && farrowD !== '-' && farrowD !== '未記載') || (!isNaN(bornAlive) && bornAlive > 0)) {
+                    return false;
+                }
+
+                sexStr = (targetItem.sex || getValueFromMultiKeys(targetItem, ['Sex', '性別']) || '').toUpperCase();
+            }
+
+            if (sexStr.includes('FEMALE') || sexStr.includes('母') || sexStr === 'F' || earStr.startsWith('LY')) return false;
             if (sexStr.includes('MALE') || sexStr.includes('公') || sexStr === 'M') return true;
-            if (sexStr.includes('FEMALE') || sexStr.includes('母') || sexStr === 'F') return false;
+
+            // 3. 採精公豬名冊
             if (earStr && knownBoarSet.has(earStr)) return true;
-            if (/^[DYL]\d{4}$/.test(earStr)) return true;
 
             return false;
         }
@@ -706,6 +723,7 @@
                 const isDeadFlag = (deathStr !== null) || item.is_dead;
                 const displaySex = checkIsMale(item) ? 'MALE' : 'FEMALE';
 
+                // 🌟 正確日齡計算
                 const ageDaysVal = calculateAgeInDays(
                     breedVal,
                     displaySex,
@@ -766,6 +784,62 @@
             ctx.stroke();
         }
 
+        // 🌟 收集個體所有配種關係：母豬收集其配種公，公豬收集其所配母豬
+        function extractMateList(items, targetEar, isMale) {
+            let mateList = [];
+            const targetClean = String(targetEar).trim().toUpperCase();
+
+            if (!isMale) {
+                // 【母豬】：從其自身生產紀錄中，提取每一胎的配種公豬 (Sire / Mate)
+                items.forEach((i, idx) => {
+                    const iEar = String(i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag'])).trim().toUpperCase();
+                    if (iEar === targetClean) {
+                        const boar = getMatingBoar(i, targetClean);
+                        const pVal = cleanParityVal(i.parity !== '-' ? i.parity : getValueFromMultiKeys(i, ['胎次', 'Parity']));
+                        if (boar && boar !== '-' && boar !== '未記載公豬' && boar.toUpperCase() !== targetClean) {
+                            String(boar).split(' ').forEach(sb => {
+                                const cb = sb.trim().toUpperCase();
+                                if (cb && cb !== targetClean && checkBreedAllowed('', cb)) {
+                                    const tnbVal = cleanVal(i.total_born || i.tnb || getValueFromMultiKeys(i, ['Total born', '總生產', '總生', 'TNB']));
+                                    const nbaVal = cleanVal(i.born_alive || i.nba || getValueFromMultiKeys(i, ['Born alive', '活胎', 'NBA']));
+                                    const wnVal  = cleanVal(i.weaning || getValueFromMultiKeys(i, ['Weaning', '離乳']));
+                                    mateList.push({ 
+                                        name: cb, 
+                                        label: '♂ Mating Sire', 
+                                        parity: pVal !== '-' ? pVal : String(idx + 1),
+                                        tnb: tnbVal !== '-' ? tnbVal : '0(無產/死胎)',
+                                        nba: nbaVal !== '-' ? nbaVal : '0',
+                                        wn: wnVal !== '-' ? wnVal : '0'
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+            } else {
+                // 【公豬】：從全場紀錄中尋找當胎配種公包含此公豬的母豬
+                pedigreeList.forEach((i, idx) => {
+                    const iEar = String(i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag'])).trim().toUpperCase();
+                    const boar = String(getMatingBoar(i, iEar)).trim().toUpperCase();
+                    if (boar.includes(targetClean) && iEar !== targetClean && checkBreedAllowed('', iEar)) {
+                        const pVal = cleanParityVal(i.parity !== '-' ? i.parity : getValueFromMultiKeys(i, ['胎次', 'Parity']));
+                        const tnbVal = cleanVal(i.total_born || i.tnb || getValueFromMultiKeys(i, ['Total born', '總生產', '總生', 'TNB']));
+                        const nbaVal = cleanVal(i.born_alive || i.nba || getValueFromMultiKeys(i, ['Born alive', '活胎', 'NBA']));
+                        const wnVal  = cleanVal(i.weaning || getValueFromMultiKeys(i, ['Weaning', '離乳']));
+                        mateList.push({ 
+                            name: iEar, 
+                            label: '♀ Mating Dam', 
+                            parity: pVal !== '-' ? pVal : String(idx + 1),
+                            tnb: tnbVal !== '-' ? tnbVal : '0(無產/死胎)',
+                            nba: nbaVal !== '-' ? nbaVal : '0',
+                            wn: wnVal !== '-' ? wnVal : '0'
+                        });
+                    }
+                });
+            }
+            return mateList;
+        }
+
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -774,35 +848,12 @@
 
             container.innerHTML = '';
             const boxW = 125, boxH = 46, colGap = 50, rowGap = 55;
+            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
             const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
-            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
 
-            let mateList = [];
-            items.forEach((i, idx) => {
-                const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag']);
-                const boar = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i, targetEar);
-                const pVal = cleanParityVal(i.parity !== '-' ? i.parity : getValueFromMultiKeys(i, ['胎次', 'Parity']));
-                
-                if (boar && boar !== '-' && boar !== '未記載公豬' && String(boar).trim().toUpperCase() !== String(targetEar).trim().toUpperCase()) {
-                    String(boar).split(' ').forEach(sb => {
-                        const cb = sb.trim();
-                        if (cb && cb.toUpperCase() !== targetEar.toUpperCase() && checkBreedAllowed('', cb)) {
-                            const tnbVal = cleanVal(i.total_born || i.tnb || getValueFromMultiKeys(i, ['Total born', '總生產', '總生', 'TNB']));
-                            const nbaVal = cleanVal(i.born_alive || i.nba || getValueFromMultiKeys(i, ['Born alive', '活胎', 'NBA']));
-                            const wnVal  = cleanVal(i.weaning || getValueFromMultiKeys(i, ['Weaning', '離乳']));
-                            mateList.push({ 
-                                name: cb, 
-                                label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', 
-                                parity: pVal !== '-' ? pVal : String(idx + 1),
-                                tnb: tnbVal !== '-' ? tnbVal : '0(無產/死胎)',
-                                nba: nbaVal !== '-' ? nbaVal : '0',
-                                wn: wnVal !== '-' ? wnVal : '0'
-                            });
-                        }
-                    });
-                }
-            });
+            // 🌟 正確提取配種對象
+            let mateList = extractMateList(items, targetEar, isMale);
 
             let col0_X = 30;
             let col1_X = 30 + boxW + colGap;
@@ -956,10 +1007,10 @@
             container.innerHTML = '';
             headerBar.innerHTML = '';
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號', 'Ear Tag']);
+            const isMale = checkIsMale(targetItem);
             if (countTag) countTag.innerText = `(Topology: Target ${targetEar} Ancestors ➔ Target ➔ Mating Sires ➔ Sire Parents)`;
 
             const boxW = 125, boxH = 46, colGap = 45;
-            const isMale = checkIsMale(targetItem);
             const ancData = getHierarchyAncestors(items, targetItem);
             const breed = String(targetItem.breed || getValueFromMultiKeys(targetItem, ['品種'])).toUpperCase();
             const ear = String(targetItem.ear || '').toUpperCase();
@@ -996,31 +1047,8 @@
                 headerBar.appendChild(div);
             });
 
-            let mateList = [];
-            items.forEach((i, idx) => {
-                const iEar = i.ear || getValueFromMultiKeys(i, ['耳號', 'Ear Tag']);
-                const boarRaw = isMale ? (iEar !== targetEar ? iEar : '') : getMatingBoar(i, targetEar);
-                const pVal = cleanParityVal(i.parity !== '-' ? i.parity : getValueFromMultiKeys(i, ['胎次', 'Parity']));
-                
-                if (boarRaw && boarRaw !== '-' && boarRaw !== '未記載公豬' && String(boarRaw).trim().toUpperCase() !== String(targetEar).trim().toUpperCase()) {
-                    String(boarRaw).split(' ').forEach(sb => {
-                        const cb = sb.trim();
-                        if (cb && cb.toUpperCase() !== targetEar.toUpperCase() && checkBreedAllowed('', cb)) {
-                            const tnbVal = cleanVal(i.total_born || i.tnb || getValueFromMultiKeys(i, ['Total born', '總生產', '總生', 'TNB']));
-                            const nbaVal = cleanVal(i.born_alive || i.nba || getValueFromMultiKeys(i, ['Born alive', '活胎', 'NBA']));
-                            const wnVal  = cleanVal(i.weaning || getValueFromMultiKeys(i, ['Weaning', '離乳']));
-                            mateList.push({ 
-                                name: cb, 
-                                label: isMale ? '♀ Mating Dam' : '♂ Mating Sire', 
-                                parity: pVal !== '-' ? pVal : String(idx + 1),
-                                tnb: tnbVal !== '-' ? tnbVal : '0(無產/死胎)',
-                                nba: nbaVal !== '-' ? nbaVal : '0',
-                                wn: wnVal !== '-' ? wnVal : '0'
-                            });
-                        }
-                    });
-                }
-            });
+            // 🌟 提取配種對象清單
+            let mateList = extractMateList(items, targetEar, isMale);
 
             const mateBlockHeight = 85;
             const totalMates = mateList.length;
