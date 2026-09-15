@@ -6,9 +6,9 @@ import re
 
 SPREADSHEET_ID = "1MlhcSXitL_jWYvXVfmo6bQfQqDPIDgUt0VGIZVaB5aw"
 
-GID_MAIN = "0"                 # 📊 育種_家族階層清單 (內含 Col L: DOD/淘汰日期)
-GID_US_ORIGIN = "1267648620"   # 美國原始種源數據 (4 位數純種生日)
-GID_COMBINED = "84920994"      # 合併報表(配種+產房) (留種區間 KN~KO 與分娩日 BJ)
+GID_MAIN = "0"                 # 📊 育種_家族階層清單 (Col G: 耳號, Col L: DOD/淘汰日期)
+GID_US_ORIGIN = "1267648620"   # 美國原始種源數據
+GID_COMBINED = "84920994"      # 合併報表(配種+產房)
 
 def fetch_sheet_csv(gid):
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
@@ -30,40 +30,43 @@ def get_prefix(tag_str):
     return chars[0].upper() if chars else ""
 
 def format_tag(prefix, num, orig_len):
-    num_str = str(num).zfill(orig_len)
-    return f"{prefix}{num_str}"
+    return f"{prefix}{str(num).zfill(orig_len)}"
 
 def find_col(df, keywords):
     for kw in keywords:
         for col in df.columns:
-            if kw.lower() in col.lower():
+            if kw.lower() in str(col).lower():
                 return col
     return None
 
 def fetch_and_parse():
-    print("🚀 正在從主表（GID: 0）解析血統及 Col L (DOD/淘汰日期)...")
+    print("🚀 正在從主表（GID: 0）強制讀取 Col L (Index 11: DOD/淘汰日期)...")
     
     raw_main_csv = fetch_sheet_csv(GID_MAIN)
     if not raw_main_csv:
         print("❌ 主表資料為空！")
         return
 
-    df_main = pd.read_csv(io.StringIO(raw_main_csv))
+    # 1. 先用純文字模式解析，以物理列與欄位直接抽值
+    lines = raw_main_csv.splitlines()
+    header_idx = 0
+    for idx, l in enumerate(lines[:15]):
+        if "耳號" in l or "Ear Tag" in l or "DOD" in l:
+            header_idx = idx
+            break
+
+    df_main = pd.read_csv(io.StringIO("\n".join(lines[header_idx:])))
     df_main.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_main.columns]
 
-    # 1. 鎖定耳號欄位與 Col L (DOD/淘汰日期)
+    # 耳號欄定位 (通常為 Col G，Index 6)
     col_ear = find_col(df_main, ['母豬耳號', '耳號', 'Ear Tag', 'Ear'])
     if not col_ear and len(df_main.columns) >= 7:
-        col_ear = df_main.columns[6] # Col G 通常為耳號
+        col_ear = df_main.columns[6]
 
-    col_dod = None
-    for c in df_main.columns:
-        c_clean = c.upper()
-        if 'DOD' in c_clean or '淘汰日期' in c or '死亡日期' in c:
-            col_dod = c
-            break
+    # DOD 欄位定位 (鎖定包含 DOD 或直接指向 Index 11，即 Col L)
+    col_dod = find_col(df_main, ['DOD', '淘汰日期', '死亡日期'])
     if not col_dod and len(df_main.columns) >= 12:
-        col_dod = df_main.columns[11] # 第 12 欄 (索引 11，即 Col L)
+        col_dod = df_main.columns[11]
 
     print(f"📌 耳號鎖定欄位: [{col_ear}]")
     print(f"📌 淘汰死亡鎖定欄位 (Col L): [{col_dod}]")
@@ -76,7 +79,7 @@ def fetch_and_parse():
     col_farrow_date = find_col(df_main, ['當胎分娩日', '分娩日期', '分娩日'])
     col_dob = find_col(df_main, ['DOB出生日期', 'DOB', '出生日期', '生日'])
 
-    death_map = {} # 存放耳號對應的死亡字串，例如 { "D1405": "2024-04-11 ⚫ (Die)" }
+    death_map = {}
 
     # 2. 4 位數美系純種原種生日對照
     raw_us_csv = fetch_sheet_csv(GID_US_ORIGIN)
@@ -181,11 +184,16 @@ def fetch_and_parse():
         ear_upper = ear.upper()
         existing_ears_in_main.add(ear_upper)
 
-        # 🌟 唯一依賴：從主表 Col L 取得淘汰資訊
-        dod_raw = str(row.get(col_dod, '')).strip() if col_dod and pd.notna(row.get(col_dod)) else ""
+        # 🌟 強制讀取 Col L (DOD/淘汰日期)
+        dod_raw = ""
+        if col_dod and pd.notna(row.get(col_dod)):
+            dod_raw = str(row.get(col_dod)).replace('\n', ' ').strip()
+        elif len(row) >= 12 and pd.notna(row.iloc[11]): # 雙重保險：直接按列第 12 欄讀取
+            dod_raw = str(row.iloc[11]).replace('\n', ' ').strip()
+
         is_dead = False
         dod_clean = "-"
-        if dod_raw and dod_raw.lower() not in ['nan', 'none', '-', '', 'null']:
+        if dod_raw and dod_raw.lower() not in ['nan', 'none', '-', '', 'null', 'dod/淘汰日期']:
             is_dead = True
             dod_clean = dod_raw
             death_map[ear_upper] = dod_clean
@@ -201,7 +209,6 @@ def fetch_and_parse():
                 return val if val.lower() not in ['nan', 'none', ''] else '-'
             return '-'
 
-        # 生日解析
         birth_date_val = '-'
         if breed == 'LY' or 'LY' in ear_upper:
             birth_date_val = '-'
@@ -266,7 +273,7 @@ def fetch_and_parse():
         "death_map": death_map
     }
 
-    print(f"💀 成功從主表 Col L 提取出 {len(death_map)} 筆淘汰/死亡紀錄")
+    print(f"💀 成功從 Col L 提取出 {len(death_map)} 筆淘汰/死亡紀錄")
     if "D1405" in death_map:
         print(f"🎯 確認抓取到 D1405: {death_map['D1405']}")
     else:
