@@ -5,9 +5,8 @@ import io
 import re
 
 SPREADSHEET_ID = "1MlhcSXitL_jWYvXVfmo6bQfQqDPIDgUt0VGIZVaB5aw"
-
-GID_MAIN = "0"                 # 📊 育種_家族階層清單 (Col F: 耳號, Col L: DOD/淘汰日期)
-GID_US_ORIGIN = "1267648620"   # 美國原始種源數據
+GID_MAIN = "0"                 # 📊 育種_家族階層清單
+GID_US_ORIGIN = "1267648620"   # 🧬 美國原始種源數據
 GID_COMBINED = "84920994"      # 合併報表(配種+產房)
 
 def fetch_sheet_csv(gid):
@@ -21,228 +20,181 @@ def fetch_sheet_csv(gid):
         print(f"❌ 讀取 GID {gid} 失敗: {e}")
     return ""
 
-def extract_number(tag_str):
-    nums = re.findall(r'\d+', str(tag_str))
-    return int(nums[0]) if nums else None
+def clean_str(val):
+    if pd.isna(val) or val is None:
+        return "-"
+    s = str(val).replace('\n', ' ').replace('\r', '').strip()
+    return s if s.lower() not in ['nan', 'none', '', 'null'] else "-"
 
-def get_prefix(tag_str):
-    chars = re.findall(r'^[A-Za-z]+', str(tag_str))
-    return chars[0].upper() if chars else ""
-
-def format_tag(prefix, num, orig_len):
-    return f"{prefix}{str(num).zfill(orig_len)}"
-
-def find_col_exact(columns, target_name):
-    for c in columns:
-        c_clean = str(c).replace('\n', '').replace('\r', '').strip()
-        if target_name.lower() in c_clean.lower():
-            return c
-    return None
+def clean_name(val):
+    s = clean_str(val)
+    if s == "-":
+        return "-"
+    if re.match(r'^[\d\-]+$', s):
+        return "-"
+    parts = s.split(' ')
+    valid_parts = [p for p in parts if not re.match(r'^[\d\-]+$', p) and p.upper() not in ['1CR1', '1CR2', 'CR1', 'CR2']]
+    if valid_parts:
+        if len(valid_parts) > 1 and re.search(r'\d', valid_parts[-1]):
+            valid_parts.pop()
+        return " ".join(valid_parts)
+    return s
 
 def fetch_and_parse():
-    print("🚀 正在從主表【📊 育種_家族階層清單】精準對齊 Col F (耳號) 與 Col L (DOD/淘汰日期)...")
-    
-    raw_main_csv = fetch_sheet_csv(GID_MAIN)
-    if not raw_main_csv:
-        print("❌ 主表 GID:0 讀取失敗！")
+    print("🚀 正在整合美國原始數據與家族階層清單...")
+
+    # 1. 讀取美國原始種源數據 (圖一)
+    us_data_map = {}
+    raw_us = fetch_sheet_csv(GID_US_ORIGIN)
+    if raw_us:
+        df_us = pd.read_csv(io.StringIO(raw_us))
+        df_us.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_us.columns]
+        
+        col_ear_us = next((c for c in df_us.columns if '耳號' in c), None)
+        col_sire_us = next((c for c in df_us.columns if 'Sire Name' in c or '美系父親名' in c), None)
+        col_dam_us = next((c for c in df_us.columns if 'Dam Name' in c or '美系母親名' in c), None)
+        col_sex_us = next((c for c in df_us.columns if 'Sex' in c or '性別' in c), None)
+        col_dob_us = next((c for c in df_us.columns if 'DOB' in c or '出生' in c), None)
+
+        for _, r in df_us.iterrows():
+            e = clean_str(r.get(col_ear_us, '')).upper()
+            if e != '-':
+                us_data_map[e] = {
+                    "sire": clean_name(r.get(col_sire_us, '-')),
+                    "dam": clean_name(r.get(col_dam_us, '-')),
+                    "sex": clean_str(r.get(col_sex_us, '-')),
+                    "dob": clean_str(r.get(col_dob_us, '-')).replace('/', '-')
+                }
+
+    # 2. 讀取主表 (圖二)
+    raw_main = fetch_sheet_csv(GID_MAIN)
+    if not raw_main:
+        print("❌ 主表讀取失敗！")
         return
 
-    # 1. 讀取主表
-    df_main = pd.read_csv(io.StringIO(raw_main_csv))
+    df_main = pd.read_csv(io.StringIO(raw_main))
     df_main.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_main.columns]
 
-    # 🌟 精確鎖定：Col F (索引 5) 為耳號，Col L (索引 11) 為 DOD/淘汰日期
-    col_ear = None
-    for c in df_main.columns:
-        if c.strip() == '耳號' or '耳號' in c:
-            col_ear = c
-            break
-    if not col_ear and len(df_main.columns) >= 6:
-        col_ear = df_main.columns[5] # Col F
+    # 動態確認欄位
+    def find_col(keywords):
+        for kw in keywords:
+            for c in df_main.columns:
+                if kw.lower() in c.lower():
+                    return c
+        return None
 
-    col_dod = None
-    for c in df_main.columns:
-        if 'DOD' in c.upper() or '淘汰日期' in c:
-            col_dod = c
-            break
-    if not col_dod and len(df_main.columns) >= 12:
-        col_dod = df_main.columns[11] # Col L
+    c_ear = find_col(['耳號']) or df_main.columns[5]
+    c_sex = find_col(['Sex', '性別']) or df_main.columns[4]
+    c_parity = find_col(['胎次', 'Parity']) or df_main.columns[6]
+    c_mate = find_col(['當胎配種公', '配種公']) or df_main.columns[7]
+    c_mating_d = find_col(['配種日期']) or df_main.columns[8]
+    c_farrow_d = find_col(['當胎分娩日', '分娩日']) or df_main.columns[9]
+    c_dob = find_col(['DOB出生日期', 'DOB']) or df_main.columns[10]
+    c_dod = find_col(['DOD/淘汰日期', 'DOD', '淘汰日期']) or df_main.columns[11]
+    c_breed = find_col(['Breed', '品種']) or df_main.columns[14]
 
-    print(f"🎯 鎖定耳號欄位 (Col F): [{col_ear}]")
-    print(f"🎯 鎖定死亡淘汰欄位 (Col L): [{col_dod}]")
+    # 全場耳號母豬確認名冊
+    confirmed_sows = set()
+    for _, row in df_main.iterrows():
+        e = clean_str(row.get(c_ear, '')).upper()
+        p = clean_str(row.get(c_parity, ''))
+        fd = clean_str(row.get(c_farrow_d, ''))
+        sx = clean_str(row.get(c_sex, '')).upper()
+        if e != '-':
+            if p != '-' or fd != '-' or 'FEMALE' in sx or 'GILT' in sx or '母' in sx:
+                confirmed_sows.add(e)
 
-    death_map = {} # 存放所有在 Col L 記載死亡的耳號及淘汰日期字串
+    for e, udata in us_data_map.items():
+        if 'GILT' in udata['sex'].upper() or 'FEMALE' in udata['sex'].upper():
+            confirmed_sows.add(e)
 
     pedigree_data = []
-    existing_ears_in_main = set()
+    death_map = {}
 
-    for idx, row in df_main.iterrows():
-        # 取耳號 (Col F)
-        ear_val = str(row.get(col_ear, '')).strip() if pd.notna(row.get(col_ear)) else ""
-        if not ear_val or ear_val.lower() in ['nan', 'none', '-', '', 'null', '耳號']:
+    for _, row in df_main.iterrows():
+        ear = clean_str(row.get(c_ear, ''))
+        if ear == '-' or ear == '耳號':
             continue
+        ear_upper = ear.upper()
 
-        ear_upper = ear_val.upper()
-        existing_ears_in_main.add(ear_upper)
-
-        # 🌟 直接取 Col L (DOD/淘汰日期)
-        dod_val = ""
-        if col_dod and pd.notna(row.get(col_dod)):
-            dod_val = str(row.get(col_dod)).replace('\n', ' ').strip()
-        elif len(row) >= 12 and pd.notna(row.iloc[11]):
-            dod_val = str(row.iloc[11]).replace('\n', ' ').strip()
-
+        # 淘汰/死亡
+        dod = clean_str(row.get(c_dod, ''))
         is_dead = False
-        dod_clean = "-"
-        if dod_val and dod_val.lower() not in ['nan', 'none', '-', '', 'null', 'dod/淘汰日期']:
+        if dod != '-':
             is_dead = True
-            dod_clean = dod_val
-            death_map[ear_upper] = dod_clean
+            death_map[ear_upper] = dod
 
-        # 品種推導
+        # 性別
+        if ear_upper in confirmed_sows or ear_upper.startswith('LY'):
+            sex = "FEMALE"
+        else:
+            raw_s = clean_str(row.get(c_sex, '')).upper()
+            sex = "MALE" if ("MALE" in raw_s or "公" in raw_s) else "FEMALE"
+
+        # 品種
+        raw_b = clean_str(row.get(c_breed, '')).upper()
         breed = "D"
-        if 'LY' in ear_upper: breed = 'LY'
-        elif 'Y' in ear_upper: breed = 'Y'
-        elif 'L' in ear_upper: breed = 'L'
+        if "YORK" in raw_b or ear_upper.startswith("Y"):
+            breed = "Y"
+        elif "LAND" in raw_b or ear_upper.startswith("L"):
+            breed = "L"
+        elif "DUROC" in raw_b or ear_upper.startswith("D"):
+            breed = "D"
+        if "LY" in ear_upper:
+            breed = "LY"
+
+        # 提取父母品系名（雙向整合圖一與圖二）
+        us_sire = "-"
+        us_dam = "-"
         
-        # 性別 (Col E / 索引 4)
-        sex_val = "FEMALE"
-        if len(row) >= 5 and pd.notna(row.iloc[4]):
-            s_raw = str(row.iloc[4]).upper()
-            if "MALE" in s_raw or "公" in s_raw: sex_val = "MALE"
-        if ear_upper.startswith('D') and not ear_upper.startswith('DD') and len(ear_upper) == 5:
-            sex_val = "MALE"
+        # 優先從主表欄位取
+        for c in df_main.columns:
+            if '父親名' in c:
+                val = clean_name(row.get(c))
+                if val != '-': us_sire = val
+            if '母親名' in c:
+                val = clean_name(row.get(c))
+                if val != '-': us_dam = val
 
-        # 出生日 (Col K / 索引 10)
-        dob_val = "-"
-        if len(row) >= 11 and pd.notna(row.iloc[10]):
-            d_raw = str(row.iloc[10]).strip()
-            if d_raw and d_raw.lower() not in ['nan', 'none', '-']:
-                dob_val = d_raw.replace('/', '-')
+        # 若主表該欄位為空，回溯美國原始數據表 (圖一)
+        if (us_sire == '-' or us_dam == '-') and ear_upper in us_data_map:
+            if us_sire == '-': us_sire = us_data_map[ear_upper]['sire']
+            if us_dam == '-': us_dam = us_data_map[ear_upper]['dam']
 
-        # 胎次 (Col G / 索引 6)、配種公 (Col H / 索引 7)、配種日 (Col I / 索引 8)、分娩日 (Col J / 索引 9)
-        parity_val = str(row.iloc[6]).strip() if len(row) >= 7 and pd.notna(row.iloc[6]) and str(row.iloc[6]).lower() not in ['nan', 'none'] else "-"
-        mate_val   = str(row.iloc[7]).strip() if len(row) >= 8 and pd.notna(row.iloc[7]) and str(row.iloc[7]).lower() not in ['nan', 'none'] else "-"
-        mating_d   = str(row.iloc[8]).strip() if len(row) >= 9 and pd.notna(row.iloc[8]) and str(row.iloc[8]).lower() not in ['nan', 'none'] else "-"
-        farrow_d   = str(row.iloc[9]).strip() if len(row) >= 10 and pd.notna(row.iloc[9]) and str(row.iloc[9]).lower() not in ['nan', 'none'] else "-"
-
-        # 祖代與父母品系名
-        def get_v_by_kw(keywords):
-            for c in df_main.columns:
-                for kw in keywords:
-                    if kw.lower() in c.lower():
-                        v = row.get(c)
-                        if pd.notna(v) and str(v).strip().lower() not in ['nan', 'none', '']:
-                            return str(v).strip()
-            return '-'
+        dob_val = clean_str(row.get(c_dob, ''))
+        if dob_val == '-' and ear_upper in us_data_map:
+            dob_val = us_data_map[ear_upper]['dob']
 
         entry = {
-            "ear": ear_val,
+            "ear": ear,
             "breed": breed,
-            "sex": sex_val,
-            "parity": parity_val,
-            "mate": mate_val,
+            "sex": sex,
+            "parity": clean_str(row.get(c_parity, '-')),
+            "mate": clean_str(row.get(c_mate, '-')),
             "birth_date": dob_val,
-            "mating_date": mating_d,
-            "dob": farrow_d,
+            "mating_date": clean_str(row.get(c_mating_d, '-')),
+            "dob": clean_str(row.get(c_farrow_d, '-')),
             "is_dead": is_dead,
-            "dod": dod_clean,
-            "spi": get_v_by_kw(['SPI']),
-            "mli": get_v_by_kw(['MLI']),
-            "tsi": get_v_by_kw(['TSI']),
-            "total_born": get_v_by_kw(['Total born', '總生產', '總生']),
-            "born_alive": get_v_by_kw(['Born alive', '活胎']),
-            "weaning": get_v_by_kw(['Weaning', '離乳']),
-            "mother_wt": get_v_by_kw(['生育重']),
-            "weaning_wt": get_v_by_kw(['均重']),
-            "tnb": get_v_by_kw(['TNB']),
-            "nba": get_v_by_kw(['NBA']),
-            "lteat": get_v_by_kw(['左乳']),
-            "rteat": get_v_by_kw(['右乳']),
-            "sire_sire": get_v_by_kw(['Sire美系第0代父親名(祖父)', '祖父']),
-            "sire_dam": get_v_by_kw(['Dam Name美系第0代母親名(祖母)', '祖母']),
-            "dam_sire": get_v_by_kw(['Sire美系第0代父親名(外公)', '外公']),
-            "dam_dam": get_v_by_kw(['Dam Name美系第0代母親名(外婆)', '外婆']),
-            "gen1_sire": get_v_by_kw(['第一代公', '1st Sire']),
-            "gen1_dam": get_v_by_kw(['第一代母', '1st Dam']),
-            "details": {str(k).strip(): (str(v).strip() if pd.notna(v) else "") for k, v in row.items()}
+            "dod": dod,
+            "sire_sire": us_sire,
+            "sire_dam": us_dam,
+            "dam_sire": us_sire,
+            "dam_dam": us_dam,
+            "gen1_sire": clean_str(row.get(find_col(['第一代公']), '-')),
+            "gen1_dam": clean_str(row.get(find_col(['第一代母']), '-')),
+            "details": {str(k).strip(): clean_str(v) for k, v in row.items()}
         }
         pedigree_data.append(entry)
 
-    # 2. 補充合併報表之未生產後備豬
-    raw_comb_csv = fetch_sheet_csv(GID_COMBINED)
-    if raw_comb_csv:
-        df_comb = pd.read_csv(io.StringIO(raw_comb_csv))
-        clean_cols = {c: re.sub(r'\s+', ' ', str(c)).strip() for c in df_comb.columns}
-        col_farrow = next((orig for orig, cl in clean_cols.items() if '分娩日' in cl or 'farrowing date' in cl.lower()), None)
-        col_dam = next((orig for orig, cl in clean_cols.items() if '母豬耳號' in cl or 'nombor telinga' in cl.lower()), None)
-        col_sire = next((orig for orig, cl in clean_cols.items() if '配種公豬' in cl or 'boar mated' in cl.lower()), None)
-        col_start = next((orig for orig, cl in clean_cols.items() if 'breeder (start)' in cl.lower() or 'breeder(start)' in cl.lower()), None)
-        col_end = next((orig for orig, cl in clean_cols.items() if 'breeder (end)' in cl.lower() or 'breeder(end)' in cl.lower()), None)
-
-        if col_farrow and col_start and col_end:
-            for _, r in df_comb.iterrows():
-                f_date = str(r.get(col_farrow, '')).strip().replace('/', '-')
-                dam_ear = str(r.get(col_dam, '')).strip().upper() if col_dam else '-'
-                sire_ear = str(r.get(col_sire, '')).strip().upper() if col_sire else '-'
-                s_tag = str(r.get(col_start, '')).strip()
-                e_tag = str(r.get(col_end, '')).strip()
-
-                if s_tag and e_tag and s_tag.lower() not in ['nan', 'none', '-', '']:
-                    s_num = extract_number(s_tag)
-                    e_num = extract_number(e_tag)
-                    prefix = get_prefix(s_tag)
-                    if s_num is not None and e_num is not None:
-                        start_i = min(s_num, e_num)
-                        end_i = max(s_num, e_num)
-                        digits_match = re.findall(r'\d+', s_tag)
-                        orig_digits_len = len(digits_match[0]) if digits_match else 5
-                        if (end_i - start_i) <= 50:
-                            for cur_n in range(start_i, end_i + 1):
-                                young_ear = format_tag(prefix, cur_n, orig_digits_len)
-                                if young_ear not in existing_ears_in_main:
-                                    existing_ears_in_main.add(young_ear)
-                                    b_code = 'D'
-                                    if 'LY' in prefix: b_code = 'LY'
-                                    elif 'Y' in prefix: b_code = 'Y'
-                                    elif 'L' in prefix: b_code = 'L'
-                                    
-                                    pedigree_data.append({
-                                        "ear": young_ear,
-                                        "breed": b_code,
-                                        "sex": "FEMALE",
-                                        "parity": "-",
-                                        "mate": "-",
-                                        "birth_date": f_date if f_date and f_date != '-' else "-",
-                                        "mating_date": "-",
-                                        "dob": "-",
-                                        "is_dead": False,
-                                        "dod": "-",
-                                        "spi": "-", "mli": "-", "tsi": "-",
-                                        "total_born": "-", "born_alive": "-", "weaning": "-",
-                                        "mother_wt": "-", "weaning_wt": "-",
-                                        "tnb": "-", "nba": "-", "lteat": "-", "rteat": "-",
-                                        "sire_sire": "-", "sire_dam": "-", "dam_sire": "-", "dam_dam": "-",
-                                        "gen1_sire": sire_ear if sire_ear and sire_ear != 'NAN' else "-",
-                                        "gen1_dam": dam_ear if dam_ear and dam_ear != 'NAN' else "-",
-                                        "details": {"耳號": young_ear, "第一代公": sire_ear, "第一代母": dam_ear, "出生日期": f_date}
-                                    })
-
-    output_payload = {
+    output = {
         "pedigree": pedigree_data,
         "death_map": death_map
     }
 
-    print(f"📊 主表解析成功：總共 {len(pedigree_data)} 筆個體")
-    print(f"💀 從 Col L 成功截獲 {len(death_map)} 筆淘汰/死亡紀錄")
-    if "D1405" in death_map:
-        print(f"🎯【成功鎖定 D1405 淘汰紀錄】: {death_map['D1405']}")
-    else:
-        print("❌ 警告：依然沒抓到 D1405，請確認主表 Col F 是否為 D1405！")
-
     with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(output_payload, f, ensure_ascii=False, indent=2)
-    print("✅ data.json 成功寫入！")
+        json.dump(output, f, ensure_ascii=False, indent=2)
+
+    print(f"✅ 成功產出 data.json！個體數: {len(pedigree_data)}")
 
 if __name__ == "__main__":
     fetch_and_parse()
