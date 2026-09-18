@@ -1,281 +1,927 @@
-import json
-import pandas as pd
-import requests
-import io
-import re
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GLA Official Pedigree Book & Lineage System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f1f5f9; color: #1e293b; }
+        .system-header-banner { background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%); color: #ffffff; padding: 14px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 12px; text-align: center; }
+        .system-header-banner h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+        .system-header-banner p { margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; }
+        
+        .control-bar { background: #ffffff; padding: 12px 18px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 12px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+        input[type="text"] { padding: 8px 14px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 320px; outline: none; }
+        input[type="text"]:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.15); }
+        .btn { padding: 7px 18px; font-size: 14px; background-color: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; }
+        .btn:hover { background-color: #0369a1; }
+        .btn-export { background-color: #10b981; margin-left: 8px; }
+        .btn-export:hover { background-color: #059669; }
+        
+        .btn-breed { background-color: #f1f5f9; color: #64748b; margin-right: 4px; padding: 6px 14px; font-size: 13px; border: 1.5px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-weight: 700; }
+        .btn-breed.active { box-shadow: 0 2px 6px rgba(0,0,0,0.12); border-color: #0f172a; }
+        .btn-breed-all.active { background-color: #334155 !important; color: white !important; }
+        .btn-breed-ly.active  { background-color: #059669 !important; color: white !important; }
+        .btn-breed-y.active   { background-color: #d97706 !important; color: white !important; }
+        .btn-breed-l.active   { background-color: #0284c7 !important; color: white !important; }
+        .btn-breed-d.active   { background-color: #e11d48 !important; color: white !important; }
+        
+        .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 16px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+        .color-badge { padding: 3px 10px; border-radius: 4px; font-weight: 800; }
 
-SPREADSHEET_ID = "1MlhcSXitL_jWYvXVfmo6bQfQqDPIDgUt0VGIZVaB5aw"
+        /* 嚴格品種配色 */
+        .breed-L  { background-color: #e0f2fe !important; color: #0369a1 !important; border: 1.5px solid #0284c7 !important; }
+        .breed-Y  { background-color: #fef3c7 !important; color: #b45309 !important; border: 1.5px solid #d97706 !important; }
+        .breed-D  { background-color: #ffe4e6 !important; color: #be123c !important; border: 1.5px solid #e11d48 !important; }
+        .breed-LY { background-color: #d1fae5 !important; color: #047857 !important; border: 1.5px solid #059669 !important; }
+        .breed-DEFAULT { background-color: #ffffff !important; color: #334155 !important; border: 1.5px solid #94a3b8 !important; }
+        
+        .node-dead { border: 2.5px dashed #ef4444 !important; box-shadow: 0 0 10px rgba(239, 68, 68, 0.45) !important; background-color: #fff1f2 !important; }
+        .badge-dead { display: inline-block; background-color: #dc2626; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 2px; }
+        .badge-active { display: inline-block; background-color: #10b981; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; }
+        .badge-gilt { display: inline-block; background-color: #8b5cf6; color: #ffffff !important; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; }
 
-# 🌟 最新指定之資料來源 GID
-GID_MAIN = "836462358"         # 📊 育種_家族階層清單
-GID_US_ORIGIN = "1297296053"   # 🧬 美國原始種源數據
-GID_COMBINED = "84920994"      # 📑 合併報表(配種+產房)
+        /* 表格樣式 */
+        #permanentCard { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .card-title { font-size: 15px; color: #0f172a; font-weight: 800; }
+        .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 12px; background-color: #fff; white-space: nowrap; text-align: center; }
+        .excel-data-table th { background-color: #1e293b; color: #ffffff; font-weight: 700; padding: 8px 10px; border: 1px solid #334155; }
+        .excel-data-table td { padding: 6px 10px; border: 1px solid #e2e8f0; }
+        .excel-data-table tr:hover { background-color: #f8fafc; }
+        .row-dead { background-color: #fff1f2 !important; }
 
-def fetch_sheet_csv(gid):
-    url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
-    try:
-        res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=25)
-        res.encoding = 'utf-8-sig'
-        if res.status_code == 200:
-            return res.text
-    except Exception as e:
-        print(f"❌ 讀取 GID {gid} 失敗: {e}")
-    return ""
+        /* 1. 官方四代造冊標準血統證書卡片 */
+        .cert-card { background: #ffffff; border: 2px solid #0284c7; border-radius: 10px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); position: relative; }
+        .cert-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px; }
+        .cert-title-block h2 { margin: 0; font-size: 17px; color: #0284c7; font-weight: 900; letter-spacing: 0.5px; }
+        .cert-title-block p { margin: 2px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600; }
+        
+        #certGridArea { position: relative; width: 100%; min-height: 440px; background: #fafbfc; border-radius: 8px; border: 1px solid #cbd5e1; overflow-x: auto; overflow-y: hidden; }
+        .cert-node { position: absolute; border-radius: 6px; padding: 5px 8px; box-sizing: border-box; text-align: left; font-size: 10px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 2; transition: all 0.15s; }
+        .cert-node-target { border: 3px solid #f59e0b !important; background: #ffffff !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.4) !important; }
+        
+        .c-title { font-size: 8.5px; font-weight: 800; opacity: 0.85; margin-bottom: 1px; }
+        .c-ear { font-size: 12px; font-weight: 900; letter-spacing: 0.5px; }
+        .c-metric-row { display: flex; gap: 4px; font-size: 8px; font-weight: 700; background: rgba(255,255,255,0.7); padding: 1px 4px; border-radius: 3px; margin-top: 2px; border: 1px solid rgba(0,0,0,0.08); white-space: nowrap; }
+        
+        canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
 
-def clean_str(val):
-    if pd.isna(val) or val is None:
-        return "-"
-    s = str(val).replace('\n', ' ').replace('\r', '').strip()
-    return s if s.lower() not in ['nan', 'none', '', 'null'] else "-"
+        /* 視圖 2、3、4 通用卡片樣式 */
+        .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .single-tree-card { position: relative; width: 100%; min-height: 400px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .tree-node-general { position: absolute; border-radius: 6px; text-align: center; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.06); z-index: 2; padding: 4px; box-sizing: border-box; transition: transform 0.15s; white-space: nowrap; }
+        .tree-node-general:hover { transform: scale(1.04); z-index: 10; }
 
-def clean_name(val):
-    s = clean_str(val)
-    if s == "-" or re.match(r'^[\d\.\-]+$', s):
-        return "-"
-    parts = s.split(' ')
-    valid = [p for p in parts if not re.match(r'^[\d\.\-]+$', p) and p.upper() not in ['1CR1', '1CR2', 'CR1', 'CR2']]
-    if valid:
-        if len(valid) > 1 and re.search(r'\d', valid[-1]):
-            valid.pop()
-        return " ".join(valid)
-    return s
+        /* 🌟 改良型非阻塞式通知標籤 (絕不擋住畫面) */
+        #statusToast { position: fixed; top: 18px; right: 18px; background: rgba(15, 23, 42, 0.9); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; display: none; align-items: center; gap: 8px; z-index: 99999; box-shadow: 0 4px 12px rgba(0,0,0,0.2); pointer-events: none; }
+        .placeholder-text { text-align: center; color: #94a3b8; padding: 50px 10px; font-size: 13px; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <!-- 非阻塞狀態指示器 -->
+    <div id="statusToast">
+        <span>🐖</span> <span id="statusToastText">載入中...</span>
+    </div>
 
-def fetch_and_parse():
-    print("🚀 啟動國際標準四代血統證書與遺傳指數提取...")
+    <div class="system-header-banner">
+        <h1>GLA Official Pedigree Book & Lineage System</h1>
+        <p>Official 4-Generation Pedigree Certificate & Multi-Perspective Breeding Topology (官方四代造冊血統書與多視角育種拓撲)</p>
+    </div>
 
-    # 1. 建立合併報表留種區間池
-    notch_ranges = []
-    raw_comb = fetch_sheet_csv(GID_COMBINED)
-    if raw_comb:
-        try:
-            df_comb = pd.read_csv(io.StringIO(raw_comb))
-            clean_c = {c: str(c).strip().lower() for c in df_comb.columns}
-            col_farrow = next((o for o, c in clean_c.items() if '分娩日' in c or 'beranak' in c or 'farrow' in c), None)
-            col_dam = next((o for o, c in clean_c.items() if '母豬耳號' in c or 'nombor telinga' in c or 'induk' in c), None)
-            col_sire = next((o for o, c in clean_c.items() if '配種公豬' in c or 'jantan' in c or 'boar' in c), None)
-            col_start = next((o for o, c in clean_c.items() if 'breeder' in c and 'start' in c), None)
-            col_end = next((o for o, c in clean_c.items() if 'breeder' in c and 'end' in c), None)
+    <div class="control-bar">
+        <div>
+            <label for="earInput"><strong>Pedigree Search (全血統耳號搜尋):</strong></label>
+            <input type="text" id="earInput" placeholder="e.g. DD26081, LY10906, L1211, D1053" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <button class="btn" onclick="searchPedigree()">🔍 造冊搜尋</button>
+        </div>
+        <div>
+            <strong>Breed Filter (品種篩選):</strong>
+            <div>
+                <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">All</button>
+                <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY</button>
+                <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y</button>
+                <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L</button>
+                <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D</button>
+            </div>
+        </div>
+    </div>
 
-            if col_farrow and col_start and col_end:
-                for _, r in df_comb.iterrows():
-                    s_tag = clean_str(r.get(col_start))
-                    e_tag = clean_str(r.get(col_end))
-                    f_date = clean_str(r.get(col_farrow)).replace('/', '-')
-                    sire_e = clean_str(r.get(col_sire)).upper()
-                    dam_e = clean_str(r.get(col_dam)).upper()
+    <div class="legend-bar">
+        <strong>Breed Legend:</strong>
+        <span class="color-badge breed-LY">LY (淡綠)</span>
+        <span class="color-badge breed-Y">Y (淡黃)</span>
+        <span class="color-badge breed-L">L (淡藍)</span>
+        <span class="color-badge breed-D">D (淡紅)</span>
+        <span class="color-badge" style="background:#fee2e2; border:1.5px solid #ef4444; color:#991b1b;">DIE (淘汰/死亡)</span>
+        <span class="color-badge" style="background:#ede9fe; border:1.5px solid #8b5cf6; color:#6d28d9;">後備留種 (未生產)</span>
+    </div>
 
-                    if s_tag != '-' and e_tag != '-' and f_date != '-':
-                        nums_s = re.findall(r'\d+', s_tag)
-                        nums_e = re.findall(r'\d+', e_tag)
-                        prefix_s = re.findall(r'^[A-Za-z]+', s_tag)
-                        pre = prefix_s[0].upper() if prefix_s else ""
-                        if nums_s and nums_e:
-                            n_start = int(nums_s[0])
-                            n_end = int(nums_e[0])
-                            notch_ranges.append({
-                                "prefix": pre,
-                                "start": min(n_start, n_end),
-                                "end": max(n_start, n_end),
-                                "dig_len": len(nums_s[0]),
-                                "dob": f_date,
-                                "sire": sire_e,
-                                "dam": dam_e
-                            })
-        except Exception as e:
-            print("⚠️ 合併報表解析異常:", e)
+    <!-- 🌟 第一張圖：國際造冊標準四代血統證書表 -->
+    <div class="cert-card" id="certExportCard">
+        <div class="cert-header">
+            <div class="cert-title-block">
+                <h2>📜 1. Official 4-Generation Pedigree Certificate (官方四代造冊標準血統證書)</h2>
+                <p>Compact Layout with Permanent Genetic Indexes (MLI, TSI, SPI, TNB/NBA, DOB, Age)</p>
+            </div>
+            <div><button class="btn btn-export" onclick="exportHighRes('certExportCard', 'certCanvas', 'GLA_Official_Certificate')">📸 造冊存檔 PNG</button></div>
+        </div>
+        <div id="certGridArea">
+            <canvas class="lineCanvas" id="certCanvas"></canvas>
+            <div id="certBoxesContainer"><div class="placeholder-text">Waiting for animal ear tag to generate certificate...</div></div>
+        </div>
+    </div>
 
-    # 2. 讀取美國原始種源數據 (GID: 1297296053)
-    us_data_map = {}
-    raw_us = fetch_sheet_csv(GID_US_ORIGIN)
-    if raw_us:
-        try:
-            df_us = pd.read_csv(io.StringIO(raw_us))
-            col_ear_us = next((c for c in df_us.columns if '耳號' in str(c)), None)
-            col_sire_us = next((c for c in df_us.columns if 'Sire Name' in str(c) or '美系父親名' in str(c)), None)
-            col_dam_us = next((c for c in df_us.columns if 'Dam Name' in str(c) or '美系母親名' in str(c)), None)
-            col_sex_us = next((c for c in df_us.columns if 'Sex' in str(c) or '性別' in str(c)), None)
-            col_dob_us = next((c for c in df_us.columns if 'DOB' in str(c) or '出生' in str(c)), None)
+    <!-- 育種生產成績表 -->
+    <div id="permanentCard">
+        <div class="card-header-bar">
+            <div class="card-title" id="cardTitle">📌 Breeding Performance & Index Data Evaluation Table (育種生產與評估成績表)</div>
+            <div><button class="btn btn-export" onclick="exportTablePNG()">📸 匯出數據表 PNG</button></div>
+        </div>
+        <div class="data-table-wrapper">
+            <table class="excel-data-table">
+                <thead>
+                    <tr>
+                        <th>Ear Tag<br>(耳號)</th>
+                        <th>Breed<br>(品種)</th>
+                        <th>Sex<br>(性別)</th>
+                        <th>Birth Date<br>(出生日)</th>
+                        <th>Age (Days)<br>(分娩日齡)</th>
+                        <th>Mating Date<br>(配種日)</th>
+                        <th>Farrow Date<br>(分娩日)</th>
+                        <th>Parity<br>(胎次)</th>
+                        <th>Sire / Mate<br>(當胎配種公)</th>
+                        <th>Total Born<br>(總產)</th>
+                        <th>Born Alive<br>(活胎)</th>
+                        <th>Weaning<br>(離乳)</th>
+                        <th>Mother Wt<br>(生育重)</th>
+                        <th>Wean Wt<br>(均重)</th>
+                        <th>SPI</th>
+                        <th>MLI</th>
+                        <th>TSI</th>
+                        <th>TNB</th>
+                        <th>NBA</th>
+                        <th>L-Teat</th>
+                        <th>R-Teat</th>
+                    </tr>
+                </thead>
+                <tbody id="excelTableBody">
+                    <tr><td colspan="21" class="placeholder-text">Please enter ear tag above to search...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-            for _, r in df_us.iterrows():
-                e = clean_str(r.get(col_ear_us, '')).upper()
-                if e != '-':
-                    us_data_map[e] = {
-                        "sire": clean_name(r.get(col_sire_us, '-')),
-                        "dam": clean_name(r.get(col_dam_us, '-')),
-                        "sex": clean_str(r.get(col_sex_us, '-')),
-                        "dob": clean_str(r.get(col_dob_us, '-')).replace('/', '-')
-                    }
-        except Exception as e:
-            print("⚠️ 美國數據表解析異常:", e)
+    <!-- 2. 個體直系演進圖 -->
+    <div class="tree-card-wrapper" id="singleTreeArea">
+        <div class="card-header-bar">
+            <div style="font-weight:bold; font-size:14px; color:#0284c7;">🌿 2. Single Lineage Direct Tree (個體直系演進與當胎配種圖)</div>
+            <div><button class="btn btn-export" onclick="exportHighRes('singleTreeArea', 'singleCanvas', 'GLA_Direct_Tree')">📸 匯出 PNG</button></div>
+        </div>
+        <div class="single-tree-card" id="singleTreeCard">
+            <canvas class="lineCanvas" id="singleCanvas"></canvas>
+            <div id="singleBoxesContainer"><div class="placeholder-text">Waiting for data...</div></div>
+        </div>
+    </div>
 
-    # 3. 讀取主表「育種_家族階層清單」 (GID: 836462358)
-    raw_main = fetch_sheet_csv(GID_MAIN)
-    if not raw_main:
-        print("❌ 主表下載失敗！")
-        return
+    <!-- 3. 近親比對全系譜拓撲家族樹 -->
+    <div class="tree-card-wrapper" id="macroTreePanel">
+        <div class="card-header-bar">
+            <div style="font-weight:bold; font-size:14px; color:#0284c7;">🌳 3. Inbreeding Comparison Topology Family Tree (近親比對全系譜拓撲家族樹)</div>
+            <div><button class="btn btn-export" onclick="exportHighRes('macroTreePanel', 'macroCanvas', 'GLA_Topology_Tree')">📸 匯出 PNG</button></div>
+        </div>
+        <div class="single-tree-card" id="macroScrollArea" style="min-height: 480px;">
+            <canvas class="lineCanvas" id="macroCanvas"></canvas>
+            <div id="macroBoxesContainer"></div>
+        </div>
+    </div>
 
-    df_main = pd.read_csv(io.StringIO(raw_main))
-    df_main.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_main.columns]
+    <!-- 4. 全血統後代世代留種與工作狀態追蹤樹 -->
+    <div class="tree-card-wrapper" id="descendantTreeArea">
+        <div class="card-header-bar">
+            <div style="font-weight:bold; font-size:14px; color:#0284c7;">🌱 4. Universal Descendant & Working Status Tree (全血統後代留種與工作狀態追蹤樹)</div>
+            <div><button class="btn btn-export" onclick="exportHighRes('descendantTreeArea', 'descendantCanvas', 'GLA_Descendant_Tree')">📸 匯出 PNG</button></div>
+        </div>
+        <div class="single-tree-card" id="descendantCard" style="min-height: 480px;">
+            <canvas class="lineCanvas" id="descendantCanvas"></canvas>
+            <div id="descendantBoxesContainer"><div class="placeholder-text">Waiting for data...</div></div>
+        </div>
+    </div>
 
-    def find_col(keywords):
-        for kw in keywords:
-            for c in df_main.columns:
-                if kw.lower() in c.lower():
-                    return c
-        return None
-
-    c_ear = find_col(['耳號']) or df_main.columns[5]
-    c_sex = find_col(['Sex', '性別']) or df_main.columns[4]
-    c_parity = find_col(['胎次', 'Parity']) or df_main.columns[6]
-    c_mate = find_col(['當胎配種公', '配種公']) or df_main.columns[7]
-    c_mating_d = find_col(['配種日期']) or df_main.columns[8]
-    c_farrow_d = find_col(['當胎分娩日', '分娩日']) or df_main.columns[9]
-    c_dob = find_col(['DOB出生日期', 'DOB']) or df_main.columns[10]
-    c_dod = find_col(['DOD/淘汰日期', 'DOD', '淘汰日期']) or df_main.columns[11]
-    c_breed = find_col(['Breed', '品種']) or df_main.columns[14]
-
-    # 確認母豬清單
-    confirmed_sows = set()
-    for _, row in df_main.iterrows():
-        e = clean_str(row.get(c_ear, '')).upper()
-        p = clean_str(row.get(c_parity, ''))
-        fd = clean_str(row.get(c_farrow_d, ''))
-        sx = clean_str(row.get(c_sex, '')).upper()
-        if e != '-':
-            if p != '-' or fd != '-' or 'FEMALE' in sx or 'GILT' in sx or '母' in sx or e.startswith('LY'):
-                confirmed_sows.add(e)
-
-    for e, udata in us_data_map.items():
-        if 'GILT' in udata['sex'].upper() or 'FEMALE' in udata['sex'].upper() or e.startswith('LY'):
-            confirmed_sows.add(e)
-
-    pedigree_data = []
-    death_map = {}
-    existing_ears = set()
-
-    for _, row in df_main.iterrows():
-        ear = clean_str(row.get(c_ear, ''))
-        if ear == '-' or ear == '耳號':
-            continue
-        ear_upper = ear.upper()
-        existing_ears.add(ear_upper)
-
-        dod_val = clean_str(row.get(c_dod, ''))
-        is_dead = False
-        if dod_val != '-':
-            is_dead = True
-            death_map[ear_upper] = dod_val
-
-        p_val = clean_str(row.get(c_parity, '-'))
-        fd_val = clean_str(row.get(c_farrow_d, '-'))
-
-        if ear_upper in confirmed_sows or ear_upper.startswith('LY') or p_val != '-' or fd_val != '-':
-            sex = "FEMALE"
-        else:
-            raw_s = clean_str(row.get(c_sex, '')).upper()
-            sex = "MALE" if ("MALE" in raw_s or "公" in raw_s) else "FEMALE"
-
-        raw_b = clean_str(row.get(c_breed, '')).upper()
-        breed = "D"
-        if "YORK" in raw_b or ear_upper.startswith("Y"): breed = "Y"
-        elif "LAND" in raw_b or ear_upper.startswith("L"): breed = "L"
-        elif "DUROC" in raw_b or ear_upper.startswith("D"): breed = "D"
-        if "LY" in ear_upper: breed = "LY"
-
-        # 出生日期
-        dob_val = clean_str(row.get(c_dob, ''))
-        g1_sire = clean_str(row.get(find_col(['第一代公']), '-'))
-        g1_dam  = clean_str(row.get(find_col(['第一代母']), '-'))
-
-        if dob_val == '-' or dob_val == '':
-            ear_nums = re.findall(r'\d+', ear_upper)
-            ear_prefix = re.findall(r'^[A-Za-z]+', ear_upper)
-            if ear_nums and ear_prefix:
-                num_val = int(ear_nums[0])
-                pre_val = ear_prefix[0]
-                for nr in notch_ranges:
-                    if nr['prefix'] == pre_val and (nr['start'] <= num_val <= nr['end']):
-                        dob_val = nr['dob']
-                        if g1_sire == '-' and nr['sire'] != '-': g1_sire = nr['sire']
-                        if g1_dam == '-' and nr['dam'] != '-':  g1_dam = nr['dam']
-                        break
-
-        if (dob_val == '-' or dob_val == '') and ear_upper in us_data_map:
-            dob_val = us_data_map[ear_upper]['dob']
-
-        # 四代祖輩提取（排除純數字與位置編號）
-        sire_sire = clean_name(row.get(find_col(['Sire美系第0代父親名(祖父)', 'Sire 美系第0代父親名(祖父)']), '-'))
-        sire_dam  = clean_name(row.get(find_col(['Dam Name美系第0代母親名(祖母)', 'Dam Name 美系第0代母親名(祖母)']), '-'))
-        dam_sire  = clean_name(row.get(find_col(['Sire美系第0代父親名(外公)', 'Sire 美系第0代父親名(外公)']), '-'))
-        dam_dam   = clean_name(row.get(find_col(['Dam Name美系第0代母親名(外婆)', 'Dam Name 美系第0代母親名(外婆)']), '-'))
-
-        # 第三代與第四代
-        gen2_sire_sire = clean_name(row.get(find_col(['2代-Sire祖父']), '-'))
-        gen2_sire_dam  = clean_name(row.get(find_col(['2代-Dam祖母']), '-'))
-        gen2_dam_sire  = clean_name(row.get(find_col(['2代-Sire外公']), '-'))
-        gen2_dam_dam   = clean_name(row.get(find_col(['2代-Dam外婆']), '-'))
-
-        gen3_sire = clean_str(row.get(find_col(['3代公(父)']), '-'))
-        gen3_dam  = clean_str(row.get(find_col(['3代母(母)']), '-'))
-
-        if sire_sire == '-': sire_sire = clean_name(row.get(find_col(['Sire Name美系父親名']), '-'))
-        if sire_dam == '-':  sire_dam  = clean_name(row.get(find_col(['Dam Name美系母親名']), '-'))
-
-        if (sire_sire == '-' or sire_dam == '-') and ear_upper in us_data_map:
-            if sire_sire == '-': sire_sire = us_data_map[ear_upper]['sire']
-            if sire_dam == '-':  sire_dam  = us_data_map[ear_upper]['dam']
-
-        entry = {
-            "ear": ear,
-            "breed": breed,
-            "sex": sex,
-            "parity": p_val,
-            "mate": clean_str(row.get(c_mate, '-')),
-            "birth_date": dob_val,
-            "mating_date": clean_str(row.get(c_mating_d, '-')),
-            "dob": fd_val,
-            "is_dead": is_dead,
-            "dod": dod_val,
-            "spi": clean_str(row.get(find_col(['SPI']), '-')),
-            "mli": clean_str(row.get(find_col(['MLI']), '-')),
-            "tsi": clean_str(row.get(find_col(['TSI']), '-')),
-            "total_born": clean_str(row.get(find_col(['Total born', '總生產']), '-')),
-            "born_alive": clean_str(row.get(find_col(['Born alive', '活胎']), '-')),
-            "weaning": clean_str(row.get(find_col(['Weaning', '離乳']), '-')),
-            "mother_wt": clean_str(row.get(find_col(['生育重']), '-')),
-            "wean_wt": clean_str(row.get(find_col(['均重']), '-')),
-            "tnb": clean_str(row.get(find_col(['TNB']), '-')),
-            "nba": clean_str(row.get(find_col(['NBA']), '-')),
-            "lteat": clean_str(row.get(find_col(['左乳']), '-')),
-            "rteat": clean_str(row.get(find_col(['右乳']), '-')),
-            # 一代
-            "gen1_sire": g1_sire,
-            "gen1_dam": g1_dam,
-            # 二代 (祖父母)
-            "sire_sire": sire_sire,
-            "sire_dam": sire_dam,
-            "dam_sire": dam_sire,
-            "dam_dam": dam_dam,
-            # 三代
-            "gen2_sire_sire": gen2_sire_sire,
-            "gen2_sire_dam": gen2_sire_dam,
-            "gen2_dam_sire": gen2_dam_sire,
-            "gen2_dam_dam": gen2_dam_dam,
-            "gen3_sire": gen3_sire,
-            "gen3_dam": gen3_dam,
-            "details": {str(k).strip(): clean_str(v) for k, v in row.items()}
+    <script>
+        // 🌟 非阻塞提示器，絕不卡死畫面
+        let toastTimer = null;
+        function notifyStatus(msg, show) {
+            const toast = document.getElementById('statusToast');
+            const toastText = document.getElementById('statusToastText');
+            if (!toast) return;
+            if (show) {
+                toastText.innerText = msg;
+                toast.style.display = 'flex';
+                clearTimeout(toastTimer);
+                // 800 毫秒強制熔斷自動關閉
+                toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 800);
+            } else {
+                toast.style.display = 'none';
+                clearTimeout(toastTimer);
+            }
         }
-        pedigree_data.append(entry)
 
-    output = {
-        "pedigree": pedigree_data,
-        "death_map": death_map
-    }
+        let pedigreeList = [];
+        let deathInfoMap = new Map();
+        let knownBoarSet = new Set();
+        let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
 
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
+        function getTodayDateStr() {
+            const d = new Date();
+            return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+        }
 
-    print(f"🎉 產出成功！個體數: {len(pedigree_data)} 筆，四代血統樹數據已完整入庫。")
+        function calculateAgeInDays(breed, sex, birthDateStr, farrowDateStr, isDead) {
+            const sClean = String(sex || '').toUpperCase();
+            if (sClean.includes('MALE') || sClean.includes('公') || isDead || !birthDateStr || birthDateStr === '-' || birthDateStr === '未記載') return '-';
+            if (!farrowDateStr || farrowDateStr === '-' || farrowDateStr === '未記載') return '-';
+            try {
+                const bDate = new Date(birthDateStr.replace(/-/g, '/'));
+                const fDate = new Date(farrowDateStr.replace(/-/g, '/'));
+                if (isNaN(bDate.getTime()) || isNaN(fDate.getTime())) return '-';
+                const diffDays = Math.floor((fDate.getTime() - bDate.getTime()) / (1000 * 60 * 60 * 24));
+                return (diffDays > 0 && diffDays < 4000) ? `${diffDays}d` : '-';
+            } catch(e) { return '-'; }
+        }
 
-if __name__ == "__main__":
-    fetch_and_parse()
+        window.addEventListener('DOMContentLoaded', () => { loadPedigreeData(); });
+
+        function extractDodFromItem(it) {
+            if (!it) return null;
+            if (it.dod && it.dod !== '-' && it.dod !== '未記載') return String(it.dod).trim();
+            if (it.details) {
+                for (let k in it.details) {
+                    if (k.includes('DOD') || k.includes('淘汰日期') || k.includes('死亡日期')) {
+                        let v = String(it.details[k]).trim();
+                        if (v && v !== '-' && v.toLowerCase() !== 'nan') return v;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function loadPedigreeData() {
+            notifyStatus("讀取家族資料庫中...", true);
+            fetch('data.json?t=' + new Date().getTime())
+                .then(res => res.json())
+                .then(data => {
+                    deathInfoMap.clear();
+                    pedigreeList = (data && data.pedigree) ? data.pedigree : (Array.isArray(data) ? data : Object.values(data || {}));
+                    if (data && data.death_map) {
+                        for (let k in data.death_map) deathInfoMap.set(k.trim().toUpperCase(), data.death_map[k]);
+                    }
+
+                    pedigreeList.forEach(it => {
+                        const ear = String(it.ear || (it.details && it.details['耳號']) || '').trim().toUpperCase();
+                        const dodStr = extractDodFromItem(it);
+                        if (dodStr) {
+                            deathInfoMap.set(ear, dodStr);
+                            it.is_dead = true; it.dod = dodStr;
+                        }
+                    });
+
+                    knownBoarSet.clear();
+                    pedigreeList.forEach(it => {
+                        const m = it.mate || (it.details && it.details['當胎配種公']);
+                        if (m && m !== '-' && m !== '未記載公豬') {
+                            String(m).split(' ').forEach(tag => {
+                                const t = tag.trim().toUpperCase();
+                                if (t && t !== '-') knownBoarSet.add(t);
+                            });
+                        }
+                        const g1s = it.gen1_sire || (it.details && it.details['第一代公']);
+                        if (g1s && g1s !== '-') knownBoarSet.add(String(g1s).trim().toUpperCase());
+                    });
+                    notifyStatus("", false);
+                })
+                .catch(err => { 
+                    console.error("載入失敗:", err); 
+                    notifyStatus("", false);
+                });
+        }
+
+        function getDeathStatusStr(itemOrEar) {
+            if (!itemOrEar) return null;
+            let earStr = typeof itemOrEar === 'string' ? itemOrEar.trim().toUpperCase() : String(itemOrEar.ear || '').trim().toUpperCase();
+            if (!earStr || earStr === '-' || earStr === '未記載') return null;
+            return deathInfoMap.get(earStr) || null;
+        }
+
+        function checkIsDead(itemOrEar) { return getDeathStatusStr(itemOrEar) !== null; }
+
+        function cleanVal(v) {
+            if (v === undefined || v === null || v === 'undefined' || v === 'NaN' || v === 'nan' || v === '') return '-';
+            return String(v).replace(/\n/g, ' ').replace(/🔴/g, '').trim();
+        }
+
+        function cleanParityVal(v) {
+            if (!v || v === '-' || v === 'undefined' || v === 'NaN') return '-';
+            const num = parseFloat(v);
+            return isNaN(num) ? '-' : num.toFixed(1);
+        }
+
+        function getBreedClass(nameStr) {
+            if (!nameStr || nameStr === '-' || nameStr.includes('未記載')) return 'breed-DEFAULT';
+            const s = String(nameStr).toUpperCase().trim();
+            if (s.includes('LY') || s.includes('CROSS')) return 'breed-LY';
+            if (s.includes('DD') || s.startsWith('D') || s.includes('DUROC')) return 'breed-D';
+            if (s.includes('YY') || s.startsWith('Y') || s.includes('YORK')) return 'breed-Y';
+            if (s.includes('LL') || s.startsWith('L') || s.includes('LAND')) return 'breed-L';
+            return 'breed-DEFAULT';
+        }
+
+        function toggleBreedFilter(breedKey) {
+            if (breedKey === 'ALL') selectedBreeds = selectedBreeds.size === 4 ? new Set() : new Set(['LY', 'Y', 'L', 'D']);
+            else selectedBreeds.has(breedKey) ? selectedBreeds.delete(breedKey) : selectedBreeds.add(breedKey);
+            ['LY', 'Y', 'L', 'D'].forEach(k => document.getElementById('btnBreed' + k).classList.toggle('active', selectedBreeds.has(k)));
+            document.getElementById('btnBreedALL').classList.toggle('active', selectedBreeds.size === 4);
+            if (document.getElementById('earInput').value.trim() !== '') searchPedigree();
+        }
+
+        function checkBreedAllowed(breedStr, earStr) {
+            if (!selectedBreeds || selectedBreeds.size === 0) return true;
+            const b = getBreedClass(earStr || breedStr);
+            return b === 'breed-DEFAULT' || selectedBreeds.has(b.replace('breed-', ''));
+        }
+
+        function getValueFromMultiKeys(obj, possibleKeys, excludeSelfEar = '') {
+            if (!obj) return '-';
+            const sanitize = s => String(s).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+            const selfEarClean = String(excludeSelfEar || '').toLowerCase().trim();
+            for (let kCandidate of possibleKeys) {
+                const targetK = sanitize(kCandidate);
+                for (let rawK in obj) {
+                    if (sanitize(rawK).includes(targetK)) {
+                        const val = obj[rawK];
+                        if (val !== undefined && val !== null && !['nan', 'none', '', '-'].includes(String(val).toLowerCase())) {
+                            const c = String(val).trim();
+                            if (selfEarClean && c.toLowerCase() === selfEarClean) continue;
+                            return c;
+                        }
+                    }
+                }
+            }
+            return obj.details ? getValueFromMultiKeys(obj.details, possibleKeys, excludeSelfEar) : '-';
+        }
+
+        function checkIsMale(itemOrEar) {
+            if (!itemOrEar) return false;
+            let earStr = typeof itemOrEar === 'string' ? itemOrEar.trim().toUpperCase() : String(itemOrEar.ear || '').trim().toUpperCase();
+            if (earStr.startsWith('LY')) return false;
+
+            const isFemaleRecorded = pedigreeList.some(it => {
+                const e = String(it.ear || (it.details && it.details['耳號']) || '').toUpperCase();
+                if (e === earStr) {
+                    const sx = String(it.sex || (it.details && it.details['Sex']) || '').toUpperCase();
+                    const p = parseFloat(it.parity || (it.details && it.details['胎次']));
+                    const fd = it.dob || (it.details && it.details['當胎分娩日']);
+                    return sx.includes('FEMALE') || sx.includes('GILT') || sx.includes('母') || (!isNaN(p) && p > 0) || (fd && fd !== '-' && fd !== '未記載');
+                }
+                return false;
+            });
+            if (isFemaleRecorded) return false;
+            if (earStr && knownBoarSet.has(earStr)) return true;
+            return false;
+        }
+
+        function drawOrthogonalLine(ctx, x1, y1, x2, y2, midX) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(midX, y1);
+            ctx.lineTo(midX, y2);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+        }
+
+        function searchPedigree() {
+            const rawInput = document.getElementById('earInput').value.trim();
+            if (!rawInput) return;
+
+            notifyStatus("查詢中...", true);
+            setTimeout(() => {
+                try {
+                    const targetTerm = rawInput.toLowerCase();
+                    let matchedItems = pedigreeList.filter(item => {
+                        const itemEar = String(item.ear || (item.details && item.details['耳號']) || '').toLowerCase();
+                        const mateBoar = String(item.mate || getValueFromMultiKeys(item, ['當胎配種', 'Sire'])).toLowerCase();
+                        return (itemEar === targetTerm || mateBoar.includes(targetTerm)) && checkBreedAllowed(item.breed, item.ear);
+                    });
+
+                    if (matchedItems.length === 0) {
+                        const fb = pedigreeList.find(it => JSON.stringify(it).toLowerCase().includes(targetTerm));
+                        if (fb) matchedItems = [fb];
+                    }
+
+                    if (matchedItems.length > 0) {
+                        let primary = [], related = [];
+                        matchedItems.forEach(it => {
+                            String(it.ear || '').toLowerCase().includes(targetTerm) ? primary.push(it) : related.push(it);
+                        });
+                        primary.sort((a, b) => (parseFloat(a.parity) || 0) - (parseFloat(b.parity) || 0));
+                        const sorted = [...primary, ...related];
+                        const targetItem = primary.length > 0 ? primary[0] : sorted[0];
+
+                        // 分步渲染，保證不卡畫面
+                        renderExcelDataTable(sorted, primary, rawInput);
+                        drawOfficialPedigreeCertificate(targetItem);
+                        
+                        setTimeout(() => {
+                            try { drawSingleLineageTree(sorted, targetItem); } catch(e) {}
+                            try { drawButterflyFamilyTree(sorted, targetItem); } catch(e) {}
+                            try { drawUniversalDescendantTree(rawInput, sorted); } catch(e) {}
+                        }, 20);
+                    } else {
+                        document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="21" class="placeholder-text">No data found for "${rawInput}"</td></tr>`;
+                        document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">No data found for "${rawInput}"</div>`;
+                    }
+                } catch (err) {
+                    console.error("執行錯誤:", err);
+                } finally {
+                    notifyStatus("", false);
+                }
+            }, 10);
+        }
+
+        function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
+            const tbody = document.getElementById('excelTableBody');
+            document.getElementById('cardTitle').innerHTML = `📌 Breeding Performance & Index Data: <span style="color:#0284c7;">Query: "${searchTerm}"</span> (Records: ${primaryItems.length})`;
+
+            let html = '';
+            allSortedItems.forEach((item, idx) => {
+                const ear = item.ear || getValueFromMultiKeys(item, ['耳號']);
+                const isPrimary = String(ear).toLowerCase().includes(searchTerm.toLowerCase());
+                const parity = cleanParityVal(item.parity);
+                const breed = cleanVal(item.breed);
+                const sex = checkIsMale(item) ? 'MALE' : 'FEMALE';
+                const dob = cleanVal(item.birth_date);
+                const fd = cleanVal(item.dob);
+                const deathStr = getDeathStatusStr(item);
+                const ageDays = calculateAgeInDays(breed, sex, dob, fd, deathStr !== null);
+
+                let badgeHtml = deathStr ? `<span class="badge-dead">${deathStr}</span>` : (item.parity === '-' && (!item.mating_date || item.mating_date === '-') ? '<span class="badge-gilt">後備留種</span>' : '');
+
+                html += `
+                    <tr class="${isPrimary ? 'main-row' : 'rel-row'} ${deathStr ? 'row-dead' : ''}">
+                        <td><b>${cleanVal(ear)}</b>${badgeHtml}</td>
+                        <td>${breed}</td>
+                        <td><b>${sex}</b></td>
+                        <td><b>${dob}</b></td>
+                        <td><b style="color:#0284c7;">${ageDays}</b></td>
+                        <td><b>${cleanVal(item.mating_date)}</b></td>
+                        <td><b>${fd}</b></td>
+                        <td><b>${parity}</b></td>
+                        <td><b>${cleanVal(item.mate)}</b></td>
+                        <td><b>${cleanVal(item.total_born || item.tnb)}</b></td>
+                        <td><b>${cleanVal(item.born_alive || item.nba)}</b></td>
+                        <td>${cleanVal(item.weaning)}</td>
+                        <td>${cleanVal(item.mother_wt)}</td>
+                        <td>${cleanVal(item.wean_wt)}</td>
+                        <td><b>${cleanVal(item.spi)}</b></td>
+                        <td><b>${cleanVal(item.mli)}</b></td>
+                        <td><b>${cleanVal(item.tsi)}</b></td>
+                        <td>${cleanVal(item.tnb)}</td>
+                        <td>${cleanVal(item.nba)}</td>
+                        <td>${cleanVal(item.lteat)}</td>
+                        <td>${cleanVal(item.rteat)}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        /* 1. 官方四代造冊標準血統證書 (無死角防呆) */
+        function drawOfficialPedigreeCertificate(targetItem) {
+            const container = document.getElementById('certBoxesContainer');
+            const canvas = document.getElementById('certCanvas');
+            const gridArea = document.getElementById('certGridArea');
+            if (!container || !canvas || !gridArea) return;
+
+            container.innerHTML = '';
+            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號']);
+            const isMale = checkIsMale(targetItem);
+
+            const colWidths = [190, 165, 165, 165];
+            const colGap = 45;
+            const cardHeight = 440;
+            const totalWidth = colWidths.reduce((a, b) => a + b, 0) + colGap * 3 + 60;
+
+            gridArea.style.height = cardHeight + 'px';
+            container.style.height = cardHeight + 'px';
+            container.style.width = totalWidth + 'px';
+
+            const col0_X = 25;
+            const col1_X = col0_X + colWidths[0] + colGap;
+            const col2_X = col1_X + colWidths[1] + colGap;
+            const col3_X = col2_X + colWidths[2] + colGap;
+
+            const lines = [];
+
+            function findAnimal(tag) {
+                if (!tag || tag === '-' || tag === '未記載') return null;
+                return pedigreeList.find(it => String(it.ear || '').toUpperCase() === String(tag).toUpperCase()) || null;
+            }
+
+            // Target
+            const targetY = cardHeight / 2 - 42;
+            const targetDiv = document.createElement('div');
+            targetDiv.className = `cert-node cert-node-target ${getBreedClass(targetItem.breed || targetEar)}`;
+            targetDiv.style.left = col0_X + 'px';
+            targetDiv.style.top = targetY + 'px';
+            targetDiv.style.width = colWidths[0] + 'px';
+            targetDiv.style.height = '84px';
+
+            const deathStr = getDeathStatusStr(targetItem);
+            const statusHtml = deathStr ? `<span class="badge-dead">${deathStr}</span>` : `<span class="badge-active">ACTIVE</span>`;
+            const ageDays = calculateAgeInDays(targetItem.breed, targetItem.sex, targetItem.birth_date, targetItem.dob, deathStr !== null);
+
+            targetDiv.innerHTML = `
+                <div>
+                    <span class="c-title">🎯 INDIVIDUAL (${isMale ? '♂ BOAR 種公' : '♀ SOW 種母'})</span>
+                    <div class="c-ear">${targetEar} ${statusHtml}</div>
+                </div>
+                <div>
+                    <div class="c-metric-row">
+                        <span>DOB: <b>${cleanVal(targetItem.birth_date)}</b></span>
+                        <span>Age: <b>${ageDays}</b></span>
+                    </div>
+                    <div class="c-metric-row">
+                        <span>SPI: <b>${cleanVal(targetItem.spi)}</b></span>
+                        <span>MLI: <b>${cleanVal(targetItem.mli)}</b></span>
+                        <span>TSI: <b>${cleanVal(targetItem.tsi)}</b></span>
+                    </div>
+                </div>
+            `;
+            container.appendChild(targetDiv);
+
+            // Parents
+            let sireTag = targetItem.gen1_sire && targetItem.gen1_sire !== '-' ? targetItem.gen1_sire : getValueFromMultiKeys(targetItem, ['第一代公', '1st Sire']);
+            let damTag  = targetItem.gen1_dam && targetItem.gen1_dam !== '-' ? targetItem.gen1_dam : getValueFromMultiKeys(targetItem, ['第一代母', '1st Dam']);
+            
+            if (checkIsMale(damTag) && !checkIsMale(sireTag) && sireTag !== '-') {
+                let temp = sireTag; sireTag = damTag; damTag = temp;
+            }
+
+            const pSireObj = findAnimal(sireTag);
+            const pDamObj  = findAnimal(damTag);
+
+            const parents = [
+                { ear: sireTag, label: "♂ 1st SIRE (父系)", y: targetY - 75, obj: pSireObj },
+                { ear: damTag,  label: "♀ 1st DAM (母系)",  y: targetY + 75, obj: pDamObj }
+            ];
+
+            parents.forEach(p => {
+                const pDiv = document.createElement('div');
+                pDiv.className = `cert-node ${getBreedClass(p.obj ? p.obj.breed : p.ear)}`;
+                pDiv.style.left = col1_X + 'px';
+                pDiv.style.top = p.y + 'px';
+                pDiv.style.width = colWidths[1] + 'px';
+                pDiv.style.height = '68px';
+                if (checkIsDead(p.ear)) pDiv.classList.add('node-dead');
+
+                pDiv.innerHTML = `
+                    <div>
+                        <span class="c-title">${p.label}</span>
+                        <div class="c-ear" style="font-size:11px;">${cleanVal(p.ear)}</div>
+                    </div>
+                    <div class="c-metric-row">
+                        <span>SPI: <b>${cleanVal(p.obj ? p.obj.spi : '-')}</b></span>
+                        <span>MLI: <b>${cleanVal(p.obj ? p.obj.mli : '-')}</b></span>
+                        <span>TSI: <b>${cleanVal(p.obj ? p.obj.tsi : '-')}</b></span>
+                    </div>
+                `;
+                pDiv.onclick = () => { if (p.ear && p.ear !== '-') { document.getElementById('earInput').value = p.ear; searchPedigree(); } };
+                container.appendChild(pDiv);
+
+                lines.push({ x1: col0_X + colWidths[0], y1: targetY + 42, x2: col1_X, y2: p.y + 34, midX: col0_X + colWidths[0] + colGap/2 });
+            });
+
+            // Grandparents
+            let ss = targetItem.sire_sire && targetItem.sire_sire !== '-' ? targetItem.sire_sire : getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(祖父)', 'Sire Name美系父親名']);
+            let sd = targetItem.sire_dam && targetItem.sire_dam !== '-' ? targetItem.sire_dam : getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名']);
+            let ds = targetItem.dam_sire && targetItem.dam_sire !== '-' ? targetItem.dam_sire : getValueFromMultiKeys(targetItem, ['Sire美系第0代父親名(外公)', 'Sire Name美系父親名']);
+            let dd = targetItem.dam_dam && targetItem.dam_dam !== '-' ? targetItem.dam_dam : getValueFromMultiKeys(targetItem, ['Dam Name美系第0代母親名(外婆)', 'Dam Name美系母親名']);
+
+            const grandparents = [
+                { name: ss, label: "♂ SIRE'S SIRE (祖父)", y: targetY - 125, parentIdx: 0 },
+                { name: sd, label: "♀ SIRE'S DAM (祖母)",  y: targetY - 35,  parentIdx: 0 },
+                { name: ds, label: "♂ DAM'S SIRE (外公)",  y: targetY + 35,  parentIdx: 1 },
+                { name: dd, label: "♀ DAM'S DAM (外婆)",   y: targetY + 125, parentIdx: 1 }
+            ];
+
+            grandparents.forEach(g => {
+                const gDiv = document.createElement('div');
+                gDiv.className = `cert-node ${getBreedClass(g.name)}`;
+                gDiv.style.left = col2_X + 'px';
+                gDiv.style.top = g.y + 'px';
+                gDiv.style.width = colWidths[2] + 'px';
+                gDiv.style.height = '56px';
+
+                gDiv.innerHTML = `
+                    <div>
+                        <span class="c-title">${g.label}</span>
+                        <div class="c-ear" style="font-size:10.5px;">${cleanVal(g.name)}</div>
+                    </div>
+                    <div class="c-metric-row"><span>US FOUNDATION ANCESTOR</span></div>
+                `;
+                container.appendChild(gDiv);
+
+                lines.push({ x1: col1_X + colWidths[1], y1: parents[g.parentIdx].y + 34, x2: col2_X, y2: g.y + 28, midX: col1_X + colWidths[1] + colGap/2 });
+            });
+
+            // Great-Grandparents (第四代)
+            const ggYOffsets = [-150, -100, -60, -10, 10, 60, 100, 150];
+            const ggLabels = [
+                "♂ S-S-S", "♀ S-S-D", "♂ S-D-S", "♀ S-D-D",
+                "♂ D-S-S", "♀ D-S-D", "♂ D-D-S", "♀ D-D-D"
+            ];
+
+            ggLabels.forEach((lbl, idx) => {
+                const ggDiv = document.createElement('div');
+                ggDiv.className = `cert-node breed-DEFAULT`;
+                ggDiv.style.left = col3_X + 'px';
+                ggDiv.style.top = (targetY + ggYOffsets[idx]) + 'px';
+                ggDiv.style.width = colWidths[3] + 'px';
+                ggDiv.style.height = '42px';
+
+                ggDiv.innerHTML = `
+                    <span class="c-title">${lbl} (美系第4代)</span>
+                    <div style="font-size:9.5px; font-weight:800; color:#334155;">FOUNDATION LINE</div>
+                `;
+                container.appendChild(ggDiv);
+
+                const gpIdx = Math.floor(idx / 2);
+                lines.push({ x1: col2_X + colWidths[2], y1: grandparents[gpIdx].y + 28, x2: col3_X, y2: targetY + ggYOffsets[idx] + 21, midX: col2_X + colWidths[2] + colGap/2 });
+            });
+
+            requestAnimationFrame(() => {
+                canvas.width = totalWidth;
+                canvas.height = cardHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                lines.forEach(l => { drawOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+            });
+        }
+
+        /* 2. 個體直系演進圖 */
+        function drawSingleLineageTree(items, targetItem) {
+            const container = document.getElementById('singleBoxesContainer');
+            const canvas = document.getElementById('singleCanvas');
+            const card = document.getElementById('singleTreeCard');
+            if (!container || !canvas || !card) return;
+
+            container.innerHTML = '';
+            const boxW = 135, boxH = 48, colGap = 50, rowGap = 55;
+            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號']);
+            const isMale = checkIsMale(targetItem);
+
+            let mateList = [];
+            items.forEach((i, idx) => {
+                const m = i.mate || getValueFromMultiKeys(i, ['當胎配種公', 'Sire']);
+                const p = cleanParityVal(i.parity);
+                if (m && m !== '-' && m !== '未記載公豬' && m.toUpperCase() !== targetEar.toUpperCase()) {
+                    String(m).split(' ').forEach(tag => {
+                        const t = tag.trim().toUpperCase();
+                        if (t && !mateList.some(p => p.name === t)) {
+                            mateList.push({ name: t, label: isMale ? '♀ 配種母豬' : '♂ 當胎配種公', parity: p !== '-' ? p : String(idx + 1), tnb: i.total_born || i.tnb || '-', ba: i.born_alive || i.nba || '-' });
+                        }
+                    });
+                }
+            });
+
+            const totalMates = Math.max(mateList.length, 1);
+            const cardHeight = Math.max(totalMates * (rowGap + 10) + 90, 400);
+            const totalWidth = 720;
+
+            card.style.height = cardHeight + 'px';
+            container.style.height = cardHeight + 'px';
+            container.style.width = totalWidth + 'px';
+
+            const col0_X = 30, col1_X = 220, col2_X = 420;
+            const targetY = cardHeight / 2 - boxH / 2;
+            const lines = [];
+
+            const parents = [
+                { ear: targetItem.gen1_sire, label: "♂ 1st Sire (生父)", y: targetY - 50 },
+                { ear: targetItem.gen1_dam,  label: "♀ 1st Dam (生母)",  y: targetY + 50 }
+            ];
+            parents.forEach(p => {
+                if (p.ear && p.ear !== '-') {
+                    const pDiv = document.createElement('div');
+                    pDiv.className = `tree-node-general ${getBreedClass(p.ear)}`;
+                    pDiv.style.left = col0_X + 'px'; pDiv.style.top = p.y + 'px';
+                    pDiv.style.width = boxW + 'px'; pDiv.style.height = boxH + 'px';
+                    pDiv.innerHTML = `<span class="c-title">${p.label}</span><b>${p.ear}</b>`;
+                    pDiv.onclick = () => { document.getElementById('earInput').value = p.ear; searchPedigree(); };
+                    container.appendChild(pDiv);
+                    lines.push({ x1: col0_X + boxW, y1: p.y + boxH/2, x2: col1_X, y2: targetY + boxH/2, midX: col0_X + boxW + colGap/2 });
+                }
+            });
+
+            const tDiv = document.createElement('div');
+            tDiv.className = `tree-node-general origin-target`;
+            tDiv.style.left = col1_X + 'px'; tDiv.style.top = targetY + 'px';
+            tDiv.style.width = (boxW + 6) + 'px'; tDiv.style.height = (boxH + 10) + 'px';
+            const deathStr = getDeathStatusStr(targetEar);
+            if (deathStr) tDiv.classList.add('node-dead');
+            tDiv.innerHTML = `<span class="c-title" style="color:#fef08a;">🎯 Target (${isMale ? '♂ 公' : '♀ 母'})</span><b style="font-size:12px;">${targetEar}</b>`;
+            container.appendChild(tDiv);
+
+            if (mateList.length > 0) {
+                mateList.forEach((m, idx) => {
+                    const my = targetY + (idx - (totalMates - 1) / 2) * (rowGap + 10);
+                    const mDiv = document.createElement('div');
+                    mDiv.className = `tree-node-general ${getBreedClass(m.name)}`;
+                    mDiv.style.left = col2_X + 'px'; mDiv.style.top = my + 'px';
+                    mDiv.style.width = (boxW + 10) + 'px'; mDiv.style.height = boxH + 'px';
+                    mDiv.innerHTML = `<span class="c-title">${m.label} (P.${m.parity})</span><b>${m.name}</b><span style="font-size:7.5px;">TNB:${m.tnb} BA:${m.ba}</span>`;
+                    mDiv.onclick = () => { document.getElementById('earInput').value = m.name; searchPedigree(); };
+                    container.appendChild(mDiv);
+                    lines.push({ x1: col1_X + boxW + 6, y1: targetY + boxH/2, x2: col2_X, y2: my + boxH/2, midX: col1_X + boxW + colGap/2 });
+                });
+            }
+
+            requestAnimationFrame(() => {
+                canvas.width = totalWidth; canvas.height = cardHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                lines.forEach(l => { drawOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+            });
+        }
+
+        /* 3. 近親比對全系譜拓撲家族樹 */
+        function drawButterflyFamilyTree(items, targetItem) {
+            const container = document.getElementById('macroBoxesContainer');
+            const canvas = document.getElementById('macroCanvas');
+            const card = document.getElementById('macroScrollArea');
+            if (!container || !canvas || !card) return;
+
+            container.innerHTML = '';
+            const boxW = 135, boxH = 46, colGap = 45;
+            const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號']);
+
+            const cardHeight = 480;
+            const totalWidth = 800;
+            card.style.height = cardHeight + 'px';
+            container.style.height = cardHeight + 'px';
+
+            const col0_X = 30, col1_X = 210, col2_X = 390;
+            const targetY = cardHeight / 2 - boxH / 2;
+            const lines = [];
+
+            const grandparents = [
+                { name: targetItem.sire_sire, label: "♂ Sire's Sire", y: targetY - 90 },
+                { name: targetItem.sire_dam,  label: "♀ Sire's Dam",  y: targetY - 30 },
+                { name: targetItem.dam_sire,  label: "♂ Dam's Sire",  y: targetY + 30 },
+                { name: targetItem.dam_dam,   label: "♀ Dam's Dam",   y: targetY + 90 }
+            ];
+            grandparents.forEach(g => {
+                if (g.name && g.name !== '-') {
+                    const gDiv = document.createElement('div');
+                    gDiv.className = `tree-node-general ${getBreedClass(g.name)}`;
+                    gDiv.style.left = col0_X + 'px'; gDiv.style.top = g.y + 'px';
+                    gDiv.style.width = boxW + 'px'; gDiv.style.height = boxH + 'px';
+                    gDiv.innerHTML = `<span class="c-title">${g.label}</span><b>${cleanVal(g.name)}</b>`;
+                    container.appendChild(gDiv);
+                    lines.push({ x1: col0_X + boxW, y1: g.y + boxH/2, x2: col1_X, y2: (g.y < targetY ? targetY - 45 : targetY + 45) + boxH/2, midX: col0_X + boxW + colGap/2 });
+                }
+            });
+
+            const parents = [
+                { ear: targetItem.gen1_sire, label: "♂ 1st Sire", y: targetY - 45 },
+                { ear: targetItem.gen1_dam,  label: "♀ 1st Dam",  y: targetY + 45 }
+            ];
+            parents.forEach(p => {
+                if (p.ear && p.ear !== '-') {
+                    const pDiv = document.createElement('div');
+                    pDiv.className = `tree-node-general ${getBreedClass(p.ear)}`;
+                    pDiv.style.left = col1_X + 'px'; pDiv.style.top = p.y + 'px';
+                    pDiv.style.width = boxW + 'px'; pDiv.style.height = boxH + 'px';
+                    pDiv.innerHTML = `<span class="c-title">${p.label}</span><b>${p.ear}</b>`;
+                    container.appendChild(pDiv);
+                    lines.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: col1_X + boxW + colGap/2 });
+                }
+            });
+
+            const tDiv = document.createElement('div');
+            tDiv.className = `tree-node-general origin-target`;
+            tDiv.style.left = col2_X + 'px'; tDiv.style.top = targetY + 'px';
+            tDiv.style.width = boxW + 'px'; tDiv.style.height = (boxH + 10) + 'px';
+            tDiv.innerHTML = `<span class="c-title" style="color:#fef08a;">🎯 Target</span><b style="font-size:12px;">${targetEar}</b>`;
+            container.appendChild(tDiv);
+
+            requestAnimationFrame(() => {
+                canvas.width = totalWidth; canvas.height = cardHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                lines.forEach(l => { drawOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+            });
+        }
+
+        /* 4. 全血統後代追蹤樹 */
+        function drawUniversalDescendantTree(targetEarTag, matchedItems) {
+            const container = document.getElementById('descendantBoxesContainer');
+            const canvas = document.getElementById('descendantCanvas');
+            const card = document.getElementById('descendantCard');
+            if (!container || !canvas || !card) return;
+
+            container.innerHTML = '';
+            const targetClean = targetEarTag.trim().toUpperCase();
+            const isTargetMale = checkIsMale(targetClean);
+
+            let descendantsMap = [];
+            pedigreeList.forEach(item => {
+                const itemEar = String(item.ear || '').trim().toUpperCase();
+                if (!itemEar || itemEar === targetClean) return;
+
+                const g1Sire = String(item.gen1_sire || '').trim().toUpperCase();
+                const g1Dam  = String(item.gen1_dam || '').trim().toUpperCase();
+                let isChild = isTargetMale ? (g1Sire === targetClean) : (g1Dam === targetClean);
+
+                if (isChild && !descendantsMap.some(d => d.ear === itemEar)) {
+                    descendantsMap.push({
+                        ear: itemEar,
+                        breed: cleanVal(item.breed),
+                        parity: cleanVal(item.parity),
+                        dob: cleanVal(item.birth_date),
+                        isMale: checkIsMale(item),
+                        isDead: checkIsDead(item)
+                    });
+                }
+            });
+
+            if (descendantsMap.length === 0) {
+                container.innerHTML = `<div class="placeholder-text">"${targetClean}" 尚未有直系留種子代個體建檔</div>`;
+                return;
+            }
+
+            const boxW = 140, boxH = 48, colGap = 80, rowGap = 65;
+            const totalF1 = descendantsMap.length;
+            const cardHeight = Math.max(totalF1 * rowGap + 90, 440);
+            const totalWidth = 650;
+
+            card.style.height = cardHeight + 'px';
+            container.style.height = cardHeight + 'px';
+
+            const col0_X = 40, col1_X = col0_X + boxW + colGap;
+            const targetY = cardHeight / 2 - boxH / 2;
+            const lines = [];
+
+            const tDiv = document.createElement('div');
+            tDiv.className = `tree-node-general origin-target`;
+            tDiv.style.left = col0_X + 'px'; tDiv.style.top = targetY + 'px';
+            tDiv.style.width = boxW + 'px'; tDiv.style.height = (boxH + 10) + 'px';
+            tDiv.innerHTML = `<span class="c-title" style="color:#fef08a;">🎯 Target</span><b>${targetClean}</b>`;
+            container.appendChild(tDiv);
+
+            descendantsMap.forEach((f1, idx) => {
+                const cy = targetY + (idx - (totalF1 - 1) / 2) * rowGap;
+                const f1Div = document.createElement('div');
+                f1Div.className = `tree-node-general ${getBreedClass(f1.breed)}`;
+                f1Div.style.left = col1_X + 'px'; f1Div.style.top = cy + 'px';
+                f1Div.style.width = boxW + 'px'; f1Div.style.height = boxH + 'px';
+                if (f1.isDead) f1Div.classList.add('node-dead');
+
+                f1Div.innerHTML = `
+                    <span class="c-title">${f1.isMale ? '♂ F1 Sire (公)' : '♀ F1 Dam (母)'}</span>
+                    <b>${f1.ear}</b>
+                `;
+                f1Div.onclick = () => { document.getElementById('earInput').value = f1.ear; searchPedigree(); };
+                container.appendChild(f1Div);
+
+                lines.push({ x1: col0_X + boxW, y1: targetY + boxH/2, x2: col1_X, y2: cy + boxH/2, midX: col0_X + boxW + colGap/2 });
+            });
+
+            requestAnimationFrame(() => {
+                canvas.width = totalWidth; canvas.height = cardHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                lines.forEach(l => { drawOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+            });
+        }
+
+        function exportTablePNG() {
+            const target = document.getElementById('permanentCard');
+            html2canvas(target, { scale: 2.0, backgroundColor: '#ffffff' }).then(c => {
+                const a = document.createElement('a'); a.download = `GLA_DataTable_${getTodayDateStr()}.png`; a.href = c.toDataURL(); a.click();
+            });
+        }
+
+        function exportHighRes(cardId, canvasId, prefix) {
+            const card = document.getElementById(cardId);
+            html2canvas(card, { scale: 2.5, backgroundColor: '#ffffff' }).then(c => {
+                const a = document.createElement('a'); a.download = `${prefix}_${getTodayDateStr()}.png`; a.href = c.toDataURL(); a.click();
+            });
+        }
+    </script>
+</body>
+</html>
