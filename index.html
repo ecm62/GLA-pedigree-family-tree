@@ -30,7 +30,7 @@
         .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 16px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 3px 10px; border-radius: 4px; font-weight: 800; }
 
-        /* 品種專屬配色 */
+        /* 嚴格品種配色 */
         .breed-L  { background-color: #e0f2fe !important; color: #0369a1 !important; border: 1.5px solid #0284c7 !important; }
         .breed-Y  { background-color: #fef3c7 !important; color: #b45309 !important; border: 1.5px solid #d97706 !important; }
         .breed-D  { background-color: #ffe4e6 !important; color: #be123c !important; border: 1.5px solid #e11d48 !important; }
@@ -53,7 +53,7 @@
         .excel-data-table tr:hover { background-color: #f8fafc; }
         .row-dead { background-color: #fff1f2 !important; }
 
-        /* 1. 四代血統證書卡片 */
+        /* 1. 官方四代造冊標準血統證書卡片 */
         .cert-card { background: #ffffff; border: 2px solid #0284c7; border-radius: 10px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); position: relative; }
         .cert-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px; }
         .cert-title-block h2 { margin: 0; font-size: 17px; color: #0284c7; font-weight: 900; letter-spacing: 0.5px; }
@@ -69,22 +69,21 @@
         
         canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
 
-        /* 視圖 2、3、4 通用樣式 */
+        /* 視圖 2、3、4 通用卡片樣式 */
         .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .single-tree-card { position: relative; width: 100%; min-height: 400px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
         .tree-node-general { position: absolute; border-radius: 6px; text-align: center; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.06); z-index: 2; padding: 4px; box-sizing: border-box; transition: transform 0.15s; white-space: nowrap; }
         .tree-node-general:hover { transform: scale(1.04); z-index: 10; }
 
-        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 99998; display: none; align-items: center; justify-content: center; flex-direction: column; color: white; }
-        .pig-loader { font-size: 42px; animation: bounce 0.8s infinite alternate; margin-bottom: 12px; }
-        @keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-16px); } }
+        /* 🌟 改良型非阻塞式通知標籤 (絕不擋住畫面) */
+        #statusToast { position: fixed; top: 18px; right: 18px; background: rgba(15, 23, 42, 0.9); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; display: none; align-items: center; gap: 8px; z-index: 99999; box-shadow: 0 4px 12px rgba(0,0,0,0.2); pointer-events: none; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 50px 10px; font-size: 13px; font-weight: 500; }
     </style>
 </head>
 <body>
-    <div id="loadingOverlay">
-        <div class="pig-loader">🐖</div>
-        <div style="font-size:15px; font-weight:700;">GLA 國際四代血統證書與家族數據運算中...</div>
+    <!-- 非阻塞狀態指示器 -->
+    <div id="statusToast">
+        <span>🐖</span> <span id="statusToastText">載入中...</span>
     </div>
 
     <div class="system-header-banner">
@@ -120,7 +119,7 @@
         <span class="color-badge" style="background:#ede9fe; border:1.5px solid #8b5cf6; color:#6d28d9;">後備留種 (未生產)</span>
     </div>
 
-    <!-- 1. 官方四代造冊標準血統證書 -->
+    <!-- 🌟 第一張圖：國際造冊標準四代血統證書表 -->
     <div class="cert-card" id="certExportCard">
         <div class="cert-header">
             <div class="cert-title-block">
@@ -212,17 +211,21 @@
     </div>
 
     <script>
-        let loadingTimer = null;
-        function showLoading(s) { 
-            const overlay = document.getElementById('loadingOverlay');
-            if (!overlay) return;
-            overlay.style.display = s ? 'flex' : 'none';
-            if (s) {
-                clearTimeout(loadingTimer);
-                // 🌟 防呆：最多 1.5 秒強制解鎖，絕不無限卡死
-                loadingTimer = setTimeout(() => { overlay.style.display = 'none'; }, 1500);
+        // 🌟 非阻塞提示器，絕不卡死畫面
+        let toastTimer = null;
+        function notifyStatus(msg, show) {
+            const toast = document.getElementById('statusToast');
+            const toastText = document.getElementById('statusToastText');
+            if (!toast) return;
+            if (show) {
+                toastText.innerText = msg;
+                toast.style.display = 'flex';
+                clearTimeout(toastTimer);
+                // 800 毫秒強制熔斷自動關閉
+                toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 800);
             } else {
-                clearTimeout(loadingTimer);
+                toast.style.display = 'none';
+                clearTimeout(toastTimer);
             }
         }
 
@@ -266,7 +269,7 @@
         }
 
         function loadPedigreeData() {
-            showLoading(true);
+            notifyStatus("讀取家族資料庫中...", true);
             fetch('data.json?t=' + new Date().getTime())
                 .then(res => res.json())
                 .then(data => {
@@ -297,11 +300,11 @@
                         const g1s = it.gen1_sire || (it.details && it.details['第一代公']);
                         if (g1s && g1s !== '-') knownBoarSet.add(String(g1s).trim().toUpperCase());
                     });
-                    showLoading(false);
+                    notifyStatus("", false);
                 })
                 .catch(err => { 
                     console.error("載入失敗:", err); 
-                    showLoading(false); 
+                    notifyStatus("", false);
                 });
         }
 
@@ -404,7 +407,7 @@
             const rawInput = document.getElementById('earInput').value.trim();
             if (!rawInput) return;
 
-            showLoading(true);
+            notifyStatus("查詢中...", true);
             setTimeout(() => {
                 try {
                     const targetTerm = rawInput.toLowerCase();
@@ -428,22 +431,25 @@
                         const sorted = [...primary, ...related];
                         const targetItem = primary.length > 0 ? primary[0] : sorted[0];
 
-                        // 獨立保護執行，避免單一錯誤造成卡死
-                        try { renderExcelDataTable(sorted, primary, rawInput); } catch(e) { console.error("Table error:", e); }
-                        try { drawOfficialPedigreeCertificate(targetItem); } catch(e) { console.error("Cert error:", e); }
-                        try { drawSingleLineageTree(sorted, targetItem); } catch(e) { console.error("Direct tree error:", e); }
-                        try { drawButterflyFamilyTree(sorted, targetItem); } catch(e) { console.error("Topology error:", e); }
-                        try { drawUniversalDescendantTree(rawInput, sorted); } catch(e) { console.error("Descendant error:", e); }
+                        // 分步渲染，保證不卡畫面
+                        renderExcelDataTable(sorted, primary, rawInput);
+                        drawOfficialPedigreeCertificate(targetItem);
+                        
+                        setTimeout(() => {
+                            try { drawSingleLineageTree(sorted, targetItem); } catch(e) {}
+                            try { drawButterflyFamilyTree(sorted, targetItem); } catch(e) {}
+                            try { drawUniversalDescendantTree(rawInput, sorted); } catch(e) {}
+                        }, 20);
                     } else {
                         document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="21" class="placeholder-text">No data found for "${rawInput}"</td></tr>`;
                         document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">No data found for "${rawInput}"</div>`;
                     }
-                } catch (globalErr) {
-                    console.error("搜尋發生例外:", globalErr);
+                } catch (err) {
+                    console.error("執行錯誤:", err);
                 } finally {
-                    showLoading(false);
+                    notifyStatus("", false);
                 }
-            }, 50);
+            }, 10);
         }
 
         function renderExcelDataTable(allSortedItems, primaryItems, searchTerm) {
@@ -493,7 +499,7 @@
             tbody.innerHTML = html;
         }
 
-        /* 1. 國際四代標準造冊血統證書 */
+        /* 1. 官方四代造冊標準血統證書 (無死角防呆) */
         function drawOfficialPedigreeCertificate(targetItem) {
             const container = document.getElementById('certBoxesContainer');
             const canvas = document.getElementById('certCanvas');
@@ -593,7 +599,7 @@
                         <span>TSI: <b>${cleanVal(p.obj ? p.obj.tsi : '-')}</b></span>
                     </div>
                 `;
-                pDiv.onclick = () => { if (p.ear !== '-') { document.getElementById('earInput').value = p.ear; searchPedigree(); } };
+                pDiv.onclick = () => { if (p.ear && p.ear !== '-') { document.getElementById('earInput').value = p.ear; searchPedigree(); } };
                 container.appendChild(pDiv);
 
                 lines.push({ x1: col0_X + colWidths[0], y1: targetY + 42, x2: col1_X, y2: p.y + 34, midX: col0_X + colWidths[0] + colGap/2 });
