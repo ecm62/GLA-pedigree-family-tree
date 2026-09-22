@@ -6,8 +6,8 @@ import re
 
 SPREADSHEET_ID = "1MlhcSXitL_jWYvXVfmo6bQfQqDPIDgUt0VGIZVaB5aw"
 
-# 🌟 最新指定之資料來源 GID
-GID_MAIN = "836462358"         # 📊 育種_家族階層清單
+# 🌟 鎖定最新出處 GID
+GID_MAIN = "836462358"         # 📊 育種_家族階層清單 (含最新 G3_父代/母代 全名與指標)
 GID_US_ORIGIN = "1297296053"   # 🧬 美國原始種源數據
 GID_COMBINED = "84920994"      # 📑 合併報表(配種+產房)
 
@@ -28,87 +28,42 @@ def clean_str(val):
     s = str(val).replace('\n', ' ').replace('\r', '').strip()
     return s if s.lower() not in ['nan', 'none', '', 'null'] else "-"
 
-def clean_name(val):
+def clean_metric_num(val):
     s = clean_str(val)
-    if s == "-" or re.match(r'^[\d\.\-]+$', s):
-        return "-"
-    parts = s.split(' ')
-    valid = [p for p in parts if not re.match(r'^[\d\.\-]+$', p) and p.upper() not in ['1CR1', '1CR2', 'CR1', 'CR2']]
-    if valid:
-        if len(valid) > 1 and re.search(r'\d', valid[-1]):
-            valid.pop()
-        return " ".join(valid)
-    return s
+    if s == "-": return "-"
+    # 確保抓到的是合法數值，排除文字錯位
+    m = re.search(r'^\d+(\.\d+)?$', s)
+    return m.group(0) if m else "-"
 
 def fetch_and_parse():
-    print("🚀 啟動國際標準四代血統證書與遺傳指數提取...")
+    print("🚀 正在抓取最新官方四代親譜與全名指標資料庫...")
 
-    # 1. 建立合併報表留種區間池
-    notch_ranges = []
-    raw_comb = fetch_sheet_csv(GID_COMBINED)
-    if raw_comb:
-        try:
-            df_comb = pd.read_csv(io.StringIO(raw_comb))
-            clean_c = {c: str(c).strip().lower() for c in df_comb.columns}
-            col_farrow = next((o for o, c in clean_c.items() if '分娩日' in c or 'beranak' in c or 'farrow' in c), None)
-            col_dam = next((o for o, c in clean_c.items() if '母豬耳號' in c or 'nombor telinga' in c or 'induk' in c), None)
-            col_sire = next((o for o, c in clean_c.items() if '配種公豬' in c or 'jantan' in c or 'boar' in c), None)
-            col_start = next((o for o, c in clean_c.items() if 'breeder' in c and 'start' in c), None)
-            col_end = next((o for o, c in clean_c.items() if 'breeder' in c and 'end' in c), None)
-
-            if col_farrow and col_start and col_end:
-                for _, r in df_comb.iterrows():
-                    s_tag = clean_str(r.get(col_start))
-                    e_tag = clean_str(r.get(col_end))
-                    f_date = clean_str(r.get(col_farrow)).replace('/', '-')
-                    sire_e = clean_str(r.get(col_sire)).upper()
-                    dam_e = clean_str(r.get(col_dam)).upper()
-
-                    if s_tag != '-' and e_tag != '-' and f_date != '-':
-                        nums_s = re.findall(r'\d+', s_tag)
-                        nums_e = re.findall(r'\d+', e_tag)
-                        prefix_s = re.findall(r'^[A-Za-z]+', s_tag)
-                        pre = prefix_s[0].upper() if prefix_s else ""
-                        if nums_s and nums_e:
-                            n_start = int(nums_s[0])
-                            n_end = int(nums_e[0])
-                            notch_ranges.append({
-                                "prefix": pre,
-                                "start": min(n_start, n_end),
-                                "end": max(n_start, n_end),
-                                "dig_len": len(nums_s[0]),
-                                "dob": f_date,
-                                "sire": sire_e,
-                                "dam": dam_e
-                            })
-        except Exception as e:
-            print("⚠️ 合併報表解析異常:", e)
-
-    # 2. 讀取美國原始種源數據 (GID: 1297296053)
+    # 1. 讀取美國原種庫 (GID: 1297296053)
     us_data_map = {}
     raw_us = fetch_sheet_csv(GID_US_ORIGIN)
     if raw_us:
         try:
             df_us = pd.read_csv(io.StringIO(raw_us))
-            col_ear_us = next((c for c in df_us.columns if '耳號' in str(c)), None)
-            col_sire_us = next((c for c in df_us.columns if 'Sire Name' in str(c) or '美系父親名' in str(c)), None)
-            col_dam_us = next((c for c in df_us.columns if 'Dam Name' in str(c) or '美系母親名' in str(c)), None)
-            col_sex_us = next((c for c in df_us.columns if 'Sex' in str(c) or '性別' in str(c)), None)
-            col_dob_us = next((c for c in df_us.columns if 'DOB' in str(c) or '出生' in str(c)), None)
+            df_us.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_us.columns]
+            col_ear_us = next((c for c in df_us.columns if '耳號' in c), None)
+            col_sire_us = next((c for c in df_us.columns if 'Sire Name' in c or '美系父親名' in c), None)
+            col_dam_us = next((c for c in df_us.columns if 'Dam Name' in c or '美系母親名' in c), None)
+            col_sex_us = next((c for c in df_us.columns if 'Sex' in c or '性別' in c), None)
+            col_dob_us = next((c for c in df_us.columns if 'DOB' in c or '出生' in c), None)
 
             for _, r in df_us.iterrows():
                 e = clean_str(r.get(col_ear_us, '')).upper()
                 if e != '-':
                     us_data_map[e] = {
-                        "sire": clean_name(r.get(col_sire_us, '-')),
-                        "dam": clean_name(r.get(col_dam_us, '-')),
+                        "sire": clean_str(r.get(col_sire_us, '-')),
+                        "dam": clean_str(r.get(col_dam_us, '-')),
                         "sex": clean_str(r.get(col_sex_us, '-')),
                         "dob": clean_str(r.get(col_dob_us, '-')).replace('/', '-')
                     }
         except Exception as e:
             print("⚠️ 美國數據表解析異常:", e)
 
-    # 3. 讀取主表「育種_家族階層清單」 (GID: 836462358)
+    # 2. 讀取主表「育種_家族階層清單」 (GID: 836462358)
     raw_main = fetch_sheet_csv(GID_MAIN)
     if not raw_main:
         print("❌ 主表下載失敗！")
@@ -134,31 +89,33 @@ def fetch_and_parse():
     c_dod = find_col(['DOD/淘汰日期', 'DOD', '淘汰日期']) or df_main.columns[11]
     c_breed = find_col(['Breed', '品種']) or df_main.columns[14]
 
-    # 確認母豬清單
-    confirmed_sows = set()
-    for _, row in df_main.iterrows():
-        e = clean_str(row.get(c_ear, '')).upper()
-        p = clean_str(row.get(c_parity, ''))
-        fd = clean_str(row.get(c_farrow_d, ''))
-        sx = clean_str(row.get(c_sex, '')).upper()
-        if e != '-':
-            if p != '-' or fd != '-' or 'FEMALE' in sx or 'GILT' in sx or '母' in sx or e.startswith('LY'):
-                confirmed_sows.add(e)
+    # 🌟 最新標準親代全名與指標欄位 (支援截圖最新表頭)
+    c_g3_sire_name = find_col(['G3_父代Sire全名', 'G3_父代全名', 'Sire美系第0代父親(祖父)-全名', 'Sire美系第0代父親(外公)-全名', 'Sire Name美系父親名'])
+    c_g3_sire_spi  = find_col(['G3_父代SPI', 'Sire_SPI'])
+    c_g3_sire_mli  = find_col(['G3_父代MLI', 'Sire_MLI'])
 
-    for e, udata in us_data_map.items():
-        if 'GILT' in udata['sex'].upper() or 'FEMALE' in udata['sex'].upper() or e.startswith('LY'):
-            confirmed_sows.add(e)
+    c_g3_dam_name  = find_col(['G3_母代Dam全名', 'G3_母代全名', 'Dam 美系第0代母親(祖母)-全名', 'Dam 美系第0代母親(外婆)-全名', 'Dam Name美系母親名'])
+    c_g3_dam_spi   = find_col(['G3_母代SPI', 'Dam_SPI'])
+    c_g3_dam_mli   = find_col(['G3_母代MLI', 'Dam_MLI'])
+
+    # 祖輩 (Grandparents) 全名欄位
+    c_ss_name = find_col(['Sire美系第0代父親(祖父)-全名', 'Sire 美系第0代父親(祖父)-全名', 'Sire美系第0代父親名(祖父)'])
+    c_sd_name = find_col(['Dam 美系第0代母親(祖母)-全名', 'Dam Name美系第0代母親名(祖母)'])
+    c_ds_name = find_col(['Sire 美系第0代父親(外公)-全名', 'Sire美系第0代父親(外公)-全名', 'Sire美系第0代父親名(外公)'])
+    c_dd_name = find_col(['Dam 美系第0代母親(外婆)-全名', 'Dam Name美系第0代母親名(外婆)'])
+
+    # 自繁親代欄位 (支援五位數自繁種豬)
+    c_gen1_sire = find_col(['G6/G7公(父)', 'G5/G6公(父)', 'G4/G5公(父)', '第一代公', '1st Sire'])
+    c_gen1_dam  = find_col(['G6/G7母(母)', 'G5/G6母(母)', 'G4/G5母(母)', '第一代母', '1st Dam'])
 
     pedigree_data = []
     death_map = {}
-    existing_ears = set()
 
     for _, row in df_main.iterrows():
         ear = clean_str(row.get(c_ear, ''))
         if ear == '-' or ear == '耳號':
             continue
         ear_upper = ear.upper()
-        existing_ears.add(ear_upper)
 
         dod_val = clean_str(row.get(c_dod, ''))
         is_dead = False
@@ -169,11 +126,12 @@ def fetch_and_parse():
         p_val = clean_str(row.get(c_parity, '-'))
         fd_val = clean_str(row.get(c_farrow_d, '-'))
 
-        if ear_upper in confirmed_sows or ear_upper.startswith('LY') or p_val != '-' or fd_val != '-':
+        # 性別判定
+        raw_s = clean_str(row.get(c_sex, '')).upper()
+        if 'FEMALE' in raw_s or 'GILT' in raw_s or '母' in raw_s or ear_upper.startswith('LY') or p_val != '-' or fd_val != '-':
             sex = "FEMALE"
         else:
-            raw_s = clean_str(row.get(c_sex, '')).upper()
-            sex = "MALE" if ("MALE" in raw_s or "公" in raw_s) else "FEMALE"
+            sex = "MALE"
 
         raw_b = clean_str(row.get(c_breed, '')).upper()
         breed = "D"
@@ -182,48 +140,30 @@ def fetch_and_parse():
         elif "DUROC" in raw_b or ear_upper.startswith("D"): breed = "D"
         if "LY" in ear_upper: breed = "LY"
 
-        # 出生日期
         dob_val = clean_str(row.get(c_dob, ''))
-        g1_sire = clean_str(row.get(find_col(['第一代公']), '-'))
-        g1_dam  = clean_str(row.get(find_col(['第一代母']), '-'))
-
-        if dob_val == '-' or dob_val == '':
-            ear_nums = re.findall(r'\d+', ear_upper)
-            ear_prefix = re.findall(r'^[A-Za-z]+', ear_upper)
-            if ear_nums and ear_prefix:
-                num_val = int(ear_nums[0])
-                pre_val = ear_prefix[0]
-                for nr in notch_ranges:
-                    if nr['prefix'] == pre_val and (nr['start'] <= num_val <= nr['end']):
-                        dob_val = nr['dob']
-                        if g1_sire == '-' and nr['sire'] != '-': g1_sire = nr['sire']
-                        if g1_dam == '-' and nr['dam'] != '-':  g1_dam = nr['dam']
-                        break
-
         if (dob_val == '-' or dob_val == '') and ear_upper in us_data_map:
             dob_val = us_data_map[ear_upper]['dob']
 
-        # 四代祖輩提取（排除純數字與位置編號）
-        sire_sire = clean_name(row.get(find_col(['Sire美系第0代父親名(祖父)', 'Sire 美系第0代父親名(祖父)']), '-'))
-        sire_dam  = clean_name(row.get(find_col(['Dam Name美系第0代母親名(祖母)', 'Dam Name 美系第0代母親名(祖母)']), '-'))
-        dam_sire  = clean_name(row.get(find_col(['Sire美系第0代父親名(外公)', 'Sire 美系第0代父親名(外公)']), '-'))
-        dam_dam   = clean_name(row.get(find_col(['Dam Name美系第0代母親名(外婆)', 'Dam Name 美系第0代母親名(外婆)']), '-'))
+        # 🌟 最新標準親本全名與育種值讀取
+        parent_sire_full = clean_str(row.get(c_g3_sire_name, '-'))
+        parent_sire_spi  = clean_metric_num(row.get(c_g3_sire_spi, '-'))
+        parent_sire_mli  = clean_metric_num(row.get(c_g3_sire_mli, '-'))
 
-        # 第三代與第四代
-        gen2_sire_sire = clean_name(row.get(find_col(['2代-Sire祖父']), '-'))
-        gen2_sire_dam  = clean_name(row.get(find_col(['2代-Dam祖母']), '-'))
-        gen2_dam_sire  = clean_name(row.get(find_col(['2代-Sire外公']), '-'))
-        gen2_dam_dam   = clean_name(row.get(find_col(['2代-Dam外婆']), '-'))
+        parent_dam_full  = clean_str(row.get(c_g3_dam_name, '-'))
+        parent_dam_spi   = clean_metric_num(row.get(c_g3_dam_spi, '-'))
+        parent_dam_mli   = clean_metric_num(row.get(c_g3_dam_mli, '-'))
 
-        gen3_sire = clean_str(row.get(find_col(['3代公(父)']), '-'))
-        gen3_dam  = clean_str(row.get(find_col(['3代母(母)']), '-'))
+        # 祖輩全名
+        ss_full = clean_str(row.get(c_ss_name, '-'))
+        sd_full = clean_str(row.get(c_sd_name, '-'))
+        ds_full = clean_str(row.get(c_ds_name, '-'))
+        dd_full = clean_str(row.get(c_dd_name, '-'))
 
-        if sire_sire == '-': sire_sire = clean_name(row.get(find_col(['Sire Name美系父親名']), '-'))
-        if sire_dam == '-':  sire_dam  = clean_name(row.get(find_col(['Dam Name美系母親名']), '-'))
-
-        if (sire_sire == '-' or sire_dam == '-') and ear_upper in us_data_map:
-            if sire_sire == '-': sire_sire = us_data_map[ear_upper]['sire']
-            if sire_dam == '-':  sire_dam  = us_data_map[ear_upper]['dam']
+        # 容錯回溯美國原種庫
+        if parent_sire_full == '-' and ear_upper in us_data_map:
+            parent_sire_full = us_data_map[ear_upper]['sire']
+        if parent_dam_full == '-' and ear_upper in us_data_map:
+            parent_dam_full = us_data_map[ear_upper]['dam']
 
         entry = {
             "ear": ear,
@@ -236,33 +176,33 @@ def fetch_and_parse():
             "dob": fd_val,
             "is_dead": is_dead,
             "dod": dod_val,
-            "spi": clean_str(row.get(find_col(['SPI']), '-')),
-            "mli": clean_str(row.get(find_col(['MLI']), '-')),
-            "tsi": clean_str(row.get(find_col(['TSI']), '-')),
+            "spi": clean_metric_num(row.get(find_col(['SPI']), '-')),
+            "mli": clean_metric_num(row.get(find_col(['MLI']), '-')),
+            "tsi": clean_metric_num(row.get(find_col(['TSI']), '-')),
             "total_born": clean_str(row.get(find_col(['Total born', '總生產']), '-')),
             "born_alive": clean_str(row.get(find_col(['Born alive', '活胎']), '-')),
             "weaning": clean_str(row.get(find_col(['Weaning', '離乳']), '-')),
             "mother_wt": clean_str(row.get(find_col(['生育重']), '-')),
             "wean_wt": clean_str(row.get(find_col(['均重']), '-')),
-            "tnb": clean_str(row.get(find_col(['TNB']), '-')),
-            "nba": clean_str(row.get(find_col(['NBA']), '-')),
+            "tnb": clean_metric_num(row.get(find_col(['TNB']), '-')),
+            "nba": clean_metric_num(row.get(find_col(['NBA']), '-')),
             "lteat": clean_str(row.get(find_col(['左乳']), '-')),
             "rteat": clean_str(row.get(find_col(['右乳']), '-')),
-            # 一代
-            "gen1_sire": g1_sire,
-            "gen1_dam": g1_dam,
-            # 二代 (祖父母)
-            "sire_sire": sire_sire,
-            "sire_dam": sire_dam,
-            "dam_sire": dam_sire,
-            "dam_dam": dam_dam,
-            # 三代
-            "gen2_sire_sire": gen2_sire_sire,
-            "gen2_sire_dam": gen2_sire_dam,
-            "gen2_dam_sire": gen2_dam_sire,
-            "gen2_dam_dam": gen2_dam_dam,
-            "gen3_sire": gen3_sire,
-            "gen3_dam": gen3_dam,
+            # 自繁生父生母
+            "gen1_sire": clean_str(row.get(c_gen1_sire, '-')),
+            "gen1_dam": clean_str(row.get(c_gen1_dam, '-')),
+            # 🌟 官方四代造冊標準欄位
+            "g3_sire_full": parent_sire_full,
+            "g3_sire_spi": parent_sire_spi,
+            "g3_sire_mli": parent_sire_mli,
+            "g3_dam_full": parent_dam_full,
+            "g3_dam_spi": parent_dam_spi,
+            "g3_dam_mli": parent_dam_mli,
+            # 祖輩全名
+            "ss_full": ss_full,
+            "sd_full": sd_full,
+            "ds_full": ds_full,
+            "dd_full": dd_full,
             "details": {str(k).strip(): clean_str(v) for k, v in row.items()}
         }
         pedigree_data.append(entry)
@@ -275,7 +215,7 @@ def fetch_and_parse():
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    print(f"🎉 產出成功！個體數: {len(pedigree_data)} 筆，四代血統樹數據已完整入庫。")
+    print(f"🎉 成功生成 data.json！收錄 {len(pedigree_data)} 頭個體，官方四代親譜全名與指標已全部鎖定。")
 
 if __name__ == "__main__":
     fetch_and_parse()
