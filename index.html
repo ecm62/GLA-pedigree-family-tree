@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GLA Official 4-Generation Pedigree System</title>
+    <title>GLA Official Pedigree Book & Inbreeding Topology System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f8fafc; color: #0f172a; }
@@ -42,25 +42,11 @@
         .badge-dead { display: inline-block; background-color: #dc2626; color: #ffffff !important; font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; margin-left: 3px; }
         .badge-active { display: inline-block; background-color: #10b981; color: #ffffff !important; font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; }
 
-        /* 🌟 字型規範：品種與耳號全名為深紅色，指標數據為純黑色 */
+        /* 🌟 字型規範：耳號與全名為深紅色，指標數據為純黑色 */
         .txt-red-title { color: #dc2626 !important; font-weight: 900; letter-spacing: 0.3px; }
         .txt-black-metric { color: #000000 !important; font-weight: 800; }
 
-        /* 視圖通用卡片容器 */
-        .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .dynamic-scroll-area { position: relative; width: 100%; min-height: 480px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
-
-        /* 節點樣式 */
-        .abs-node { position: absolute; border-radius: 6px; padding: 5px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.06); z-index: 2; transition: transform 0.15s; }
-        .abs-node:hover { transform: scale(1.02); z-index: 10; }
-        .node-target-highlight { border: 3px solid #f59e0b !important; background: #ffffff !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.4) !important; }
-        
-        .c-sub-label { font-size: 8px; font-weight: 800; color: #475569; margin-bottom: 1px; }
-        .c-metric-row { display: flex; gap: 6px; font-size: 8.5px; background: rgba(255,255,255,0.85); padding: 2px 5px; border-radius: 3px; margin-top: 2px; border: 1px solid rgba(0,0,0,0.08); white-space: nowrap; }
-        
-        canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-
-        /* 數據總表樣式 */
+        /* 表格樣式 */
         #permanentCard { background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .card-title { font-size: 15px; color: #0f172a; font-weight: 800; }
@@ -70,6 +56,19 @@
         .excel-data-table td { padding: 6px 10px; border: 1px solid #e2e8f0; color: #000000; font-weight: 600; }
         .excel-data-table tr:hover { background-color: #f8fafc; }
 
+        /* 視圖通用卡片容器 */
+        .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .dynamic-scroll-area { position: relative; width: 100%; min-height: 480px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+
+        /* 節點樣式 */
+        .abs-node { position: absolute; border-radius: 6px; padding: 6px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.06); z-index: 2; transition: transform 0.15s; cursor: pointer; }
+        .abs-node:hover { transform: scale(1.02); z-index: 10; }
+        .node-target-highlight { border: 3px solid #f59e0b !important; background: #ffffff !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.4) !important; cursor: default; }
+        
+        .c-sub-label { font-size: 8px; font-weight: 800; color: #475569; margin-bottom: 2px; }
+        .c-metric-row { display: flex; gap: 6px; font-size: 8.5px; background: rgba(255,255,255,0.85); padding: 2px 5px; border-radius: 3px; margin-top: 2px; border: 1px solid rgba(0,0,0,0.08); white-space: nowrap; }
+        
+        canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.9); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; z-index: 99998; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 60px 10px; font-size: 13px; font-weight: 500; }
     </style>
@@ -79,13 +78,13 @@
 
     <div class="system-header-banner">
         <h1>GLA Official Pedigree Book & Lineage System</h1>
-        <p>Official 4-Generation Pedigree Certificate & Multi-Perspective Lineage (官方四代造冊血統書與多視角系譜系統)</p>
+        <p>Official 4-Generation Pedigree Certificate & Recursive Inbreeding Topology (官方四代造冊血統書與遞迴近親比對拓撲)</p>
     </div>
 
     <div class="control-bar">
         <div>
-            <label for="earInput"><strong>Pedigree Search (全血統耳號搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. L1211, DD26081, LY10921, Y1456" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
+            <input type="text" id="earInput" placeholder="e.g. DD26081, L1211, LY10921, Y1456" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" onclick="searchPedigree()">🔍 造冊搜尋</button>
         </div>
         <div>
@@ -109,16 +108,16 @@
         <span class="color-badge" style="background:#fee2e2; border:1px solid #ef4444; color:#991b1b;">DIE (淘汰/死亡)</span>
     </div>
 
-    <!-- 🌟 1. 官方四代造冊標準血統證書 (仿美國種豬協會 NSR 標準，四代全名與育種值入格) -->
+    <!-- 🌟 1. 官方四代造冊標準血統證書 (嚴格向量幾何對齊，無懸空線) -->
     <div class="tree-card-wrapper" id="certExportCard" style="border:2px solid #0284c7;">
         <div class="card-header-bar">
             <div>
                 <h2 style="margin:0; font-size:16px; color:#0284c7; font-weight:900;">📜 1. Official 4-Generation Pedigree Certificate (官方四代造冊標準血統證書)</h2>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">NSR Standard: Full Registered Ancestor Names, Direct Breeding Indexes, and Magnetic Alignments</p>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">NSR Standard: Full Registered Ancestor Names, Direct Breeding Indexes, and Exact Anchor Bindings</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('certExportCard', 'certCanvas', 'GLA_Official_Certificate')">📸 造冊存檔 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height:600px;">
+        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height:580px;">
             <canvas class="lineCanvas" id="certCanvas"></canvas>
             <div id="certBoxesContainer"><div class="placeholder-text">Please enter ear tag above to search...</div></div>
         </div>
@@ -164,7 +163,7 @@
         </div>
     </div>
 
-    <!-- 2. 個體直系演進圖 -->
+    <!-- 🌟 2. 個體直系演進圖 -->
     <div class="tree-card-wrapper" id="singleTreeArea">
         <div class="card-header-bar">
             <div style="font-weight:bold; font-size:14px; color:#0284c7;">🌿 2. Single Lineage Direct Tree (個體直系演進圖 - 雙向展開當胎配種)</div>
@@ -176,7 +175,7 @@
         </div>
     </div>
 
-    <!-- 3. 近親比對全系譜拓撲家族樹 -->
+    <!-- 🌟 3. 近親比對全系譜拓撲家族樹 -->
     <div class="tree-card-wrapper" id="macroTreePanel" style="border:2px solid #0d6efd;">
         <div class="card-header-bar">
             <div>
@@ -377,7 +376,7 @@
             return false;
         }
 
-        // 🌟 實體 DOM 磁吸錨定引擎：由來源方塊右中點 連至 目標方塊左中點，零誤差
+        // 🌟 實體 DOM 磁吸錨定引擎：由父方右邊中點 吸附至 子方左邊中點
         function renderMagneticLine(ctx, fromElem, toElem) {
             if (!fromElem || !toElem) return;
             const x1 = fromElem.offsetLeft + fromElem.offsetWidth;
@@ -402,7 +401,7 @@
             return pedigreeList.find(it => String(it.ear || (it.details && it.details['耳號']) || '').toUpperCase() === cleanTag) || null;
         }
 
-        // 🌟 遞迴四代親譜全名與指標提取引擎
+        // 🌟 遞迴四代親譜全名與指標提取引擎 (支援最新主表欄位)
         function getFourGenerationPedigreeTree(itemOrEar) {
             if (!itemOrEar) return null;
             let item = typeof itemOrEar === 'string' ? findAnimalRecord(itemOrEar) : itemOrEar;
@@ -418,6 +417,11 @@
             let damName  = item ? (item.g3_dam_full || item.gen1_dam || getValueFromMultiKeys(item, ['G3_母代Dam全名', '第一代母', '1st Dam'])) : '-';
             let damSPI   = item ? (item.g3_dam_spi || getValueFromMultiKeys(item, ['G3_母代SPI'])) : '-';
             let damMLI   = item ? (item.g3_dam_mli || getValueFromMultiKeys(item, ['G3_母代MLI'])) : '-';
+
+            // 排除誤把公豬品系名當成生母
+            if (damName.includes('TUCKER') || damName.includes('FIRESTONE')) {
+                damName = '-';
+            }
 
             const sObj = findAnimalRecord(item ? item.gen1_sire : sireName);
             const dObj = findAnimalRecord(item ? item.gen1_dam : damName);
@@ -453,6 +457,7 @@
             };
         }
 
+        // 🌟 雙向收集配種夥伴
         function collectAllMatingPartners(targetEar, isMale, items) {
             let partners = [];
             const targetClean = targetEar.trim().toUpperCase();
@@ -469,7 +474,8 @@
                                 isMale: false,
                                 label: `♀ 配種母豬 (P.${cleanParityVal(r.parity) || idx + 1})`,
                                 tnb: cleanVal(r.total_born || r.tnb),
-                                ba: cleanVal(r.born_alive || r.nba)
+                                ba: cleanVal(r.born_alive || r.nba),
+                                rawItem: r
                             });
                         }
                     }
@@ -487,7 +493,8 @@
                                     isMale: true,
                                     label: `♂ 配種公豬 (P.${cleanParityVal(r.parity) || idx + 1})`,
                                     tnb: cleanVal(r.total_born || r.tnb),
-                                    ba: cleanVal(r.born_alive || r.nba)
+                                    ba: cleanVal(r.born_alive || r.nba),
+                                    rawItem: r
                                 });
                             }
                         });
@@ -584,7 +591,7 @@
             tbody.innerHTML = html;
         }
 
-        /* 🌟 1. 官方標準四代血統證書 (NSR標準：垂直等距舒展、全名與指標入格、磁吸精準連線) */
+        /* 🌟 1. 官方標準四代血統證書 (垂直等距舒展、全名與指標入格、磁吸精準連線、無懸空括號) */
         function drawOfficialPedigreeCertificate(targetItem) {
             const container = document.getElementById('certBoxesContainer');
             const canvas = document.getElementById('certCanvas');
@@ -597,7 +604,7 @@
 
             const colWidths = [200, 180, 180, 175];
             const colGap = 45;
-            const cardHeight = 620; // 充分垂直舒展，完全防重疊
+            const cardHeight = 620;
             const totalWidth = colWidths.reduce((a, b) => a + b, 0) + colGap * 3 + 60;
 
             scrollArea.style.height = cardHeight + 'px';
@@ -697,7 +704,7 @@
                 container.appendChild(gDiv);
             });
 
-            // 4. Great-Grandparents (F4: 曾祖代 8 個象限等距垂直發散，完全不重疊，無右側懸空線)
+            // 4. Great-Grandparents (F4: 曾祖代 8 個象限等距垂直發散，完全不重疊)
             const ggLabels = [
                 "♂ S-S-S", "♀ S-S-D", "♂ S-D-S", "♀ S-D-D",
                 "♂ D-S-S", "♀ D-S-D", "♂ D-D-S", "♀ D-D-D"
@@ -742,7 +749,7 @@
                     renderMagneticLine(ctx, document.getElementById(g.parentId), document.getElementById(g.id));
                 });
 
-                // F3 -> F4
+                // F3 -> F4 (連線只連到第 4 代左側，絕不往右懸空多畫！)
                 ggNodes.forEach(gg => {
                     renderMagneticLine(ctx, document.getElementById(gg.parentId), document.getElementById(gg.id));
                 });
@@ -835,7 +842,7 @@
             });
         }
 
-        /* 🌟 3. 近親比對全系譜拓撲家族樹 (親本族名 vs 配種夥伴族名對稱展開) */
+        /* 🌟 3. 近親比對全系譜拓撲家族樹 (DOM 磁吸錨定，雙向親代對稱展開) */
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
