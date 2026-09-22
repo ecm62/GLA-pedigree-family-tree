@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GLA Official Pedigree Book & Inbreeding Topology System</title>
+    <title>GLA Official 4-Generation Pedigree System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 12px; background-color: #f8fafc; color: #0f172a; }
@@ -42,11 +42,25 @@
         .badge-dead { display: inline-block; background-color: #dc2626; color: #ffffff !important; font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; margin-left: 3px; }
         .badge-active { display: inline-block; background-color: #10b981; color: #ffffff !important; font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; }
 
-        /* 🌟 字型規範：耳號與品種紅色，生育指數黑色 */
-        .txt-red-title { color: #dc2626 !important; font-weight: 900; letter-spacing: 0.5px; }
+        /* 🌟 字型規範：品種與耳號全名為深紅色，指標數據為純黑色 */
+        .txt-red-title { color: #dc2626 !important; font-weight: 900; letter-spacing: 0.3px; }
         .txt-black-metric { color: #000000 !important; font-weight: 800; }
 
-        /* 表格樣式 */
+        /* 視圖通用卡片容器 */
+        .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .dynamic-scroll-area { position: relative; width: 100%; min-height: 480px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+
+        /* 節點樣式 */
+        .abs-node { position: absolute; border-radius: 6px; padding: 5px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.06); z-index: 2; transition: transform 0.15s; }
+        .abs-node:hover { transform: scale(1.02); z-index: 10; }
+        .node-target-highlight { border: 3px solid #f59e0b !important; background: #ffffff !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.4) !important; }
+        
+        .c-sub-label { font-size: 8px; font-weight: 800; color: #475569; margin-bottom: 1px; }
+        .c-metric-row { display: flex; gap: 6px; font-size: 8.5px; background: rgba(255,255,255,0.85); padding: 2px 5px; border-radius: 3px; margin-top: 2px; border: 1px solid rgba(0,0,0,0.08); white-space: nowrap; }
+        
+        canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+
+        /* 數據總表樣式 */
         #permanentCard { background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .card-title { font-size: 15px; color: #0f172a; font-weight: 800; }
@@ -56,19 +70,6 @@
         .excel-data-table td { padding: 6px 10px; border: 1px solid #e2e8f0; color: #000000; font-weight: 600; }
         .excel-data-table tr:hover { background-color: #f8fafc; }
 
-        /* 視圖通用卡片容器 */
-        .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .dynamic-scroll-area { position: relative; width: 100%; min-height: 480px; overflow-x: auto; overflow-y: hidden; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
-
-        /* 節點通用樣式 */
-        .abs-node { position: absolute; border-radius: 6px; padding: 5px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.06); z-index: 2; transition: transform 0.15s; }
-        .abs-node:hover { transform: scale(1.03); z-index: 10; }
-        .node-target-highlight { border: 3px solid #f59e0b !important; background: #ffffff !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.4) !important; }
-        
-        .c-sub-label { font-size: 8.5px; font-weight: 800; color: #475569; margin-bottom: 2px; }
-        .c-metric-row { display: flex; gap: 6px; font-size: 8.5px; background: rgba(255,255,255,0.85); padding: 2px 5px; border-radius: 3px; margin-top: 2px; border: 1px solid rgba(0,0,0,0.08); white-space: nowrap; }
-        
-        canvas.lineCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.9); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; z-index: 99998; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 60px 10px; font-size: 13px; font-weight: 500; }
     </style>
@@ -78,13 +79,13 @@
 
     <div class="system-header-banner">
         <h1>GLA Official Pedigree Book & Lineage System</h1>
-        <p>Official 4-Generation Pedigree Certificate & Recursive Inbreeding Topology (官方四代造冊血統書與遞迴近親比對拓撲)</p>
+        <p>Official 4-Generation Pedigree Certificate & Multi-Perspective Lineage (官方四代造冊血統書與多視角系譜系統)</p>
     </div>
 
     <div class="control-bar">
         <div>
-            <label for="earInput"><strong>Pedigree Search / ANNA / Mating Boar (全血統搜尋):</strong></label>
-            <input type="text" id="earInput" placeholder="e.g. LY10921, DD26081, L1211, D1053" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <label for="earInput"><strong>Pedigree Search (全血統耳號搜尋):</strong></label>
+            <input type="text" id="earInput" placeholder="e.g. L1211, DD26081, LY10921, Y1456" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" onclick="searchPedigree()">🔍 造冊搜尋</button>
         </div>
         <div>
@@ -108,16 +109,16 @@
         <span class="color-badge" style="background:#fee2e2; border:1px solid #ef4444; color:#991b1b;">DIE (淘汰/死亡)</span>
     </div>
 
-    <!-- 🌟 1. 官方四代造冊標準血統證書 (四代全名、精密錨定吸附連線) -->
+    <!-- 🌟 1. 官方四代造冊標準血統證書 (仿美國種豬協會 NSR 標準，四代全名與育種值入格) -->
     <div class="tree-card-wrapper" id="certExportCard" style="border:2px solid #0284c7;">
         <div class="card-header-bar">
             <div>
-                <h2 style="margin:0; font-size:16px; color:#0284c7; font-weight:900;">📜 1. Official 4-Generation Pedigree Certificate (官方四代造冊標準血統證書 - 完整全名與親譜)</h2>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">Full Registered Strain Names, Recursive Dam Lineage, and Exact Anchored Connectors</p>
+                <h2 style="margin:0; font-size:16px; color:#0284c7; font-weight:900;">📜 1. Official 4-Generation Pedigree Certificate (官方四代造冊標準血統證書)</h2>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">NSR Standard: Full Registered Ancestor Names, Direct Breeding Indexes, and Magnetic Alignments</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('certExportCard', 'certCanvas', 'GLA_Official_Certificate')">📸 造冊存檔 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height:580px;">
+        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height:600px;">
             <canvas class="lineCanvas" id="certCanvas"></canvas>
             <div id="certBoxesContainer"><div class="placeholder-text">Please enter ear tag above to search...</div></div>
         </div>
@@ -163,10 +164,10 @@
         </div>
     </div>
 
-    <!-- 🌟 2. 個體直系演進圖 (右側完整展開所有配種公/母豬) -->
+    <!-- 2. 個體直系演進圖 -->
     <div class="tree-card-wrapper" id="singleTreeArea">
         <div class="card-header-bar">
-            <div style="font-weight:bold; font-size:14px; color:#0284c7;">🌿 2. Single Lineage Direct Tree (個體直系演進圖 - 雙向完整展開配種公/母豬)</div>
+            <div style="font-weight:bold; font-size:14px; color:#0284c7;">🌿 2. Single Lineage Direct Tree (個體直系演進圖 - 雙向展開當胎配種)</div>
             <div><button class="btn btn-export" onclick="exportHighRes('singleTreeArea', 'singleCanvas', 'GLA_Direct_Tree')">📸 Export PNG</button></div>
         </div>
         <div class="dynamic-scroll-area" id="singleTreeCard">
@@ -175,12 +176,12 @@
         </div>
     </div>
 
-    <!-- 🌟 3. 近親比對全系譜拓撲家族樹 (親本多代族名 vs 配種夥伴多代族名對稱展開) -->
+    <!-- 3. 近親比對全系譜拓撲家族樹 -->
     <div class="tree-card-wrapper" id="macroTreePanel" style="border:2px solid #0d6efd;">
         <div class="card-header-bar">
             <div>
-                <h3 style="margin:0; font-size:15px; color:#0d6efd; font-weight:800;">🌳 3. Inbreeding Comparison Topology Family Tree (近親比對全系譜拓撲家族樹 - 族名近親比對)</h3>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">Target Ancestors (Strain Names) vs. Mating Partner Ancestors (Strain Names)</p>
+                <h3 style="margin:0; font-size:15px; color:#0d6efd; font-weight:800;">🌳 3. Inbreeding Comparison Topology Family Tree (近親比對全系譜拓撲家族樹)</h3>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">Target Ancestor Strains vs. Mating Partner Ancestor Strains</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('macroTreePanel', 'macroCanvas', 'GLA_Topology_Tree')">📸 Export PNG</button></div>
         </div>
@@ -193,7 +194,7 @@
     <!-- 4. 全血統後代留種與工作狀態追蹤樹 -->
     <div class="tree-card-wrapper" id="descendantTreeArea">
         <div class="card-header-bar">
-            <div style="font-weight:bold; font-size:14px; color:#0284c7;">🌱 4. Universal Descendant & Generation Working Status Tree (全血統後代世代留種與工作狀態追蹤樹)</div>
+            <div style="font-weight:bold; font-size:14px; color:#0284c7;">🌱 4. Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</div>
             <div><button class="btn btn-export" onclick="exportHighRes('descendantTreeArea', 'descendantCanvas', 'GLA_Descendant_Tree')">📸 Export PNG</button></div>
         </div>
         <div class="dynamic-scroll-area" id="descendantCard">
@@ -296,7 +297,6 @@
         function cleanVal(v) { return (v === undefined || v === null || v === 'undefined' || v === 'NaN' || v === 'nan' || v === '') ? '-' : String(v).replace(/\n/g, ' ').trim(); }
         function cleanParityVal(v) { if (!v || v === '-' || v === 'NaN') return '-'; const n = parseFloat(v); return isNaN(n) ? '-' : n.toFixed(1); }
 
-        // 嚴格過濾純數字編號 (如 1, 10, 11)
         function getValidStrainName(val) {
             if (!val || val === '-' || val === 'nan' || val === 'none') return '-';
             const s = String(val).trim();
@@ -304,22 +304,20 @@
             return s;
         }
 
-        // 族名簡化 (用於近親比對圖，只取核心族名)
         function shortenToFamilyName(val) {
             const raw = getValidStrainName(val);
             if (raw === '-') return '-';
             const parts = raw.split(' ');
-            let keywords = parts.filter(p => !/^[\d\.\-]+$/.test(p) && !['1CR1', '1CR2', 'CR1', 'CR2'].includes(p.toUpperCase()));
+            let keywords = parts.filter(p => !/^[\d\.\-]+$/.test(p) && !['1CR1', '1CR2', '1CR3', 'CR1', 'CR2'].includes(p.toUpperCase()));
             return keywords.length > 0 ? keywords[keywords.length - 1] : raw;
         }
 
-        // 品系與品種著色繼承
         function getBreedClass(nameStr, fallbackBreed = '') {
             if (!nameStr || nameStr === '-' || nameStr.includes('未記載')) return 'breed-DEFAULT';
             const s = String(nameStr).toUpperCase().trim();
             if (s.includes('LY') || s.includes('CROSS')) return 'breed-LY';
             if (s.includes('DD') || s.startsWith('D') || s.includes('DUROC') || s.includes('TUCKER') || s.includes('FIRESTONE') || s.includes('PERCHERON')) return 'breed-D';
-            if (s.includes('YY') || s.startsWith('Y') || s.includes('YORK') || s.includes('LADY N') || s.includes('TRIPLE H') || s.includes('SULTAN') || s.includes('SUE')) return 'breed-Y';
+            if (s.includes('YY') || s.startsWith('Y') || s.includes('YORK') || s.includes('LADY N') || s.includes('TRIPLE H') || s.includes('SULTAN') || s.includes('SUE') || s.includes('GLOBE') || s.includes('BEAUTY')) return 'breed-Y';
             if (s.includes('LL') || s.startsWith('L') || s.includes('LAND') || s.includes('RODMAN') || s.includes('LANA') || s.includes('WAGON') || s.includes('SADDEN')) return 'breed-L';
             if (fallbackBreed) return getBreedClass(fallbackBreed);
             return 'breed-DEFAULT';
@@ -379,8 +377,15 @@
             return false;
         }
 
-        // 🌟 正交直角連線 (保證水平垂直，精確咬合)
-        function drawExactOrthogonalLine(ctx, x1, y1, x2, y2, midX) {
+        // 🌟 實體 DOM 磁吸錨定引擎：由來源方塊右中點 連至 目標方塊左中點，零誤差
+        function renderMagneticLine(ctx, fromElem, toElem) {
+            if (!fromElem || !toElem) return;
+            const x1 = fromElem.offsetLeft + fromElem.offsetWidth;
+            const y1 = fromElem.offsetTop + fromElem.offsetHeight / 2;
+            const x2 = toElem.offsetLeft;
+            const y2 = toElem.offsetTop + toElem.offsetHeight / 2;
+            const midX = (x1 + x2) / 2;
+
             ctx.beginPath();
             ctx.moveTo(x1, y1);
             ctx.lineTo(midX, y1);
@@ -391,58 +396,63 @@
             ctx.stroke();
         }
 
-        // 🌟 遞迴親緣解析器 (Recursive Pedigree Traversal Engine)
         function findAnimalRecord(tag) {
             if (!tag || tag === '-' || tag === '未記載') return null;
             const cleanTag = String(tag).trim().toUpperCase();
             return pedigreeList.find(it => String(it.ear || (it.details && it.details['耳號']) || '').toUpperCase() === cleanTag) || null;
         }
 
-        function getRecursiveAncestors(itemOrEar, depth = 3) {
+        // 🌟 遞迴四代親譜全名與指標提取引擎
+        function getFourGenerationPedigreeTree(itemOrEar) {
             if (!itemOrEar) return null;
             let item = typeof itemOrEar === 'string' ? findAnimalRecord(itemOrEar) : itemOrEar;
             const ear = item ? String(item.ear || getValueFromMultiKeys(item, ['耳號'])).trim().toUpperCase() : String(itemOrEar).trim().toUpperCase();
             const breed = item ? (item.breed || ear) : ear;
 
-            let sTag = item ? (item.gen1_sire || getValueFromMultiKeys(item, ['第一代公', '1st Sire'])) : '-';
-            let dTag = item ? (item.gen1_dam  || getValueFromMultiKeys(item, ['第一代母', '1st Dam'])) : '-';
+            // 1. 父系 (Sire) 全名與指標
+            let sireName = item ? (item.g3_sire_full || item.gen1_sire || getValueFromMultiKeys(item, ['G3_父代Sire全名', '第一代公', '1st Sire'])) : '-';
+            let sireSPI  = item ? (item.g3_sire_spi || getValueFromMultiKeys(item, ['G3_父代SPI'])) : '-';
+            let sireMLI  = item ? (item.g3_sire_mli || getValueFromMultiKeys(item, ['G3_父代MLI'])) : '-';
 
-            // 防呆顛倒
-            if (checkIsMale(dTag) && !checkIsMale(sTag) && sTag !== '-') {
-                let tmp = sTag; sTag = dTag; dTag = tmp;
+            // 2. 母系 (Dam) 全名與指標
+            let damName  = item ? (item.g3_dam_full || item.gen1_dam || getValueFromMultiKeys(item, ['G3_母代Dam全名', '第一代母', '1st Dam'])) : '-';
+            let damSPI   = item ? (item.g3_dam_spi || getValueFromMultiKeys(item, ['G3_母代SPI'])) : '-';
+            let damMLI   = item ? (item.g3_dam_mli || getValueFromMultiKeys(item, ['G3_母代MLI'])) : '-';
+
+            const sObj = findAnimalRecord(item ? item.gen1_sire : sireName);
+            const dObj = findAnimalRecord(item ? item.gen1_dam : damName);
+
+            if (sObj) {
+                if (sireSPI === '-' && sObj.spi) sireSPI = sObj.spi;
+                if (sireMLI === '-' && sObj.mli) sireMLI = sObj.mli;
+            }
+            if (dObj) {
+                if (damSPI === '-' && dObj.spi) damSPI = dObj.spi;
+                if (damMLI === '-' && dObj.mli) damMLI = dObj.mli;
             }
 
-            // 尋找父母實體以遞迴提取祖輩
-            const sObj = findAnimalRecord(sTag);
-            const dObj = findAnimalRecord(dTag);
+            // 3. 祖代 (Grandparents) 4 頭全名
+            let ss = item ? getValidStrainName(item.ss_full || item.sire_sire || getValueFromMultiKeys(item, ['Sire美系第0代父親(祖父)-全名', 'Sire美系第0代父親名(祖父)'])) : '-';
+            let sd = item ? getValidStrainName(item.sd_full || item.sire_dam  || getValueFromMultiKeys(item, ['Dam 美系第0代母親(祖母)-全名', 'Dam Name美系第0代母親名(祖母)'])) : '-';
+            let ds = item ? getValidStrainName(item.ds_full || item.dam_sire  || getValueFromMultiKeys(item, ['Sire 美系第0代父親(外公)-全名', 'Sire美系第0代父親名(外公)'])) : '-';
+            let dd = item ? getValidStrainName(item.dd_full || item.dam_dam   || getValueFromMultiKeys(item, ['Dam 美系第0代母親(外婆)-全名', 'Dam Name美系第0代母親名(外婆)'])) : '-';
 
-            // 父系祖輩
-            let ss = item ? getValidStrainName(item.sire_sire || getValueFromMultiKeys(item, ['Sire美系第0代父親名(祖父)', 'Sire Name美系父親名'])) : '-';
-            let sd = item ? getValidStrainName(item.sire_dam  || getValueFromMultiKeys(item, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名'])) : '-';
-            if ((ss === '-' || sd === '-') && sObj) {
-                if (ss === '-') ss = getValidStrainName(sObj.sire_sire || getValueFromMultiKeys(sObj, ['Sire美系第0代父親名(祖父)', 'Sire Name美系父親名']));
-                if (sd === '-') sd = getValidStrainName(sObj.sire_dam  || getValueFromMultiKeys(sObj, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名']));
-            }
-
-            // 母系祖輩 (🌟 遞迴穿透提取生母外公外婆)
-            let ds = item ? getValidStrainName(item.dam_sire  || getValueFromMultiKeys(item, ['Sire美系第0代父親名(外公)', 'Sire Name美系父親名'])) : '-';
-            let dd = item ? getValidStrainName(item.dam_dam   || getValueFromMultiKeys(item, ['Dam Name美系第0代母親名(外婆)', 'Dam Name美系母親名'])) : '-';
+            // 遞迴外公外婆穿透
             if ((ds === '-' || dd === '-') && dObj) {
-                if (ds === '-') ds = getValidStrainName(dObj.sire_sire || getValueFromMultiKeys(dObj, ['Sire美系第0代父親名(祖父)', 'Sire Name美系父親名', 'Sire美系第0代父親名(外公)']));
-                if (dd === '-') dd = getValidStrainName(dObj.sire_dam  || getValueFromMultiKeys(dObj, ['Dam Name美系第0代母親名(祖母)', 'Dam Name美系母親名', 'Dam Name美系第0代母親名(外婆)']));
+                if (ds === '-') ds = getValidStrainName(dObj.g3_sire_full || dObj.ss_full || dObj.sire_sire || getValueFromMultiKeys(dObj, ['Sire 美系第0代父親(外公)-全名', 'Sire美系第0代父親名(祖父)']));
+                if (dd === '-') dd = getValidStrainName(dObj.g3_dam_full  || dObj.sd_full || dObj.sire_dam  || getValueFromMultiKeys(dObj, ['Dam 美系第0代母親(外婆)-全名', 'Dam Name美系第0代母親名(祖母)']));
             }
 
             return {
                 ear: ear,
                 breed: breed,
                 itemRef: item,
-                sire: { ear: sTag, obj: sObj, strain: ss },
-                dam:  { ear: dTag, obj: dObj, strain: sd },
+                sire: { name: sireName, spi: sireSPI, mli: sireMLI, obj: sObj },
+                dam:  { name: damName,  spi: damSPI,  mli: damMLI,  obj: dObj },
                 grandparents: { ss: ss, sd: sd, ds: ds, dd: dd }
             };
         }
 
-        // 🌟 雙向收集所有配種夥伴
         function collectAllMatingPartners(targetEar, isMale, items) {
             let partners = [];
             const targetClean = targetEar.trim().toUpperCase();
@@ -459,8 +469,7 @@
                                 isMale: false,
                                 label: `♀ 配種母豬 (P.${cleanParityVal(r.parity) || idx + 1})`,
                                 tnb: cleanVal(r.total_born || r.tnb),
-                                ba: cleanVal(r.born_alive || r.nba),
-                                rawItem: r
+                                ba: cleanVal(r.born_alive || r.nba)
                             });
                         }
                     }
@@ -478,8 +487,7 @@
                                     isMale: true,
                                     label: `♂ 配種公豬 (P.${cleanParityVal(r.parity) || idx + 1})`,
                                     tnb: cleanVal(r.total_born || r.tnb),
-                                    ba: cleanVal(r.born_alive || r.nba),
-                                    rawItem: r
+                                    ba: cleanVal(r.born_alive || r.nba)
                                 });
                             }
                         });
@@ -576,7 +584,7 @@
             tbody.innerHTML = html;
         }
 
-        /* 🌟 1. 官方四代造冊標準血統證書 (完整全名、遞迴母系外公外婆、消除懸空線、精準吸附) */
+        /* 🌟 1. 官方標準四代血統證書 (NSR標準：垂直等距舒展、全名與指標入格、磁吸精準連線) */
         function drawOfficialPedigreeCertificate(targetItem) {
             const container = document.getElementById('certBoxesContainer');
             const canvas = document.getElementById('certCanvas');
@@ -584,12 +592,12 @@
             if (!container || !canvas || !scrollArea) return;
 
             container.innerHTML = '';
-            const tree = getRecursiveAncestors(targetItem, 3);
+            const tree = getFourGenerationPedigreeTree(targetItem);
             const isMale = checkIsMale(targetItem);
 
-            const colWidths = [190, 160, 160, 160];
+            const colWidths = [200, 180, 180, 175];
             const colGap = 45;
-            const cardHeight = 580;
+            const cardHeight = 620; // 充分垂直舒展，完全防重疊
             const totalWidth = colWidths.reduce((a, b) => a + b, 0) + colGap * 3 + 60;
 
             scrollArea.style.height = cardHeight + 'px';
@@ -600,16 +608,15 @@
             const col1_X = col0_X + colWidths[0] + colGap;
             const col2_X = col1_X + colWidths[1] + colGap;
             const col3_X = col2_X + colWidths[2] + colGap;
-            const lines = [];
 
-            // Target (F1)
-            const targetY = cardHeight / 2 - 42;
+            // 1. Target (F1)
             const targetDiv = document.createElement('div');
+            targetDiv.id = 'cert-f1';
             targetDiv.className = `abs-node node-target-highlight ${getBreedClass(tree.breed)}`;
             targetDiv.style.left = col0_X + 'px';
-            targetDiv.style.top = targetY + 'px';
+            targetDiv.style.top = (cardHeight / 2 - 44) + 'px';
             targetDiv.style.width = colWidths[0] + 'px';
-            targetDiv.style.height = '84px';
+            targetDiv.style.height = '88px';
 
             const deathStr = getDeathStatusStr(targetItem);
             const statusHtml = deathStr ? `<span class="badge-dead">${deathStr}</span>` : `<span class="badge-active">ACTIVE</span>`;
@@ -618,7 +625,7 @@
             targetDiv.innerHTML = `
                 <div>
                     <span class="c-sub-label">🎯 INDIVIDUAL (${isMale ? '♂ BOAR 種公' : '♀ SOW 種母'})</span>
-                    <div class="txt-red-title" style="font-size:12px;">${tree.ear} ${statusHtml}</div>
+                    <div class="txt-red-title" style="font-size:12.5px;">${tree.ear} ${statusHtml}</div>
                 </div>
                 <div>
                     <div class="c-metric-row">
@@ -634,77 +641,76 @@
             `;
             container.appendChild(targetDiv);
 
-            // Parents (F2)
+            // 2. Parents (F2: 父母全名與指標入格)
             const parents = [
-                { ear: tree.sire.ear, label: "♂ 1st SIRE (父系)", y: cardHeight * 0.25 - 34, obj: tree.sire.obj, fallbackBreed: tree.breed },
-                { ear: tree.dam.ear,  label: "♀ 1st DAM (母系)",  y: cardHeight * 0.75 - 34, obj: tree.dam.obj,  fallbackBreed: tree.breed }
+                { id: 'cert-sire', name: tree.sire.name, spi: tree.sire.spi, mli: tree.sire.mli, label: "♂ 1st SIRE (父代全名)", y: cardHeight * 0.25 - 36, fallbackBreed: tree.breed },
+                { id: 'cert-dam',  name: tree.dam.name,  spi: tree.dam.spi,  mli: tree.dam.mli,  label: "♀ 1st DAM (母代全名)",  y: cardHeight * 0.75 - 36, fallbackBreed: tree.breed }
             ];
 
             parents.forEach(p => {
                 const pDiv = document.createElement('div');
-                pDiv.className = `abs-node ${getBreedClass(p.obj ? p.obj.breed : p.ear, p.fallbackBreed)}`;
+                pDiv.id = p.id;
+                pDiv.className = `abs-node ${getBreedClass(p.name, p.fallbackBreed)}`;
                 pDiv.style.left = col1_X + 'px';
                 pDiv.style.top = p.y + 'px';
                 pDiv.style.width = colWidths[1] + 'px';
-                pDiv.style.height = '68px';
-                if (checkIsDead(p.ear)) pDiv.classList.add('node-dead');
+                pDiv.style.height = '72px';
 
                 pDiv.innerHTML = `
                     <div>
                         <span class="c-sub-label">${p.label}</span>
-                        <div class="txt-red-title" style="font-size:11px;">${cleanVal(p.ear)}</div>
+                        <div class="txt-red-title" style="font-size:10.5px; word-break:break-all;">${cleanVal(p.name)}</div>
                     </div>
                     <div class="c-metric-row">
-                        <span>SPI: <b class="txt-black-metric">${cleanVal(p.obj ? p.obj.spi : '-')}</b></span>
-                        <span>MLI: <b class="txt-black-metric">${cleanVal(p.obj ? p.obj.mli : '-')}</b></span>
-                        <span>TSI: <b class="txt-black-metric">${cleanVal(p.obj ? p.obj.tsi : '-')}</b></span>
+                        <span>SPI: <b class="txt-black-metric">${cleanVal(p.spi)}</b></span>
+                        <span>MLI: <b class="txt-black-metric">${cleanVal(p.mli)}</b></span>
                     </div>
                 `;
-                pDiv.onclick = () => { if (p.ear && p.ear !== '-') { document.getElementById('earInput').value = p.ear; searchPedigree(); } };
+                pDiv.onclick = () => { if (p.name && p.name !== '-') { document.getElementById('earInput').value = p.name; searchPedigree(); } };
                 container.appendChild(pDiv);
-
-                lines.push({ x1: col0_X + colWidths[0], y1: targetY + 42, x2: col1_X, y2: p.y + 34, midX: col0_X + colWidths[0] + colGap/2 });
             });
 
-            // Grandparents (F3: 祖父、祖母、外公、外婆 完整全名)
+            // 3. Grandparents (F3: 祖代 4 頭全名)
             const grandparents = [
-                { name: tree.grandparents.ss, label: "♂ SIRE'S SIRE (祖父全名)", y: cardHeight * 0.125 - 28, parentIdx: 0, pBreed: tree.sire.ear },
-                { name: tree.grandparents.sd, label: "♀ SIRE'S DAM (祖母全名)",  y: cardHeight * 0.375 - 28, parentIdx: 0, pBreed: tree.sire.ear },
-                { name: tree.grandparents.ds, label: "♂ DAM'S SIRE (外公全名)",  y: cardHeight * 0.625 - 28, parentIdx: 1, pBreed: tree.dam.ear },
-                { name: tree.grandparents.dd, label: "♀ DAM'S DAM (外婆全名)",   y: cardHeight * 0.875 - 28, parentIdx: 1, pBreed: tree.dam.ear }
+                { id: 'cert-gp0', name: tree.grandparents.ss, label: "♂ SIRE'S SIRE (祖父全名)", y: cardHeight * 0.125 - 28, parentId: 'cert-sire', pBreed: tree.sire.name },
+                { id: 'cert-gp1', name: tree.grandparents.sd, label: "♀ SIRE'S DAM (祖母全名)",  y: cardHeight * 0.375 - 28, parentId: 'cert-sire', pBreed: tree.sire.name },
+                { id: 'cert-gp2', name: tree.grandparents.ds, label: "♂ DAM'S SIRE (外公全名)",  y: cardHeight * 0.625 - 28, parentId: 'cert-dam',  pBreed: tree.dam.name },
+                { id: 'cert-gp3', name: tree.grandparents.dd, label: "♀ DAM'S DAM (外婆全名)",   y: cardHeight * 0.875 - 28, parentId: 'cert-dam',  pBreed: tree.dam.name }
             ];
 
             grandparents.forEach(g => {
                 const gDiv = document.createElement('div');
+                gDiv.id = g.id;
                 gDiv.className = `abs-node ${getBreedClass(g.name, g.pBreed)}`;
                 gDiv.style.left = col2_X + 'px';
                 gDiv.style.top = g.y + 'px';
                 gDiv.style.width = colWidths[2] + 'px';
-                gDiv.style.height = '56px';
+                gDiv.style.height = '58px';
 
                 gDiv.innerHTML = `
                     <div>
                         <span class="c-sub-label">${g.label}</span>
-                        <div class="txt-red-title" style="font-size:10.5px;">${cleanVal(g.name)}</div>
+                        <div class="txt-red-title" style="font-size:10px; word-break:break-all;">${cleanVal(g.name)}</div>
                     </div>
                     <div class="c-metric-row"><span>REGISTERED US ANCESTOR</span></div>
                 `;
                 container.appendChild(gDiv);
-
-                lines.push({ x1: col1_X + colWidths[1], y1: parents[g.parentIdx].y + 34, x2: col2_X, y2: g.y + 28, midX: col1_X + colWidths[1] + colGap/2 });
             });
 
-            // Great-Grandparents (F4: 8個象限均勻展開，完全不重疊，無右側懸空線)
+            // 4. Great-Grandparents (F4: 曾祖代 8 個象限等距垂直發散，完全不重疊，無右側懸空線)
             const ggLabels = [
                 "♂ S-S-S", "♀ S-S-D", "♂ S-D-S", "♀ S-D-D",
                 "♂ D-S-S", "♀ D-S-D", "♂ D-D-S", "♀ D-D-D"
             ];
             const stepY = cardHeight / 8;
+            const ggNodes = [];
 
             ggLabels.forEach((lbl, idx) => {
                 const gy = idx * stepY + (stepY - 44) / 2;
-                const ggDiv = document.createElement('div');
                 const gpIdx = Math.floor(idx / 2);
+                const ggDiv = document.createElement('div');
+                const nodeId = 'cert-gg-' + idx;
+                ggDiv.id = nodeId;
                 ggDiv.className = `abs-node ${getBreedClass(grandparents[gpIdx].pBreed)}`;
                 ggDiv.style.left = col3_X + 'px';
                 ggDiv.style.top = gy + 'px';
@@ -717,20 +723,33 @@
                 `;
                 container.appendChild(ggDiv);
 
-                // 🌟 連線只連到第 4 代左側，絕不往右懸空多畫！
-                lines.push({ x1: col2_X + colWidths[2], y1: grandparents[gpIdx].y + 28, x2: col3_X, y2: gy + 22, midX: col2_X + colWidths[2] + colGap/2 });
+                ggNodes.push({ id: nodeId, parentId: grandparents[gpIdx].id });
             });
 
+            // 🌟 實體 DOM 磁吸錨定吸附 (100% 精準連線，消除脫節與多餘懸空線)
             requestAnimationFrame(() => {
                 canvas.width = totalWidth;
                 canvas.height = cardHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                lines.forEach(l => { drawExactOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+
+                // F1 -> F2
+                renderMagneticLine(ctx, document.getElementById('cert-f1'), document.getElementById('cert-sire'));
+                renderMagneticLine(ctx, document.getElementById('cert-f1'), document.getElementById('cert-dam'));
+
+                // F2 -> F3
+                grandparents.forEach(g => {
+                    renderMagneticLine(ctx, document.getElementById(g.parentId), document.getElementById(g.id));
+                });
+
+                // F3 -> F4
+                ggNodes.forEach(gg => {
+                    renderMagneticLine(ctx, document.getElementById(gg.parentId), document.getElementById(gg.id));
+                });
             });
         }
 
-        /* 🌟 2. 個體直系演進圖 (右側配種夥伴完整展開，精確咬合連線) */
+        /* 🌟 2. 個體直系演進圖 (DOM 磁吸錨定連線，右側配種夥伴完整展開) */
         function drawSingleLineageTree(items, targetItem) {
             const container = document.getElementById('singleBoxesContainer');
             const canvas = document.getElementById('singleCanvas');
@@ -741,12 +760,12 @@
             const boxW = 140, boxH = 50, colGap = 55, rowGap = 65;
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號']);
             const isMale = checkIsMale(targetItem);
-            const tree = getRecursiveAncestors(targetItem, 2);
+            const tree = getFourGenerationPedigreeTree(targetItem);
 
             let mateList = collectAllMatingPartners(targetEar, isMale, items);
 
             const totalMates = Math.max(mateList.length, 1);
-            const cardHeight = Math.max(totalMates * rowGap + 100, 480);
+            const cardHeight = Math.max(totalMates * rowGap + 120, 480);
             const totalWidth = 760;
 
             card.style.height = cardHeight + 'px';
@@ -755,28 +774,10 @@
 
             const col0_X = 35, col1_X = 235, col2_X = 455;
             const targetY = cardHeight / 2 - boxH / 2;
-            const lines = [];
-
-            // 父母
-            const parents = [
-                { ear: tree.sire.ear, label: "♂ 1st Sire (生父)", y: targetY - 55, breed: tree.sire.ear },
-                { ear: tree.dam.ear,  label: "♀ 1st Dam (生母)",  y: targetY + 55, breed: tree.dam.ear }
-            ];
-            parents.forEach(p => {
-                if (p.ear && p.ear !== '-') {
-                    const pDiv = document.createElement('div');
-                    pDiv.className = `abs-node ${getBreedClass(p.breed, tree.breed)}`;
-                    pDiv.style.left = col0_X + 'px'; pDiv.style.top = p.y + 'px';
-                    pDiv.style.width = boxW + 'px'; pDiv.style.height = boxH + 'px';
-                    pDiv.innerHTML = `<span class="c-sub-label">${p.label}</span><b class="txt-red-title">${p.ear}</b>`;
-                    pDiv.onclick = () => { document.getElementById('earInput').value = p.ear; searchPedigree(); };
-                    container.appendChild(pDiv);
-                    lines.push({ x1: col0_X + boxW, y1: p.y + boxH/2, x2: col1_X, y2: targetY + boxH/2, midX: col0_X + boxW + colGap/2 });
-                }
-            });
 
             // Target
             const tDiv = document.createElement('div');
+            tDiv.id = 'direct-target';
             tDiv.className = `abs-node node-target-highlight`;
             tDiv.style.left = col1_X + 'px'; tDiv.style.top = targetY + 'px';
             tDiv.style.width = (boxW + 6) + 'px'; tDiv.style.height = (boxH + 10) + 'px';
@@ -785,18 +786,41 @@
             tDiv.innerHTML = `<span class="c-sub-label" style="color:#f59e0b;">🎯 Target (${isMale ? '♂ 公' : '♀ 母'})</span><b class="txt-red-title" style="font-size:12px;">${targetEar}</b>`;
             container.appendChild(tDiv);
 
-            // 右側配種夥伴 (精確連線，不懸空)
+            // 父母
+            const parentNodes = [];
+            const parents = [
+                { id: 'direct-sire', ear: tree.sire.name, label: "♂ 1st Sire (生父)", y: targetY - 55, breed: tree.sire.name },
+                { id: 'direct-dam',  ear: tree.dam.name,  label: "♀ 1st Dam (生母)",  y: targetY + 55, breed: tree.dam.name }
+            ];
+            parents.forEach(p => {
+                if (p.ear && p.ear !== '-') {
+                    const pDiv = document.createElement('div');
+                    pDiv.id = p.id;
+                    pDiv.className = `abs-node ${getBreedClass(p.breed, tree.breed)}`;
+                    pDiv.style.left = col0_X + 'px'; pDiv.style.top = p.y + 'px';
+                    pDiv.style.width = boxW + 'px'; pDiv.style.height = boxH + 'px';
+                    pDiv.innerHTML = `<span class="c-sub-label">${p.label}</span><b class="txt-red-title">${p.ear}</b>`;
+                    pDiv.onclick = () => { document.getElementById('earInput').value = p.ear; searchPedigree(); };
+                    container.appendChild(pDiv);
+                    parentNodes.push(p.id);
+                }
+            });
+
+            // 配種夥伴完整展開
+            const mateNodes = [];
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const my = targetY + (idx - (totalMates - 1) / 2) * rowGap;
                     const mDiv = document.createElement('div');
+                    const mId = 'direct-mate-' + idx;
+                    mDiv.id = mId;
                     mDiv.className = `abs-node ${getBreedClass(m.breed || m.ear)}`;
                     mDiv.style.left = col2_X + 'px'; mDiv.style.top = my + 'px';
                     mDiv.style.width = (boxW + 10) + 'px'; mDiv.style.height = boxH + 'px';
                     mDiv.innerHTML = `<span class="c-sub-label">${m.label}</span><b class="txt-red-title">${m.ear}</b><span class="txt-black-metric" style="font-size:8px;">TNB:${m.tnb} BA:${m.ba}</span>`;
                     mDiv.onclick = () => { document.getElementById('earInput').value = m.ear; searchPedigree(); };
                     container.appendChild(mDiv);
-                    lines.push({ x1: col1_X + boxW + 6, y1: targetY + (boxH + 10)/2, x2: col2_X, y2: my + boxH/2, midX: col1_X + boxW + colGap/2 });
+                    mateNodes.push(mId);
                 });
             }
 
@@ -804,11 +828,14 @@
                 canvas.width = totalWidth; canvas.height = cardHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                lines.forEach(l => { drawExactOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+
+                const tElem = document.getElementById('direct-target');
+                parentNodes.forEach(pId => renderMagneticLine(ctx, document.getElementById(pId), tElem));
+                mateNodes.forEach(mId => renderMagneticLine(ctx, tElem, document.getElementById(mId)));
             });
         }
 
-        /* 🌟 3. 近親比對全系譜拓撲家族樹 (左側本體祖輩族名 vs 右側配偶祖輩族名，雙向完全展開) */
+        /* 🌟 3. 近親比對全系譜拓撲家族樹 (親本族名 vs 配種夥伴族名對稱展開) */
         function drawButterflyFamilyTree(items, targetItem) {
             const container = document.getElementById('macroBoxesContainer');
             const canvas = document.getElementById('macroCanvas');
@@ -816,22 +843,18 @@
             if (!container || !canvas || !card) return;
 
             container.innerHTML = '';
-            const boxW = 140, boxH = 48, colGap = 50;
+            const boxW = 140, boxH = 48;
             const targetEar = targetItem.ear || getValueFromMultiKeys(targetItem, ['耳號']);
             const isMale = checkIsMale(targetItem);
-            
-            // 遞迴提取本體祖輩族名
-            const tree = getRecursiveAncestors(targetItem, 3);
+            const tree = getFourGenerationPedigreeTree(targetItem);
 
-            // 提取所有配種對象
             let mateList = collectAllMatingPartners(targetEar, isMale, items);
 
-            const cardHeight = Math.max(mateList.length * 85 + 140, 560);
-            const totalWidth = 1020; // 擴增以容納配偶之祖代展開
+            const cardHeight = Math.max(mateList.length * 85 + 160, 560);
+            const totalWidth = 1040;
             card.style.height = cardHeight + 'px';
             container.style.height = cardHeight + 'px';
 
-            // 5 欄拓撲：[本體祖輩] -> [本體父母] -> [Target] -> [配種夥伴] -> [配種夥伴父母族名]
             const col0_X = 25;
             const col1_X = 205;
             const col2_X = 390;
@@ -839,57 +862,62 @@
             const col4_X = 770;
 
             const targetY = cardHeight / 2 - boxH / 2;
-            const lines = [];
 
-            // 1. 本體祖輩 (左欄：簡短族名)
-            const grandparents = [
-                { name: shortenToFamilyName(tree.grandparents.ss), label: "♂ 祖父族名", y: targetY - 105, pBreed: tree.sire.ear },
-                { name: shortenToFamilyName(tree.grandparents.sd), label: "♀ 祖母族名", y: targetY - 35,  pBreed: tree.sire.ear },
-                { name: shortenToFamilyName(tree.grandparents.ds), label: "♂ 外公族名", y: targetY + 35,  pBreed: tree.dam.ear },
-                { name: shortenToFamilyName(tree.grandparents.dd), label: "♀ 外婆族名", y: targetY + 105, pBreed: tree.dam.ear }
-            ];
-            grandparents.forEach(g => {
-                if (g.name && g.name !== '-') {
-                    const gDiv = document.createElement('div');
-                    gDiv.className = `abs-node ${getBreedClass(g.name, g.pBreed)}`;
-                    gDiv.style.left = col0_X + 'px'; gDiv.style.top = g.y + 'px';
-                    gDiv.style.width = boxW + 'px'; gDiv.style.height = boxH + 'px';
-                    gDiv.innerHTML = `<span class="c-sub-label">${g.label}</span><b class="txt-red-title">${g.name}</b>`;
-                    container.appendChild(gDiv);
-                    lines.push({ x1: col0_X + boxW, y1: g.y + boxH/2, x2: col1_X, y2: (g.y < targetY ? targetY - 45 : targetY + 45) + boxH/2, midX: col0_X + boxW + colGap/2 });
-                }
-            });
-
-            // 2. 本體父母
-            const parents = [
-                { ear: tree.sire.ear, label: "♂ 1st Sire", y: targetY - 45, breed: tree.sire.ear },
-                { ear: tree.dam.ear,  label: "♀ 1st Dam",  y: targetY + 45, breed: tree.dam.ear }
-            ];
-            parents.forEach(p => {
-                if (p.ear && p.ear !== '-') {
-                    const pDiv = document.createElement('div');
-                    pDiv.className = `abs-node ${getBreedClass(p.breed, tree.breed)}`;
-                    pDiv.style.left = col1_X + 'px'; pDiv.style.top = p.y + 'px';
-                    pDiv.style.width = boxW + 'px'; pDiv.style.height = boxH + 'px';
-                    pDiv.innerHTML = `<span class="c-sub-label">${p.label}</span><b class="txt-red-title">${p.ear}</b>`;
-                    container.appendChild(pDiv);
-                    lines.push({ x1: col1_X + boxW, y1: p.y + boxH/2, x2: col2_X, y2: targetY + boxH/2, midX: col1_X + boxW + colGap/2 });
-                }
-            });
-
-            // 3. Target
+            // Target
             const tDiv = document.createElement('div');
+            tDiv.id = 'topo-target';
             tDiv.className = `abs-node node-target-highlight`;
             tDiv.style.left = col2_X + 'px'; tDiv.style.top = targetY + 'px';
             tDiv.style.width = boxW + 'px'; tDiv.style.height = (boxH + 10) + 'px';
             tDiv.innerHTML = `<span class="c-sub-label" style="color:#f59e0b;">🎯 Target</span><b class="txt-red-title" style="font-size:12px;">${targetEar}</b>`;
             container.appendChild(tDiv);
 
-            // 4. 右側配種夥伴及其親代族名 (🌟 徹底解決懸空問題，完整展開配偶親代！)
+            // 本體父母
+            const parents = [
+                { id: 'topo-sire', ear: tree.sire.name, label: "♂ 1st Sire", y: targetY - 45, breed: tree.sire.name },
+                { id: 'topo-dam',  ear: tree.dam.name,  label: "♀ 1st Dam",  y: targetY + 45, breed: tree.dam.name }
+            ];
+            parents.forEach(p => {
+                if (p.ear && p.ear !== '-') {
+                    const pDiv = document.createElement('div');
+                    pDiv.id = p.id;
+                    pDiv.className = `abs-node ${getBreedClass(p.breed, tree.breed)}`;
+                    pDiv.style.left = col1_X + 'px'; pDiv.style.top = p.y + 'px';
+                    pDiv.style.width = boxW + 'px'; pDiv.style.height = boxH + 'px';
+                    pDiv.innerHTML = `<span class="c-sub-label">${p.label}</span><b class="txt-red-title">${shortenToFamilyName(p.ear)}</b>`;
+                    container.appendChild(pDiv);
+                }
+            });
+
+            // 本體祖輩 (簡潔族名)
+            const gpNodes = [];
+            const grandparents = [
+                { id: 'topo-gp0', name: shortenToFamilyName(tree.grandparents.ss), label: "♂ 祖父族名", y: targetY - 105, pBreed: tree.sire.name, parentId: 'topo-sire' },
+                { id: 'topo-gp1', name: shortenToFamilyName(tree.grandparents.sd), label: "♀ 祖母族名", y: targetY - 35,  pBreed: tree.sire.name, parentId: 'topo-sire' },
+                { id: 'topo-gp2', name: shortenToFamilyName(tree.grandparents.ds), label: "♂ 外公族名", y: targetY + 35,  pBreed: tree.dam.name,  parentId: 'topo-dam' },
+                { id: 'topo-gp3', name: shortenToFamilyName(tree.grandparents.dd), label: "♀ 外婆族名", y: targetY + 105, pBreed: tree.dam.name,  parentId: 'topo-dam' }
+            ];
+            grandparents.forEach(g => {
+                if (g.name && g.name !== '-') {
+                    const gDiv = document.createElement('div');
+                    gDiv.id = g.id;
+                    gDiv.className = `abs-node ${getBreedClass(g.name, g.pBreed)}`;
+                    gDiv.style.left = col0_X + 'px'; gDiv.style.top = g.y + 'px';
+                    gDiv.style.width = boxW + 'px'; gDiv.style.height = boxH + 'px';
+                    gDiv.innerHTML = `<span class="c-sub-label">${g.label}</span><b class="txt-red-title">${g.name}</b>`;
+                    container.appendChild(gDiv);
+                    gpNodes.push(g);
+                }
+            });
+
+            // 右側配種夥伴及其親代族名展開
+            const mateLinks = [];
             if (mateList.length > 0) {
                 mateList.forEach((m, idx) => {
                     const my = targetY + (idx - (mateList.length - 1) / 2) * 80;
+                    const mId = 'topo-mate-' + idx;
                     const mDiv = document.createElement('div');
+                    mDiv.id = mId;
                     mDiv.className = `abs-node ${getBreedClass(m.breed || m.ear)}`;
                     mDiv.style.left = col3_X + 'px'; mDiv.style.top = my + 'px';
                     mDiv.style.width = boxW + 'px'; mDiv.style.height = boxH + 'px';
@@ -897,28 +925,29 @@
                     mDiv.onclick = () => { document.getElementById('earInput').value = m.ear; searchPedigree(); };
                     container.appendChild(mDiv);
 
-                    // 連線：Target -> 配種夥伴
-                    lines.push({ x1: col2_X + boxW, y1: targetY + (boxH + 10)/2, x2: col3_X, y2: my + boxH/2, midX: col2_X + boxW + colGap/2 });
+                    mateLinks.push({ from: 'topo-target', to: mId });
 
-                    // 遞迴解析配種夥伴的父母族名
-                    const mTree = getRecursiveAncestors(m.ear, 2);
+                    // 遞迴解析配偶親代族名
+                    const mTree = getFourGenerationPedigreeTree(m.ear);
                     if (mTree) {
+                        const mp1Id = `topo-mp-${idx}-s`;
+                        const mp2Id = `topo-mp-${idx}-d`;
                         const mParents = [
-                            { name: shortenToFamilyName(mTree.sire.strain || mTree.sire.ear), label: "♂ 配偶父族", y: my - 22, breed: mTree.sire.ear },
-                            { name: shortenToFamilyName(mTree.dam.strain || mTree.dam.ear),   label: "♀ 配偶母族", y: my + 22, breed: mTree.dam.ear }
+                            { id: mp1Id, name: shortenToFamilyName(mTree.sire.name), label: "♂ 配偶父族", y: my - 22, breed: mTree.sire.name },
+                            { id: mp2Id, name: shortenToFamilyName(mTree.dam.name),  label: "♀ 配偶母族", y: my + 22, breed: mTree.dam.name }
                         ];
 
                         mParents.forEach(mp => {
                             if (mp.name && mp.name !== '-') {
                                 const mpDiv = document.createElement('div');
+                                mpDiv.id = mp.id;
                                 mpDiv.className = `abs-node ${getBreedClass(mp.name, mp.breed)}`;
                                 mpDiv.style.left = col4_X + 'px'; mpDiv.style.top = mp.y + 'px';
                                 mpDiv.style.width = (boxW - 10) + 'px'; mpDiv.style.height = '40px';
                                 mpDiv.innerHTML = `<span class="c-sub-label">${mp.label}</span><b class="txt-red-title" style="font-size:10px;">${mp.name}</b>`;
                                 container.appendChild(mpDiv);
 
-                                // 連線：配種夥伴 -> 其父母族名
-                                lines.push({ x1: col3_X + boxW, y1: my + boxH/2, x2: col4_X, y2: mp.y + 20, midX: col3_X + boxW + colGap/2 });
+                                mateLinks.push({ from: mId, to: mp.id });
                             }
                         });
                     }
@@ -929,7 +958,25 @@
                 canvas.width = totalWidth; canvas.height = cardHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                lines.forEach(l => { drawExactOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+
+                const tElem = document.getElementById('topo-target');
+                const sElem = document.getElementById('topo-sire');
+                const dElem = document.getElementById('topo-dam');
+
+                if (sElem) renderMagneticLine(ctx, sElem, tElem);
+                if (dElem) renderMagneticLine(ctx, dElem, tElem);
+
+                gpNodes.forEach(g => {
+                    const pElem = document.getElementById(g.parentId);
+                    const gElem = document.getElementById(g.id);
+                    if (pElem && gElem) renderMagneticLine(ctx, gElem, pElem);
+                });
+
+                mateLinks.forEach(l => {
+                    const fElem = document.getElementById(l.from);
+                    const toElem = document.getElementById(l.to);
+                    if (fElem && toElem) renderMagneticLine(ctx, fElem, toElem);
+                });
             });
         }
 
@@ -980,18 +1027,21 @@
 
             const col0_X = 40, col1_X = col0_X + boxW + colGap;
             const targetY = cardHeight / 2 - boxH / 2;
-            const lines = [];
 
             const tDiv = document.createElement('div');
+            tDiv.id = 'desc-target';
             tDiv.className = `abs-node node-target-highlight`;
             tDiv.style.left = col0_X + 'px'; tDiv.style.top = targetY + 'px';
             tDiv.style.width = boxW + 'px'; tDiv.style.height = (boxH + 10) + 'px';
             tDiv.innerHTML = `<span class="c-sub-label" style="color:#f59e0b;">🎯 Target</span><b class="txt-red-title">${targetClean}</b>`;
             container.appendChild(tDiv);
 
+            const f1Ids = [];
             descendantsMap.forEach((f1, idx) => {
                 const cy = targetY + (idx - (totalF1 - 1) / 2) * rowGap;
+                const f1Id = 'desc-f1-' + idx;
                 const f1Div = document.createElement('div');
+                f1Div.id = f1Id;
                 f1Div.className = `abs-node ${getBreedClass(f1.breed)}`;
                 f1Div.style.left = col1_X + 'px'; f1Div.style.top = cy + 'px';
                 f1Div.style.width = boxW + 'px'; f1Div.style.height = boxH + 'px';
@@ -1003,15 +1053,16 @@
                 `;
                 f1Div.onclick = () => { document.getElementById('earInput').value = f1.ear; searchPedigree(); };
                 container.appendChild(f1Div);
-
-                lines.push({ x1: col0_X + boxW, y1: targetY + boxH/2, x2: col1_X, y2: cy + boxH/2, midX: col0_X + boxW + colGap/2 });
+                f1Ids.push(f1Id);
             });
 
             requestAnimationFrame(() => {
                 canvas.width = totalWidth; canvas.height = cardHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                lines.forEach(l => { drawExactOrthogonalLine(ctx, l.x1, l.y1, l.x2, l.y2, l.midX); });
+
+                const tElem = document.getElementById('desc-target');
+                f1Ids.forEach(id => renderMagneticLine(ctx, tElem, document.getElementById(id)));
             });
         }
 
