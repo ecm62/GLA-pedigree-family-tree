@@ -6,20 +6,21 @@ import requests
 
 SPREADSHEET_ID = "1uWXfIMrRidpoZTq_BYYTy9ho_0a194pMMSS_EQpJoeA"
 
-# 🌟 分頁 GID 定位
-GID_US_ORIGIN = "1866228473"  # 美國原始種源數據
-GID_MAIN = "1807731938"  # 📊 主生產表 (含 目前年齡、已使用年限)
-GID_BLOOD = "60312190"  # 📊 育種_血統比例(轉)
-GID_SALES = "84920994"  # 全生命週期銷售與血統分析 (若 GID 不同，腳本會自動讀取備份)
+# 🌟 精確鎖定你提供的 4 個分頁 GID
+GID_MAIN = "0"  # 全期整合總表(配娩種)(PY)(轉)
+GID_SALES = "591794579"  # 全生命週期銷售與血統分析(PY)(轉) [圖六專用]
+GID_US_ORIGIN = "1866228473"  # 美國原始種源數據(轉)
+GID_HIERARCHY = "1807731938"  # 📊 育種_家族階層清單(轉) [年齡與年限專用]
 
 
 def fetch_sheet_csv(gid):
   url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
   try:
-    res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=40)
+    res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=45)
     res.encoding = "utf-8-sig"
     if res.status_code == 200:
       return res.text
+    print(f"❌ 抓取 GID {gid} 失敗: HTTP {res.status_code}")
   except Exception as e:
     print(f"❌ 連線 GID {gid} 異常: {e}")
   return ""
@@ -41,7 +42,7 @@ def clean_num(val):
 
 
 def main():
-  print("🚀 [1/4] 抓取《美國原始種源數據》...")
+  print("🚀 [1/4] 抓取《美國原始種源數據 (GID: 1866228473)》...")
   raw_us = fetch_sheet_csv(GID_US_ORIGIN)
   df_us = (
       pd.read_csv(io.StringIO(raw_us), low_memory=False)
@@ -170,7 +171,38 @@ def main():
         },
     }
 
-  print("🚀 [2/4] 抓取《主生產清單 (GID: 1807731938)》...")
+  print("🚀 [2/4] 抓取《育種家族階層清單 (GID: 1807731938)》取得年齡與役期...")
+  raw_hier = fetch_sheet_csv(GID_HIERARCHY)
+  df_hier = (
+      pd.read_csv(io.StringIO(raw_hier), low_memory=False)
+      if raw_hier
+      else pd.DataFrame()
+  )
+  df_hier.columns = [
+      str(c).replace("\n", " ").replace("\r", "").strip()
+      for c in df_hier.columns
+  ]
+
+  age_map = {}
+  used_map = {}
+  if not df_hier.empty:
+    c_h_ear = next(
+        (c for c in df_hier.columns if "耳號" in c or "Ear" in c),
+        df_hier.columns[0],
+    )
+    c_h_age = next(
+        (c for c in df_hier.columns if "年齡" in c), "目前年齡(歲)"
+    )
+    c_h_used = next(
+        (c for c in df_hier.columns if "使用年限" in c), "已使用年限(年)"
+    )
+    for _, hr in df_hier.iterrows():
+      h_ear = clean_val(hr.get(c_h_ear)).upper()
+      if h_ear != "-" and h_ear != "耳號":
+        age_map[h_ear] = clean_num(hr.get(c_h_age))
+        used_map[h_ear] = clean_num(hr.get(c_h_used))
+
+  print("🚀 [3/4] 抓取《全期整合總表 (GID: 0)》...")
   raw_main = fetch_sheet_csv(GID_MAIN)
   df_main = (
       pd.read_csv(io.StringIO(raw_main), low_memory=False)
@@ -198,14 +230,6 @@ def main():
   c_dob = find_c(["DOB出生日期", "DOB", "出生日期"], df_main) or "DOB"
   c_dod = find_c(["DOD/淘汰日期", "淘汰日期", "DOD"], df_main) or "DOD/淘汰日期"
   c_breed = find_c(["Breed", "品種"], df_main) or "Breed"
-  c_age = (
-      find_c(["目前年齡(歲)", "目前年齡", "年齡(歲)", "年齡"], df_main)
-      or "目前年齡(歲)"
-  )
-  c_used = (
-      find_c(["已使用年限(年)", "已使用年限", "使用年限"], df_main)
-      or "已使用年限(年)"
-  )
 
   pedigree_list = []
   death_map = {}
@@ -272,6 +296,23 @@ def main():
       dam_full = us_meta.get("dam_full", "-")
       dam_line = us_meta.get("dam_line", "-")
 
+    current_age = age_map.get(
+        ear_upper,
+        clean_num(
+            r.get(
+                find_c(
+                    ["目前年齡(歲)", "目前年齡", "年齡(歲)", "年齡"], df_main
+                )
+            )
+        ),
+    )
+    used_years = used_map.get(
+        ear_upper,
+        clean_num(
+            r.get(find_c(["已使用年限(年)", "已使用年限", "使用年限"], df_main))
+        ),
+    )
+
     entry = {
         "ear": ear_upper,
         "breed": breed,
@@ -287,8 +328,8 @@ def main():
         "farrow_date": clean_val(r.get(c_fd)),
         "dob": clean_val(r.get(c_dob)),
         "dod": dod,
-        "current_age": clean_num(r.get(c_age)),
-        "used_years": clean_num(r.get(c_used)),
+        "current_age": current_age,
+        "used_years": used_years,
         "total_born": clean_num(
             r.get(find_c(["Total born同胎總生產數", "Total born", "總產"], df_main))
         ),
@@ -444,7 +485,6 @@ def main():
     }
     pedigree_list.append(entry)
 
-  # 補齊美系種公豬
   for boar_ear, bdata in us_dict.items():
     if boar_ear not in known_ears:
       pedigree_list.append({
@@ -461,8 +501,8 @@ def main():
           "farrow_date": "-",
           "dob": "-",
           "dod": "-",
-          "current_age": "-",
-          "used_years": "-",
+          "current_age": age_map.get(boar_ear, "-"),
+          "used_years": used_map.get(boar_ear, "-"),
           "total_born": "-",
           "born_alive": "-",
           "weaning": "-",
@@ -488,26 +528,32 @@ def main():
           "g1_nodes": bdata["g1_nodes"],
       })
 
-  print("🚀 [3/4] 抽取《全生命週期銷售與血統分析》屠體與遺傳缺陷庫...")
+  print(
+      "🚀 [4/4] 抓取《全生命週期銷售與血統分析 (GID: 591794579)》屠體與遺傳缺陷庫..."
+  )
   raw_sales = fetch_sheet_csv(GID_SALES)
+  df_sales = pd.DataFrame()
   if raw_sales:
     df_sales = pd.read_csv(io.StringIO(raw_sales), low_memory=False)
   else:
-    # 嘗試由本地快照抽取
     try:
       df_sales = pd.read_csv(
           "2_PY_族譜家族樹_GLA-pedigree-family_全生命週期銷售與血統分析_PY_轉.csv",
           low_memory=False,
       )
     except:
-      df_sales = pd.DataFrame()
+      pass
 
   carcass_list = []
   if not df_sales.empty:
     for _, r in df_sales.iterrows():
-      sire = str(r["G4-m"]).strip() if pd.notna(r.get("G4-m")) else "-"
-      dam = str(r["G4-f"]).strip() if pd.notna(r.get("G4-f")) else "-"
-      ear = str(r["Ear Notch"]).strip() if pd.notna(r.get("Ear Notch")) else "-"
+      sire = str(r.get("G4-m", "")).strip() if pd.notna(r.get("G4-m")) else "-"
+      dam = str(r.get("G4-f", "")).strip() if pd.notna(r.get("G4-f")) else "-"
+      ear = (
+          str(r.get("Ear Notch", "")).strip()
+          if pd.notna(r.get("Ear Notch"))
+          else "-"
+      )
       if ear == "-" or (sire == "-" and dam == "-"):
         continue
 
@@ -553,8 +599,8 @@ def main():
           "ear": ear,
           "sire": sire,
           "dam": dam,
-          "g3_m": str(r["G3-m"]).strip() if pd.notna(r.get("G3-m")) else "-",
-          "g3_f": str(r["G3-f"]).strip() if pd.notna(r.get("G3-f")) else "-",
+          "g3_m": str(r.get("G3-m", "-")).strip(),
+          "g3_f": str(r.get("G3-f", "-")).strip(),
           "wt": (
               round(float(r["Weight(kg)的AVERAGE"]), 1)
               if pd.notna(r.get("Weight(kg)的AVERAGE"))
@@ -592,7 +638,7 @@ def main():
           ),
           "defects": defects,
       })
-  print(f"   ✓ 成功收錄 {len(carcass_list)} 筆屠體與遺傳缺陷檢定記錄。")
+  print(f"   ✓ 成功收錄 {len(carcass_list)} 筆出欄屠體與遺傳缺陷記錄。")
 
   final_payload = {
       "pedigree": pedigree_list,
@@ -604,7 +650,9 @@ def main():
   with open("data.json", "w", encoding="utf-8") as f:
     json.dump(final_payload, f, ensure_ascii=False)
 
-  print(f"🎉 產出完成！收錄 {len(pedigree_list)} 頭種豬，data.json 輸出成功。")
+  print(
+      f"🎉 產出成功！共收錄 {len(pedigree_list)} 頭種豬，{len(carcass_list)} 筆出欄肉豬。"
+  )
 
 
 if __name__ == "__main__":
