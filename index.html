@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            /* 專業嚴格品種色系：Y 黃、L 藍、D 紅、LY 綠 */
+            /* 專業品種配色：Y 黃、L 藍、D 紅、LY 綠 */
             --breed-y-bg: #fffbeb; --breed-y-border: #d97706; --breed-y-text: #92400e;
             --breed-l-bg: #f0f9ff; --breed-l-border: #0284c7; --breed-l-text: #075985;
             --breed-d-bg: #fff1f2; --breed-d-border: #e11d48; --breed-d-text: #9f1239;
@@ -16,12 +16,10 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 0; padding: 12px; background-color: #f1f5f9; color: #0f172a; line-height: 1.4; }
         
-        /* 系統頂部橫幅 (專業深邃商用質感) */
         .system-header-banner { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0369a1 100%); color: #ffffff; padding: 12px 20px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); margin-bottom: 10px; }
         .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
         .system-header-banner p { margin: 3px 0 0 0; font-size: 11.5px; opacity: 0.9; }
 
-        /* 緊湊搜尋工具列 */
         .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 10px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
         input[type="text"] { padding: 6px 12px; font-size: 13.5px; border: 1.5px solid #cbd5e1; border-radius: 5px; width: 260px; outline: none; font-weight: 700; color: #0f172a; }
         input[type="text"]:focus { border-color: #0284c7; box-shadow: 0 0 0 2.5px rgba(2,132,199,0.15); }
@@ -41,7 +39,6 @@
         .legend-bar { display: flex; gap: 8px; font-size: 11.5px; background: #fff; padding: 6px 14px; border-radius: 5px; border: 1px solid #e2e8f0; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 2px 8px; border-radius: 3px; font-weight: 800; font-size: 11px; }
 
-        /* 品種嚴格配色 */
         .breed-Y  { background-color: var(--breed-y-bg) !important; border: 1.8px solid var(--breed-y-border) !important; }
         .breed-L  { background-color: var(--breed-l-bg) !important; border: 1.8px solid var(--breed-l-border) !important; }
         .breed-D  { background-color: var(--breed-d-bg) !important; border: 1.8px solid var(--breed-d-border) !important; }
@@ -52,39 +49,33 @@
         .badge-dead { background-color: #dc2626; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; margin-left: 3px; }
         .badge-active { background-color: #10b981; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; }
 
-        /* 卡片包裝盒 (緊湊精緻) */
         .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 5px; border: 1px solid #e2e8f0; }
 
-        /* 節點定位母容器 (必須為 absolute) */
+        /* 圖一排版 */
         .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.1s; cursor: pointer; }
         .node-group-container:hover { transform: scale(1.02); z-index: 10; }
-
-        /* 圖一框內純粹血統 */
         .node-box-main { border-radius: 5px; padding: 5px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; text-align: center; }
         .node-target-highlight { border: 2.5px solid #f59e0b !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4) !important; }
-
         .c-sub-label { font-size: 8.5px; font-weight: 800; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
         .c-main-title { color: #dc2626; font-size: 13px; font-weight: 900; line-height: 1.2; word-break: break-word; margin: 1px 0; }
         .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 9.5px; }
-
-        /* 圖一框下純文字無膠囊感 */
         .node-text-sub-block { width: 100%; padding-top: 3px; box-sizing: border-box; text-align: center; }
         .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 8.5px; color: #0f172a; font-weight: 800; white-space: nowrap; line-height: 1.25; }
         .sub-metric-row-2 { display: flex; justify-content: space-around; font-size: 7.8px; color: #64748b; font-weight: 600; margin-top: 1px; white-space: nowrap; line-height: 1.25; }
 
         svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
-        /* 表格精緻化 (高密度商業排版，無多餘浪費空間) */
-        .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 5px; }
+        /* 高密度商業表格 */
+        .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 5px; max-height: 480px; }
         .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: #fff; white-space: nowrap; text-align: center; }
-        .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 6px 8px; border: 1px solid #334155; font-size: 11px; }
+        .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 6px 8px; border: 1px solid #334155; font-size: 11px; position: sticky; top: 0; z-index: 5; }
         .excel-data-table td { padding: 4.5px 8px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 600; }
         .excel-data-table tr:nth-child(even) { background-color: #f8fafc; }
         .excel-data-table tr:hover { background-color: #f1f5f9; }
 
-        /* 圖三蝴蝶樹專用節點樣式 */
+        /* 圖三蝴蝶樹專用樣式 */
         .butterfly-node { position: absolute; border-radius: 5px; padding: 6px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
         .butterfly-node:hover { transform: scale(1.03); z-index: 10; }
 
@@ -104,6 +95,14 @@
         .strain-bar-bg { background-color: #e2e8f0; border-radius: 3px; height: 7px; width: 100%; overflow: hidden; }
         .strain-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
 
+        /* 圖六專屬 KPI 摘要卡 */
+        .kpi-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; }
+        .kpi-card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border-top: 3.5px solid #0284c7; text-align: center; }
+        .kpi-label { font-size: 10.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
+        .kpi-val { font-size: 17px; font-weight: 900; color: #0f172a; }
+        .defect-badge { background-color: #fee2e2; color: #dc2626; border: 1px solid #f87171; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; display: inline-block; margin: 1px; }
+        .defect-none { color: #10b981; font-weight: 700; font-size: 10px; }
+
         #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.92); color: #fff; padding: 7px 16px; border-radius: 20px; font-size: 11.5px; font-weight: 700; display: none; z-index: 99999; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 40px 10px; font-size: 12.5px; font-weight: 600; }
     </style>
@@ -119,7 +118,7 @@
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>耳號檢索 (Ear Tag):</strong></label>
-            <input type="text" id="earInput" placeholder="例如: L1426, Y1456, Y1266, LY3507" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如: D1400, L1426, Y1456, Y1266, LY3507" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" onclick="searchPedigree()">🔍 造冊檢索</button>
         </div>
         <div>
@@ -189,7 +188,7 @@
         </div>
     </div>
 
-    <!-- 🌳 3. 蝴蝶對稱全系譜家族拓撲樹 (正宗對稱蝴蝶型) -->
+    <!-- 🌳 3. 蝴蝶對稱全系譜家族拓撲樹 -->
     <div class="tree-card-wrapper" id="macroTreePanel" style="border: 1.5px solid #0d6efd;">
         <div class="card-header-bar">
             <div>
@@ -204,7 +203,7 @@
         </div>
     </div>
 
-    <!-- 🌱 4. 全血統後代留種追蹤樹 (公母分流、使用年限評估) -->
+    <!-- 🌱 4. 全血統後代留種追蹤樹 -->
     <div class="tree-card-wrapper" id="descendantTreeArea" style="border: 1.5px solid #0284c7;">
         <div class="card-header-bar">
             <div>
@@ -228,10 +227,23 @@
         <div id="bloodContainer"><div class="placeholder-text">請檢索個體以解析該個體之家族品系血緣比例...</div></div>
     </div>
 
+    <!-- 🥩 6. 直系後裔屠體銷售與遺傳缺陷檢定表 (新增第六表) -->
+    <div class="tree-card-wrapper" id="carcassExportCard" style="border: 1.5px solid #d97706;">
+        <div class="card-header-bar">
+            <div>
+                <h3 style="margin:0; font-size:14.5px; color:#d97706; font-weight:800;">🥩 6. Offspring Carcass & Slaughter Performance with Genetic Defect Audit (直系後裔屠體銷售與遺傳缺陷檢定表)</h3>
+                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">直系出欄肉豬性能檢定：平均體重、日增重、出肉率，以及疝氣/隱睪/脫肛/肢蹄等遺傳缺陷監測</p>
+            </div>
+            <div><button class="btn btn-export" onclick="exportHighRes('carcassExportCard', 'GLA_Carcass_Audit')">📸 匯出檢定表 PNG</button></div>
+        </div>
+        <div id="carcassContainer"><div class="placeholder-text">請檢索種公豬或種母豬，系統將自動匯總其直系出欄肉豬屠體表現與遺傳缺陷統計...</div></div>
+    </div>
+
     <script>
         let pedigreeList = [];
         let deathInfoMap = new Map();
         let usIndex = {};
+        let carcassSales = [];
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
 
         function showToast(msg) {
@@ -252,11 +264,12 @@
                 .then(data => {
                     pedigreeList = data.pedigree || [];
                     usIndex = data.us_index || {};
+                    carcassSales = data.carcass_sales || [];
                     deathInfoMap.clear();
                     if (data.death_map) {
                         for (let k in data.death_map) deathInfoMap.set(k.toUpperCase(), data.death_map[k]);
                     }
-                    showToast(`✅ 資料庫載入成功！共收錄 ${pedigreeList.length} 筆資料`);
+                    showToast(`✅ 資料庫載入成功！共收錄 ${pedigreeList.length} 筆種豬，${carcassSales.length} 筆出欄屠體資料`);
                 })
                 .catch(err => {
                     console.error("載入 data.json 失敗:", err);
@@ -320,23 +333,25 @@
                         if (matedSows.length > 0) tableItems = [...matched, ...matedSows];
                     }
 
-                    // 依序執行 5 大項目
+                    // 依序執行 6 大功能模組
                     drawOfficialPedigree(primary);                // 1
                     renderTable(tableItems, query, primary);     // 2
                     drawButterflyTopologyTree(primary);          // 3
                     renderDescendantSplitView(primary);          // 4
                     renderFamilyLineProportion(primary);         // 5
+                    renderCarcassPerformanceAudit(primary);      // 6
                 } else {
                     document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="14" class="placeholder-text">查無 "${query}" 之造冊資料</td></tr>`;
                     document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之官方四代家譜</div>`;
                     document.getElementById('macroBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之蝴蝶拓撲資料</div>`;
                     document.getElementById('descendantContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
                     document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
+                    document.getElementById('carcassContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之屠體檢定資料</div>`;
                 }
             }, 30);
         }
 
-        /* 📌 2. 育種成績與評估資料表 */
+        /* 📌 2. 育種成績總表 */
         function renderTable(items, query, primary) {
             const tbody = document.getElementById('excelTableBody');
             const isMale = primary && primary.sex === 'MALE';
@@ -531,8 +546,6 @@
             svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
 
             // 🦋 軸心座標：中心 X = 632
-            // 左翼 (父系)：L1=440, L2=250, L3=50
-            // 右翼 (母系)：R1=820, R2=1010, R3=1210
             const cCenter = 632;
             const cL1 = 440, cL2 = 250, cL3 = 50;
             const cR1 = 825, cR2 = 1015, cR3 = 1215;
@@ -591,9 +604,7 @@
                 }
             });
 
-            // 連線清單
             const topoLinks = [
-                // 向左連線 (父系側)
                 ['TARGET', 'SIRE', 'left'],
                 ['SIRE', 'SS', 'left'],
                 ['SIRE', 'SD', 'left'],
@@ -601,7 +612,6 @@
                 ['SS', 'SSD', 'left'],
                 ['SD', 'SDS', 'left'],
                 ['SD', 'SDD', 'left'],
-                // 向右連線 (母系側)
                 ['TARGET', 'DAM', 'right'],
                 ['DAM', 'DS', 'right'],
                 ['DAM', 'DD', 'right'],
@@ -629,7 +639,6 @@
                 svgLayer.appendChild(p);
             });
 
-            // 節點渲染 (絕對定位至 #macroBoxesContainer)
             Object.keys(tNodes).forEach(k => {
                 const n = tNodes[k];
                 const card = document.createElement('div');
@@ -653,7 +662,7 @@
             });
         }
 
-        /* 🌱 4. 全血統後代留種追蹤樹 (分流公母雙欄排版、役期評估) */
+        /* 🌱 4. 全血統後代留種追蹤樹 */
         function renderDescendantSplitView(primary) {
             const container = document.getElementById('descendantContainer');
             const targetEar = primary.ear.toUpperCase();
@@ -764,7 +773,7 @@
             container.innerHTML = html;
         }
 
-        /* 🧬 5. 家族品系血統比例分析表 (Family Line Proportion) */
+        /* 🧬 5. 家族品系血統比例分析表 */
         function renderFamilyLineProportion(primary) {
             const container = document.getElementById('bloodContainer');
             
@@ -826,6 +835,117 @@
             });
 
             html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        /* 🥩 6. 直系後裔屠體銷售與遺傳缺陷檢定表 (新增第六表渲染核心) */
+        function renderCarcassPerformanceAudit(primary) {
+            const container = document.getElementById('carcassContainer');
+            const targetEar = primary.ear.toUpperCase();
+
+            // 搜尋直系後代肉豬（無論本體為公或母）
+            const matches = carcassSales.filter(p => p.sire === targetEar || p.dam === targetEar);
+
+            if (matches.length === 0) {
+                container.innerHTML = `<div class="placeholder-text">個體 "${targetEar}" 暫無直系肉豬屠體出欄或屠宰銷售紀錄。</div>`;
+                return;
+            }
+
+            // 計算最頂部 KPI 統計指標
+            let totalWt = 0, countWt = 0;
+            let totalADG1 = 0, countADG1 = 0;
+            let totalADG2 = 0, countADG2 = 0;
+            let totalDR = 0, countDR = 0;
+            let defectPorkers = 0;
+
+            matches.forEach(m => {
+                if (m.wt !== null && !isNaN(m.wt)) { totalWt += m.wt; countWt++; }
+                if (m.adg1 !== null && !isNaN(m.adg1)) { totalADG1 += m.adg1; countADG1++; }
+                if (m.adg2 !== null && !isNaN(m.adg2)) { totalADG2 += m.adg2; countADG2++; }
+                if (m.dr !== null && !isNaN(m.dr)) { totalDR += m.dr; countDR++; }
+                if (m.defects && m.defects.length > 0) defectPorkers++;
+            });
+
+            const avgWt = countWt > 0 ? (totalWt / countWt).toFixed(1) : '-';
+            const avgADG1 = countADG1 > 0 ? (totalADG1 / countADG1).toFixed(0) : '-';
+            const avgADG2 = countADG2 > 0 ? (totalADG2 / countADG2).toFixed(0) : '-';
+            const avgDR = countDR > 0 ? (totalDR / countDR).toFixed(1) + '%' : '-';
+            const defectPct = ((defectPorkers / matches.length) * 100).toFixed(1) + '%';
+
+            let html = `
+                <!-- 頂部 Summary KPI 摘要卡 (做在最上面) -->
+                <div class="kpi-summary-grid">
+                    <div class="kpi-card" style="border-color:#0284c7;">
+                        <div class="kpi-label">出欄肉豬總數</div>
+                        <div class="kpi-val" style="color:#0284c7;">${matches.length} 頭</div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#059669;">
+                        <div class="kpi-label">平均出欄體重 (Weight)</div>
+                        <div class="kpi-val" style="color:#059669;">${avgWt} <small style="font-size:12px;">kg</small></div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#d97706;">
+                        <div class="kpi-label">平均生長 ADG1 / ADG2</div>
+                        <div class="kpi-val" style="color:#d97706;">${avgADG1} / ${avgADG2} <small style="font-size:11px;">g/d</small></div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#6366f1;">
+                        <div class="kpi-label">平均出肉/屠體率</div>
+                        <div class="kpi-val" style="color:#6366f1;">${avgDR}</div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#dc2626;">
+                        <div class="kpi-label">遺傳疾病與不良率</div>
+                        <div class="kpi-val" style="color:#dc2626;">${defectPct} <small style="font-size:11px;">(${defectPorkers}頭)</small></div>
+                    </div>
+                </div>
+
+                <!-- 屠體與遺傳缺陷明細總表 (高密度商業級精緻化排版) -->
+                <div class="data-table-wrapper">
+                    <table class="excel-data-table">
+                        <thead>
+                            <tr>
+                                <th>肉豬耳號 (Porker Ear)</th>
+                                <th>生父 (Sire)</th>
+                                <th>生母 (Dam)</th>
+                                <th>祖代公/母品系名 (G3 Strains)</th>
+                                <th>出生/銷售週次</th>
+                                <th>銷售體重 (kg)</th>
+                                <th>ADG1 (g/d)</th>
+                                <th>ADG2 (g/d)</th>
+                                <th>出肉率 (%)</th>
+                                <th>屠體重 (kg)</th>
+                                <th>🚨 遺傳缺陷與不良性狀 (Defect Audit)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            matches.forEach(m => {
+                let defectHtml = '<span class="defect-none">✔ 正常 (Normal)</span>';
+                if (m.defects && m.defects.length > 0) {
+                    defectHtml = m.defects.map(d => `<span class="defect-badge">${d}</span>`).join(' ');
+                }
+
+                html += `
+                    <tr>
+                        <td><b>${m.ear}</b></td>
+                        <td style="color:#0284c7; font-weight:700;">${m.sire}</td>
+                        <td style="color:#e11d48; font-weight:700;">${m.dam}</td>
+                        <td style="color:#475569;">${m.g3_m} × ${m.g3_f}</td>
+                        <td>${m.b_wk ? 'W'+m.b_wk : '-'} / ${m.s_wk ? 'W'+m.s_wk : '-'}</td>
+                        <td><b style="color:#0f172a;">${m.wt !== null ? m.wt : '-'}</b></td>
+                        <td>${m.adg1 !== null ? m.adg1 : '-'}</td>
+                        <td>${m.adg2 !== null ? m.adg2 : '-'}</td>
+                        <td>${m.dr !== null ? m.dr + '%' : '-'}</td>
+                        <td>${m.ckg !== null ? m.ckg : '-'}</td>
+                        <td>${defectHtml}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
             container.innerHTML = html;
         }
 
