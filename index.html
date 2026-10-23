@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            /* 專業品種色系：Y 黃、L 藍、D 紅、LY 綠 */
+            /* 專業品種配色：Y 黃、L 藍、D 紅、LY 綠 */
             --breed-y-bg: #fffbeb; --breed-y-border: #d97706; --breed-y-text: #92400e;
             --breed-l-bg: #f0f9ff; --breed-l-border: #0284c7; --breed-l-text: #075985;
             --breed-d-bg: #fff1f2; --breed-d-border: #e11d48; --breed-d-text: #9f1239;
@@ -86,14 +86,14 @@
         .butterfly-compact-node { position: absolute; border-radius: 4px; padding: 4px 6px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
         .butterfly-compact-node:hover { transform: scale(1.04); z-index: 10; }
 
-        /* 蝴蝶樹下方：家族品系在場遺傳性能統計卡片 */
+        /* 蝴蝶樹下方：家族品系在場平均遺傳性能統計卡片 */
         .strain-benchmark-bar { margin-top: 10px; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; }
         .benchmark-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 6px; }
         .benchmark-pill { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 10px; display: flex; flex-direction: column; justify-content: space-between; }
         .benchmark-pill-title { font-size: 11px; font-weight: 800; color: #1e3a8a; display: flex; justify-content: space-between; }
         .benchmark-pill-stats { font-size: 9.5px; color: #475569; margin-top: 2px; display: flex; justify-content: space-between; font-weight: 600; }
 
-        /* 圖四後代留種雙欄 */
+        /* 圖四後代留種階層總表 */
         .descendant-dual-cols { display: flex; gap: 14px; width: 100%; }
         .descendant-col-box { flex: 1; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; }
         .desc-col-title { font-size: 13px; font-weight: 800; padding-bottom: 6px; border-bottom: 2px solid; margin-bottom: 8px; display: flex; justify-content: space-between; }
@@ -337,7 +337,7 @@
         let deathInfoMap = new Map();
         let usIndex = {};
         let carcassSales = [];
-        let linePerformanceStats = {}; // 品系平均生產成績快取
+        let linePerformanceStats = {};
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
 
         function showToast(msg) {
@@ -394,6 +394,7 @@
             tbody.innerHTML = html;
         }
 
+        // 🌟 第一道門禁：一般 User 通行密碼
         function verifyGatePass() {
             const p = document.getElementById('userGatePassword').value.trim();
             if (p === 'gla@8888') {
@@ -408,6 +409,7 @@
             }
         }
 
+        // 🌟 第二道隱形小門：點擊小點啟動 Admin 驗證
         function openAdminModal() {
             document.getElementById('adminSecretModal').style.display = 'flex';
             document.getElementById('adminSecretUser').focus();
@@ -417,6 +419,7 @@
             document.getElementById('adminSecretModal').style.display = 'none';
         }
 
+        // 🌟 Admin 驗證邏輯：帳號 admin，密碼更新為 510067
         function verifyAdminMaster() {
             const u = document.getElementById('adminSecretUser').value.trim().toLowerCase();
             const p = document.getElementById('adminSecretPass').value.trim();
@@ -765,75 +768,86 @@
             });
         }
 
-        /* 🌳 蝴蝶對稱全系譜家族拓撲樹 (緊湊微型化版 + 家族在場平均遺傳成績) */
+        /* 🌳 蝴蝶對稱全系譜家族拓撲樹 (黃金比例微型工藝版) */
         function drawButterflyTopologyTree(target) {
             const container = document.getElementById('macroBoxesContainer');
             const svgLayer = document.getElementById('macroSvg');
             const cardArea = document.getElementById('macroScrollArea');
             container.innerHTML = ''; svgLayer.innerHTML = '';
 
-            // 🌟 緊湊化微縮座標 (更精緻、減少多餘空隙)
-            const cardW = 135, cardH = 48;
-            const totalWidth = 980, totalHeight = 500;
+            const cardW = 148, cardH = 54;
+            const totalWidth = 1460, totalHeight = 620;
             cardArea.style.height = totalHeight + 'px';
             container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
             svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
 
-            // 中心點 X = 490
-            const cCenter = 422;
-            const cL1 = 285, cL2 = 150, cL3 = 15;
-            const cR1 = 560, cR2 = 695, cR3 = 830;
-            const midY = totalHeight / 2 - cardH / 2;
+            const Y_G3_0 = 35;
+            const Y_G3_1 = 165;
+            const Y_G3_2 = 380;
+            const Y_G3_3 = 510;
+
+            const Y_G2_UPPER = (Y_G3_0 + Y_G3_1) / 2; // 100px
+            const Y_G2_LOWER = (Y_G3_2 + Y_G3_3) / 2; // 445px
+            const Y_CENTER   = (Y_G2_UPPER + Y_G2_LOWER) / 2; // 272px
+
+            const cCenter = 656; // 🎯 TARGET
+            const cL1 = 460;     // ♂ 生父
+            const cL2 = 240;     // 祖父/祖母
+            const cL3 = 20;      // 曾祖輩
+
+            const cR1 = 852;     // ♀ 生母
+            const cR2 = 1072;    // 外祖父/外祖母
+            const cR3 = 1292;    // 曾外祖輩
 
             const tNodes = {};
             const g1 = target.g1_nodes || {};
 
             tNodes['TARGET'] = {
-                x: cCenter, y: midY, ear: target.ear, breed: target.breed,
+                x: cCenter, y: Y_CENTER, ear: target.ear, breed: target.breed,
                 line: target.g3_sire_line || '-', role: `TARGET (${target.sex==='MALE'?'♂':'♀'})`
             };
 
             // 左翼：父系
             if (target.g3_sire_full && target.g3_sire_full !== '-') {
-                tNodes['SIRE'] = { x: cL1, y: midY, ear: target.g3_sire_full, breed: target.breed, line: target.g3_sire_line, role: "生父 (Sire)" };
+                tNodes['SIRE'] = { x: cL1, y: Y_CENTER, ear: target.g3_sire_full, breed: target.breed, line: target.g3_sire_line, role: "生父 (Sire)" };
             }
             if (target.ss_full && target.ss_full !== '-') {
-                tNodes['SS'] = { x: cL2, y: totalHeight * 0.25 - cardH / 2, ear: target.ss_full, breed: target.breed, line: target.ss_line, role: "祖父 (SS)" };
+                tNodes['SS'] = { x: cL2, y: Y_G2_UPPER, ear: target.ss_full, breed: target.breed, line: target.ss_line, role: "祖父 (SS)" };
             }
             if (target.sd_full && target.sd_full !== '-') {
-                tNodes['SD'] = { x: cL2, y: totalHeight * 0.75 - cardH / 2, ear: target.sd_full, breed: target.breed, line: target.sd_line, role: "祖母 (SD)" };
+                tNodes['SD'] = { x: cL2, y: Y_G2_LOWER, ear: target.sd_full, breed: target.breed, line: target.sd_line, role: "祖母 (SD)" };
             }
             const g1Left = [
-                { k: 'SSS', line: g1.sss, role: "曾祖父", yR: 0.125 },
-                { k: 'SSD', line: g1.ssd, role: "曾祖母", yR: 0.375 },
-                { k: 'SDS', line: g1.sds, role: "曾祖父", yR: 0.625 },
-                { k: 'SDD', line: g1.sdd, role: "曾祖母", yR: 0.875 }
+                { k: 'SSS', line: g1.sss, role: "曾祖父", y: Y_G3_0 },
+                { k: 'SSD', line: g1.ssd, role: "曾祖母", y: Y_G3_1 },
+                { k: 'SDS', line: g1.sds, role: "曾祖父", y: Y_G3_2 },
+                { k: 'SDD', line: g1.sdd, role: "曾祖母", y: Y_G3_3 }
             ];
             g1Left.forEach(g => {
                 if (g.line && g.line !== '-') {
-                    tNodes[g.k] = { x: cL3, y: totalHeight * g.yR - cardH / 2, ear: g.line, breed: target.breed, line: g.line, role: g.role };
+                    tNodes[g.k] = { x: cL3, y: g.y, ear: g.line, breed: target.breed, line: g.line, role: g.role };
                 }
             });
 
             // 右翼：母系
             if (target.g3_dam_full && target.g3_dam_full !== '-') {
-                tNodes['DAM'] = { x: cR1, y: midY, ear: target.g3_dam_full, breed: target.breed, line: target.g3_dam_line, role: "生母 (Dam)" };
+                tNodes['DAM'] = { x: cR1, y: Y_CENTER, ear: target.g3_dam_full, breed: target.breed, line: target.g3_dam_line, role: "生母 (Dam)" };
             }
             if (target.ds_full && target.ds_full !== '-') {
-                tNodes['DS'] = { x: cR2, y: totalHeight * 0.25 - cardH / 2, ear: target.ds_full, breed: target.breed, line: target.ds_line, role: "外祖父 (DS)" };
+                tNodes['DS'] = { x: cR2, y: Y_G2_UPPER, ear: target.ds_full, breed: target.breed, line: target.ds_line, role: "外祖父 (DS)" };
             }
             if (target.dd_full && target.dd_full !== '-') {
-                tNodes['DD'] = { x: cR2, y: totalHeight * 0.75 - cardH / 2, ear: target.dd_full, breed: target.breed, line: target.dd_line, role: "外祖母 (DD)" };
+                tNodes['DD'] = { x: cR2, y: Y_G2_LOWER, ear: target.dd_full, breed: target.breed, line: target.dd_line, role: "外祖母 (DD)" };
             }
             const g1Right = [
-                { k: 'DSS', line: g1.dss, role: "曾外祖父", yR: 0.125 },
-                { k: 'DSD', line: g1.dsd, role: "曾外祖母", yR: 0.375 },
-                { k: 'DDS', line: g1.dds, role: "曾外祖父", yR: 0.625 },
-                { k: 'DDD', line: g1.ddd, role: "曾外祖母", yR: 0.875 }
+                { k: 'DSS', line: g1.dss, role: "曾外祖父", y: Y_G3_0 },
+                { k: 'DSD', line: g1.dsd, role: "曾外祖母", y: Y_G3_1 },
+                { k: 'DDS', line: g1.dds, role: "曾外祖父", y: Y_G3_2 },
+                { k: 'DDD', line: g1.ddd, role: "曾外祖母", y: Y_G3_3 }
             ];
             g1Right.forEach(g => {
                 if (g.line && g.line !== '-') {
-                    tNodes[g.k] = { x: cR3, y: totalHeight * g.yR - cardH / 2, ear: g.line, breed: target.breed, line: g.line, role: g.role };
+                    tNodes[g.k] = { x: cR3, y: g.y, ear: g.line, breed: target.breed, line: g.line, role: g.role };
                 }
             });
 
@@ -865,10 +879,14 @@
                 const midX = x1 + (x2 - x1) / 2;
 
                 const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
+                if (Math.abs(y1 - y2) < 2) {
+                    p.setAttribute('d', `M ${x1} ${y1} H ${x2}`);
+                } else {
+                    p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
+                }
                 p.setAttribute('fill', 'none');
                 p.setAttribute('stroke', dir === 'left' ? '#0284c7' : '#e11d48');
-                p.setAttribute('stroke-width', '1.3');
+                p.setAttribute('stroke-width', '1.4');
                 svgLayer.appendChild(p);
             });
 
@@ -884,11 +902,11 @@
                 card.style.width = cardW + 'px'; card.style.height = cardH + 'px';
 
                 card.innerHTML = `
-                    <div style="font-size:8px; font-weight:800; color:#64748b;">${n.role}</div>
-                    <div style="font-size:11px; font-weight:900; color:#1e3a8a; margin: 1px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    <div style="font-size:8px; font-weight:800; color:#64748b; line-height:1.1;">${n.role}</div>
+                    <div style="font-size:11.5px; font-weight:900; color:#1e3a8a; margin: 1px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                         Line: ${n.line || '-'}
                     </div>
-                    <div style="font-size:9px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
+                    <div style="font-size:9.5px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
                         ${n.ear}
                     </div>
                 `;
@@ -898,7 +916,6 @@
                 container.appendChild(card);
             });
 
-            // 🌟 渲染正下方：雙翼家族在場平均遺傳性能檢定列
             renderStrainBenchmark(Array.from(uniqueActiveLines));
         }
 
