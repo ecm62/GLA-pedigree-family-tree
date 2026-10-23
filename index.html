@@ -46,15 +46,15 @@
         .legend-bar { display: flex; gap: 8px; font-size: 11.5px; background: #fff; padding: 6px 14px; border-radius: 5px; border: 1px solid #e2e8f0; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 2px 8px; border-radius: 3px; font-weight: 800; font-size: 11px; }
 
-        .breed-Y  { background-color: var(--breed-y-bg) !important; border: 1.8px solid var(--breed-y-border) !important; }
-        .breed-L  { background-color: var(--breed-l-bg) !important; border: 1.8px solid var(--breed-l-border) !important; }
-        .breed-D  { background-color: var(--breed-d-bg) !important; border: 1.8px solid var(--breed-d-border) !important; }
-        .breed-LY { background-color: var(--breed-ly-bg) !important; border: 1.8px solid var(--breed-ly-border) !important; }
-        .breed-DEFAULT { background-color: #ffffff !important; border: 1.8px solid #94a3b8 !important; }
+        .breed-Y  { background-color: var(--breed-y-bg) !important; border: 1.5px solid var(--breed-y-border) !important; }
+        .breed-L  { background-color: var(--breed-l-bg) !important; border: 1.5px solid var(--breed-l-border) !important; }
+        .breed-D  { background-color: var(--breed-d-bg) !important; border: 1.5px solid var(--breed-d-border) !important; }
+        .breed-LY { background-color: var(--breed-ly-bg) !important; border: 1.5px solid var(--breed-ly-border) !important; }
+        .breed-DEFAULT { background-color: #ffffff !important; border: 1.5px solid #94a3b8 !important; }
 
-        .node-dead { border: 2px dashed var(--dead-border) !important; background-color: var(--dead-bg) !important; }
-        .badge-dead { background-color: #dc2626; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; margin-left: 3px; }
-        .badge-active { background-color: #10b981; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; }
+        .node-dead { border: 1.8px dashed var(--dead-border) !important; background-color: var(--dead-bg) !important; }
+        .badge-dead { background-color: #dc2626; color: #fff; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 2px; margin-left: 2px; }
+        .badge-active { background-color: #10b981; color: #fff; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 2px; }
 
         .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -63,30 +63,44 @@
         /* 圖一排版 */
         .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.1s; cursor: pointer; }
         .node-group-container:hover { transform: scale(1.02); z-index: 10; }
-        .node-box-main { border-radius: 5px; padding: 5px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; text-align: center; }
-        .node-target-highlight { border: 2.5px solid #f59e0b !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4) !important; }
-        .c-sub-label { font-size: 8.5px; font-weight: 800; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
-        .c-main-title { color: #dc2626; font-size: 13px; font-weight: 900; line-height: 1.2; word-break: break-word; margin: 1px 0; }
-        .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 9.5px; }
-        .node-text-sub-block { width: 100%; padding-top: 3px; box-sizing: border-box; text-align: center; }
-        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 8.5px; color: #0f172a; font-weight: 800; white-space: nowrap; line-height: 1.25; }
-        .sub-metric-row-2 { display: flex; justify-content: space-around; font-size: 7.8px; color: #64748b; font-weight: 600; margin-top: 1px; white-space: nowrap; line-height: 1.25; }
+        .node-box-main { border-radius: 4px; padding: 4px 6px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.04); width: 100%; text-align: center; }
+        .node-target-highlight { border: 2.2px solid #f59e0b !important; box-shadow: 0 0 8px rgba(245, 158, 11, 0.35) !important; }
+        .c-sub-label { font-size: 8px; font-weight: 800; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
+        .c-main-title { color: #dc2626; font-size: 12px; font-weight: 900; line-height: 1.15; word-break: break-word; margin: 1px 0; }
+        .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 9px; }
+        .node-text-sub-block { width: 100%; padding-top: 2px; box-sizing: border-box; text-align: center; }
+        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 8px; color: #0f172a; font-weight: 800; white-space: nowrap; line-height: 1.2; }
+        .sub-metric-row-2 { display: flex; justify-content: space-around; font-size: 7.5px; color: #64748b; font-weight: 600; margin-top: 1px; white-space: nowrap; line-height: 1.2; }
 
         svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
         /* 商業表格樣式 */
         .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 5px; max-height: 480px; }
-        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: #fff; white-space: nowrap; text-align: center; }
-        .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 6px 8px; border: 1px solid #334155; font-size: 11px; position: sticky; top: 0; z-index: 5; }
-        .excel-data-table td { padding: 4.5px 8px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 600; }
+        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11px; background-color: #fff; white-space: nowrap; text-align: center; }
+        .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 5px 6px; border: 1px solid #334155; font-size: 10.5px; position: sticky; top: 0; z-index: 5; }
+        .excel-data-table td { padding: 4px 6px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 600; }
         .excel-data-table tr:nth-child(even) { background-color: #f8fafc; }
         .excel-data-table tr:hover { background-color: #f1f5f9; }
 
-        /* 圖三蝴蝶樹節點 */
-        .butterfly-node { position: absolute; border-radius: 5px; padding: 6px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
-        .butterfly-node:hover { transform: scale(1.03); z-index: 10; }
+        /* 🌟 精緻微型蝴蝶拓撲樹節點 (緊湊化工藝) */
+        .butterfly-compact-node { position: absolute; border-radius: 4px; padding: 4px 6px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
+        .butterfly-compact-node:hover { transform: scale(1.04); z-index: 10; }
 
-        /* 圖五血統比例進度條卡片 */
+        /* 蝴蝶樹下方：家族品系在場遺傳性能統計卡片 */
+        .strain-benchmark-bar { margin-top: 10px; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .benchmark-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 6px; }
+        .benchmark-pill { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 10px; display: flex; flex-direction: column; justify-content: space-between; }
+        .benchmark-pill-title { font-size: 11px; font-weight: 800; color: #1e3a8a; display: flex; justify-content: space-between; }
+        .benchmark-pill-stats { font-size: 9.5px; color: #475569; margin-top: 2px; display: flex; justify-content: space-between; font-weight: 600; }
+
+        /* 圖四後代留種雙欄 */
+        .descendant-dual-cols { display: flex; gap: 14px; width: 100%; }
+        .descendant-col-box { flex: 1; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; }
+        .desc-col-title { font-size: 13px; font-weight: 800; padding-bottom: 6px; border-bottom: 2px solid; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .desc-card { border-radius: 5px; padding: 8px 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.1s; }
+        .desc-card:hover { transform: translateX(2px); }
+
+        /* 圖五血統比例卡片 */
         .strain-overview-bar { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
         .strain-parent-card { flex: 1; min-width: 240px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .strain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
@@ -95,7 +109,7 @@
         .strain-bar-bg { background-color: #e2e8f0; border-radius: 3px; height: 7px; width: 100%; overflow: hidden; }
         .strain-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
 
-        /* 圖六專屬 KPI 摘要卡 */
+        /* 圖六 KPI 摘要卡 */
         .kpi-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; }
         .kpi-card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border-top: 3.5px solid #0284c7; text-align: center; }
         .kpi-label { font-size: 10.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
@@ -112,7 +126,7 @@
         .modal-desc-en { font-size: 11px; color: #64748b; line-height: 1.4; margin-bottom: 16px; font-style: italic; }
 
         #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.92); color: #fff; padding: 7px 16px; border-radius: 20px; font-size: 11.5px; font-weight: 700; display: none; z-index: 99999; }
-        .placeholder-text { text-align: center; color: #94a3b8; padding: 40px 10px; font-size: 12.5px; font-weight: 600; }
+        .placeholder-text { text-align: center; color: #94a3b8; padding: 30px 10px; font-size: 12px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -181,12 +195,12 @@
     <div class="tree-card-wrapper" id="certExportCard" style="border: 1.5px solid #0284c7;">
         <div class="card-header-bar">
             <div>
-                <h2 style="margin:0; font-size:15px; color:#0284c7; font-weight:900;">Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
-                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (圖框內純淨血統名冊，圖框下方文字展示 MLI/SPI/役期指標)</p>
+                <h2 style="margin:0; font-size:14.5px; color:#0284c7; font-weight:900;">Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
+                <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (圖框內純淨血統名冊，圖框下方文字展示 MLI/SPI/役期指標)</p>
             </div>
             <div><button class="btn btn-export" onclick="exportFullPage('certScrollArea', 'GLA_Official_Certificate')">📸 整頁存檔 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 780px;">
+        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 760px;">
             <svg class="orthogonal-svg" id="certSvg"></svg>
             <div id="certBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請在上方輸入耳號啟動四代造冊檢索...</div></div>
         </div>
@@ -195,7 +209,7 @@
     <!-- 📌 育種成績與評估資料表 (User/Admin 開放) -->
     <div class="tree-card-wrapper" id="tableExportCard">
         <div class="card-header-bar">
-            <div style="font-size:14.5px; color:#0f172a; font-weight:800;" id="cardTitle">Breeding Performance & Index Data (育種成績與評估總表)</div>
+            <div style="font-size:14px; color:#0f172a; font-weight:800;" id="cardTitle">Breeding Performance & Index Data (育種成績與評估總表)</div>
             <div><button class="btn btn-export" onclick="exportFullPage('tableWrapper', 'GLA_Breeding_Table')">📸 整頁存檔 PNG</button></div>
         </div>
         <div class="data-table-wrapper" id="tableWrapper">
@@ -225,29 +239,39 @@
         </div>
     </div>
 
-    <!-- 🌳 蝴蝶對稱全系譜家族拓撲樹 (User/Admin 開放) -->
+    <!-- 🌳 蝴蝶對稱全系譜家族拓撲樹 (緊湊微型化版，附帶下方家族品系平均成績) -->
     <div class="tree-card-wrapper" id="macroTreePanel" style="border: 1.5px solid #0d6efd;">
         <div class="card-header-bar">
             <div>
-                <h3 style="margin:0; font-size:14.5px; color:#0d6efd; font-weight:800;">Bilateral Butterfly Lineage Topology Tree (蝴蝶對稱全系譜家族拓撲樹)</h3>
-                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">左翼：父系家族品系完整展開 (Sire Lines) ⟵ 🎯 本體 ⟶ 右翼：母系家族品系完整展開 (Dam Lines)</p>
+                <h3 style="margin:0; font-size:14px; color:#0d6efd; font-weight:800;">Bilateral Butterfly Lineage Topology Tree (蝴蝶對稱全系譜家族拓撲樹)</h3>
+                <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">左翼：父系家族品系完整展開 (Sire Lines) ⟵ 🎯 本體 ⟶ 右翼：母系家族品系完整展開 (Dam Lines)</p>
             </div>
-            <div><button class="btn btn-export" onclick="exportFullPage('macroScrollArea', 'GLA_Butterfly_Topology')">📸 整頁存檔 PNG</button></div>
+            <div><button class="btn btn-export" onclick="exportFullPage('macroExportSection', 'GLA_Butterfly_Topology')">📸 整頁存檔 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="macroScrollArea" style="min-height: 680px;">
-            <svg class="orthogonal-svg" id="macroSvg"></svg>
-            <div id="macroBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請檢索個體以展開蝴蝶型雙向全系譜家族樹...</div></div>
+        <div id="macroExportSection">
+            <div class="dynamic-scroll-area" id="macroScrollArea" style="min-height: 520px;">
+                <svg class="orthogonal-svg" id="macroSvg"></svg>
+                <div id="macroBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請檢索個體以展開蝴蝶型雙向全系譜家族樹...</div></div>
+            </div>
+            <!-- 🌟 蝴蝶樹正下方：家族品系在場平均遺傳性能檢定列 -->
+            <div class="strain-benchmark-bar" id="strainBenchmarkSection" style="display:none;">
+                <div style="font-size:11px; font-weight:800; color:#1e293b; display:flex; justify-content:space-between;">
+                    <span>📊 雙翼家族品系在場平均遺傳性能檢定列 (Ancestral Strain Herd Performance Benchmarks)</span>
+                    <span style="font-size:10px; color:#64748b;">依本場全期分娩產仔紀錄即時匯總</span>
+                </div>
+                <div class="benchmark-grid" id="benchmarkGridContainer"></div>
+            </div>
         </div>
     </div>
 
     <!-- ==================== 隱密區塊：完全無提示，只有 Admin 輸入正確密碼才無縫顯示 ==================== -->
     <div id="adminProtectedSection" style="display:none;">
-        <!-- 🌱 全血統後代留種追蹤樹狀階層總表 -->
+        <!-- 🌱 全血統後代留種追蹤：配種母本與在役留種子代生產效能階層總表 -->
         <div class="tree-card-wrapper" id="descendantTreeArea" style="border: 1.5px solid #0284c7;">
             <div class="card-header-bar">
                 <div>
-                    <h3 style="margin:0; font-size:14.5px; color:#0284c7; font-weight:800;">Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</h3>
-                    <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">配種母本與在役留種子代 (F1) 生產效能階層總表：追蹤在場母本表現與女兒在役胎次、活仔數、SPI 評估</p>
+                    <h3 style="margin:0; font-size:14px; color:#0284c7; font-weight:800;">Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</h3>
+                    <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">配種母本與在役留種子代 (F1) 生產效能階層總表：追蹤在場母本表現與女兒在役胎次、活仔數、SPI 評估</p>
                 </div>
                 <div><button class="btn btn-export" onclick="exportFullPage('descendantTableWrapper', 'GLA_Descendant_Working_Status')">📸 整頁存檔 PNG</button></div>
             </div>
@@ -258,8 +282,8 @@
         <div class="tree-card-wrapper" id="bloodExportCard" style="border: 1.5px solid #10b981;">
             <div class="card-header-bar">
                 <div>
-                    <h3 style="margin:0; font-size:14.5px; color:#059669; font-weight:800;">Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
-                    <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">依據父系家族與母系家族溯源解構，呈現各品系之純度佔比，倒推性能遺傳歸屬</p>
+                    <h3 style="margin:0; font-size:14px; color:#059669; font-weight:800;">Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
+                    <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">依據父系家族與母系家族溯源解構，呈現各品系之純度佔比，倒推性能遺傳歸屬</p>
                 </div>
                 <div><button class="btn btn-export" onclick="exportFullPage('bloodContainer', 'GLA_Family_Line_Proportion')">📸 整頁存檔 PNG</button></div>
             </div>
@@ -270,8 +294,8 @@
         <div class="tree-card-wrapper" id="carcassExportCard" style="border: 1.5px solid #d97706;">
             <div class="card-header-bar">
                 <div>
-                    <h3 style="margin:0; font-size:14.5px; color:#d97706; font-weight:800;">Offspring Carcass & Slaughter Performance with Genetic Defect Audit (直系後裔屠體銷售與遺傳缺陷檢定表)</h3>
-                    <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">直系出欄肉豬性能檢定：平均體重、日增重、出肉率，以及疝氣/隱睪/脫肛/肢蹄等遺傳缺陷監測</p>
+                    <h3 style="margin:0; font-size:14px; color:#d97706; font-weight:800;">Offspring Carcass & Slaughter Performance with Genetic Defect Audit (直系後裔屠體銷售與遺傳缺陷檢定表)</h3>
+                    <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">直系出欄肉豬性能檢定：平均體重、日增重、出肉率，以及疝氣/隱睪/脫肛/肢蹄等遺傳缺陷監測</p>
                 </div>
                 <div><button class="btn btn-export" onclick="exportFullPage('carcassTableWrapper', 'GLA_Carcass_Audit')">📸 整頁存檔 PNG</button></div>
             </div>
@@ -281,7 +305,7 @@
         <!-- 🛡️ 管理者專屬稽核日誌 -->
         <div class="tree-card-wrapper" id="auditCard" style="border: 1.5px solid #64748b; background-color: #f8fafc;">
             <div class="card-header-bar">
-                <div style="font-size:13px; font-weight:800; color:#334155;">System Access & Search Audit Trail (系統存取與搜尋稽核日誌)</div>
+                <div style="font-size:12.5px; font-weight:800; color:#334155;">System Access & Search Audit Trail (系統存取與搜尋稽核日誌)</div>
                 <button class="btn btn-export" onclick="exportFullPage('auditTableWrapper', 'GLA_Audit_Log')">📸 匯出日誌</button>
             </div>
             <div class="data-table-wrapper" id="auditTableWrapper" style="max-height: 200px;">
@@ -313,6 +337,7 @@
         let deathInfoMap = new Map();
         let usIndex = {};
         let carcassSales = [];
+        let linePerformanceStats = {}; // 品系平均生產成績快取
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
 
         function showToast(msg) {
@@ -369,7 +394,6 @@
             tbody.innerHTML = html;
         }
 
-        // 🌟 第一道門禁：一般 User 通行密碼
         function verifyGatePass() {
             const p = document.getElementById('userGatePassword').value.trim();
             if (p === 'gla@8888') {
@@ -384,7 +408,6 @@
             }
         }
 
-        // 🌟 第二道隱形小門：點擊小點啟動 Admin 驗證
         function openAdminModal() {
             document.getElementById('adminSecretModal').style.display = 'flex';
             document.getElementById('adminSecretUser').focus();
@@ -394,7 +417,6 @@
             document.getElementById('adminSecretModal').style.display = 'none';
         }
 
-        // 🌟 Admin 驗證邏輯：帳號 admin，密碼更新為 510067
         function verifyAdminMaster() {
             const u = document.getElementById('adminSecretUser').value.trim().toLowerCase();
             const p = document.getElementById('adminSecretPass').value.trim();
@@ -415,6 +437,38 @@
                 closeAdminModal();
                 logAudit('ADMIN_MASTER_AUTH', 'Admin 密碼錯誤');
             }
+        }
+
+        // 🌟 自動預先統計各家族品系在全場的平均成績
+        function computeLinePerformanceStats() {
+            linePerformanceStats = {};
+            pedigreeList.forEach(item => {
+                const lines = new Set();
+                if (item.g3_sire_line && item.g3_sire_line !== '-') lines.add(item.g3_sire_line);
+                if (item.g3_dam_line && item.g3_dam_line !== '-') lines.add(item.g3_dam_line);
+
+                const nba = parseFloat(item.born_alive);
+                const tnb = parseFloat(item.total_born);
+                const wean = parseFloat(item.weaning);
+                const spi = parseFloat(item.spi);
+                const mli = parseFloat(item.mli);
+
+                lines.forEach(l => {
+                    if (!linePerformanceStats[l]) linePerformanceStats[l] = { nba: [], tnb: [], wean: [], spi: [], mli: [], count: 0 };
+                    linePerformanceStats[l].count++;
+                    if (!isNaN(nba)) linePerformanceStats[l].nba.push(nba);
+                    if (!isNaN(tnb)) linePerformanceStats[l].tnb.push(tnb);
+                    if (!isNaN(wean)) linePerformanceStats[l].wean.push(wean);
+                    if (!isNaN(spi)) linePerformanceStats[l].spi.push(spi);
+                    if (!isNaN(mli)) linePerformanceStats[l].mli.push(mli);
+                });
+            });
+        }
+
+        function getAvg(arr) {
+            if (!arr || arr.length === 0) return '-';
+            const sum = arr.reduce((a, b) => a + b, 0);
+            return (sum / arr.length).toFixed(1);
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -440,6 +494,7 @@
                     if (data.death_map) {
                         for (let k in data.death_map) deathInfoMap.set(k.toUpperCase(), data.death_map[k]);
                     }
+                    computeLinePerformanceStats();
                     logAudit('INIT_LOAD', `載入數據成功 (${pedigreeList.length}筆)`);
                 })
                 .catch(err => {
@@ -509,12 +564,10 @@
                         if (matedSows.length > 0) tableItems = [...matched, ...matedSows];
                     }
 
-                    // 基礎模組 (User 可視)
                     drawOfficialPedigree(primary);
                     renderTable(tableItems, query, primary);
                     drawButterflyTopologyTree(primary);
 
-                    // 進階模組 (Admin 登入才算)
                     if (isAdminUnlocked) {
                         renderDescendantSplitView(primary);
                         renderFamilyLineProportion(primary);
@@ -526,6 +579,7 @@
                     document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="14" class="placeholder-text">查無 "${query}" 之造冊資料</td></tr>`;
                     document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之官方四代家譜</div>`;
                     document.getElementById('macroBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之蝴蝶拓撲資料</div>`;
+                    document.getElementById('strainBenchmarkSection').style.display = 'none';
                     if (isAdminUnlocked) {
                         document.getElementById('descendantContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
                         document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
@@ -574,16 +628,16 @@
             const scrollArea = document.getElementById('certScrollArea');
             container.innerHTML = ''; svgLayer.innerHTML = '';
 
-            const cardW = 205, boxMainH = 54, textSubH = 34;
+            const cardW = 195, boxMainH = 50, textSubH = 32;
             const cardTotalH = boxMainH + textSubH;
-            const colGap = 50, totalHeight = 780;
-            const totalWidth = (cardW * 4) + (colGap * 3) + 50;
+            const colGap = 45, totalHeight = 760;
+            const totalWidth = (cardW * 4) + (colGap * 3) + 40;
 
             scrollArea.style.height = totalHeight + 'px';
             container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
             svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
 
-            const colX = [20, 20 + cardW + colGap, 20 + (cardW + colGap) * 2, 20 + (cardW + colGap) * 3];
+            const colX = [15, 15 + cardW + colGap, 15 + (cardW + colGap) * 2, 15 + (cardW + colGap) * 3];
             const nodes = {};
 
             const isDead = deathInfoMap.has(target.ear);
@@ -662,7 +716,7 @@
                 p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
                 p.setAttribute('fill', 'none');
                 p.setAttribute('stroke', '#64748b');
-                p.setAttribute('stroke-width', '1.6');
+                p.setAttribute('stroke-width', '1.4');
                 svgLayer.appendChild(p);
             });
 
@@ -711,22 +765,24 @@
             });
         }
 
-        /* 🌳 蝴蝶對稱全系譜家族拓撲樹 */
+        /* 🌳 蝴蝶對稱全系譜家族拓撲樹 (緊湊微型化版 + 家族在場平均遺傳成績) */
         function drawButterflyTopologyTree(target) {
             const container = document.getElementById('macroBoxesContainer');
             const svgLayer = document.getElementById('macroSvg');
             const cardArea = document.getElementById('macroScrollArea');
             container.innerHTML = ''; svgLayer.innerHTML = '';
 
-            const cardW = 155, cardH = 58;
-            const totalWidth = 1420, totalHeight = 660;
+            // 🌟 緊湊化微縮座標 (更精緻、減少多餘空隙)
+            const cardW = 135, cardH = 48;
+            const totalWidth = 980, totalHeight = 500;
             cardArea.style.height = totalHeight + 'px';
             container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
             svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
 
-            const cCenter = 632;
-            const cL1 = 440, cL2 = 250, cL3 = 50;
-            const cR1 = 825, cR2 = 1015, cR3 = 1215;
+            // 中心點 X = 490
+            const cCenter = 422;
+            const cL1 = 285, cL2 = 150, cL3 = 15;
+            const cR1 = 560, cR2 = 695, cR3 = 830;
             const midY = totalHeight / 2 - cardH / 2;
 
             const tNodes = {};
@@ -812,23 +868,27 @@
                 p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
                 p.setAttribute('fill', 'none');
                 p.setAttribute('stroke', dir === 'left' ? '#0284c7' : '#e11d48');
-                p.setAttribute('stroke-width', '1.8');
+                p.setAttribute('stroke-width', '1.3');
                 svgLayer.appendChild(p);
             });
 
+            const uniqueActiveLines = new Set();
+
             Object.keys(tNodes).forEach(k => {
                 const n = tNodes[k];
+                if (n.line && n.line !== '-') uniqueActiveLines.add(n.line);
+
                 const card = document.createElement('div');
-                card.className = `butterfly-node ${getBreedClass(n.breed)} ${k === 'TARGET' ? 'node-target-highlight' : ''}`;
+                card.className = `butterfly-compact-node ${getBreedClass(n.breed)} ${k === 'TARGET' ? 'node-target-highlight' : ''}`;
                 card.style.left = n.x + 'px'; card.style.top = n.y + 'px';
                 card.style.width = cardW + 'px'; card.style.height = cardH + 'px';
 
                 card.innerHTML = `
-                    <div style="font-size:8.5px; font-weight:800; color:#64748b;">${n.role}</div>
-                    <div style="font-size:12px; font-weight:900; color:#1e3a8a; margin: 1px 0;">
+                    <div style="font-size:8px; font-weight:800; color:#64748b;">${n.role}</div>
+                    <div style="font-size:11px; font-weight:900; color:#1e3a8a; margin: 1px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                         Line: ${n.line || '-'}
                     </div>
-                    <div style="font-size:9.5px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
+                    <div style="font-size:9px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
                         ${n.ear}
                     </div>
                 `;
@@ -837,6 +897,47 @@
                 }
                 container.appendChild(card);
             });
+
+            // 🌟 渲染正下方：雙翼家族在場平均遺傳性能檢定列
+            renderStrainBenchmark(Array.from(uniqueActiveLines));
+        }
+
+        /* 渲染家族在場平均遺傳表現卡 */
+        function renderStrainBenchmark(activeLines) {
+            const benchSection = document.getElementById('strainBenchmarkSection');
+            const benchContainer = document.getElementById('benchmarkGridContainer');
+            if (activeLines.length === 0) {
+                benchSection.style.display = 'none';
+                return;
+            }
+
+            let html = '';
+            activeLines.forEach(lineName => {
+                const st = linePerformanceStats[lineName];
+                if (st && st.count > 0) {
+                    html += `
+                        <div class="benchmark-pill">
+                            <div class="benchmark-pill-title">
+                                <span>品系: <b>${lineName}</b></span>
+                                <span style="color:#0284c7;">在場: ${st.count} 胎次</span>
+                            </div>
+                            <div class="benchmark-pill-stats">
+                                <span>均活: <b style="color:#059669;">${getAvg(st.nba)}</b></span>
+                                <span>總產: <b>${getAvg(st.tnb)}</b></span>
+                                <span>離乳: <b>${getAvg(st.wean)}</b></span>
+                                <span>SPI: <b style="color:#d97706;">${getAvg(st.spi)}</b></span>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (html) {
+                benchContainer.innerHTML = html;
+                benchSection.style.display = 'block';
+            } else {
+                benchSection.style.display = 'none';
+            }
         }
 
         /* 🌱 全血統後代留種追蹤：公豬配偶與在役留種後代生產效能階層總表 (Admin 專屬) */
@@ -845,7 +946,6 @@
             const targetEar = primary.ear.toUpperCase();
             const isMale = primary.sex === 'MALE';
 
-            // 1. 抓出所有「配種母豬」以及該胎次產仔數據 (當胎總產、活胎、離乳)
             let matedPairs = [];
             if (isMale) {
                 matedPairs = pedigreeList.filter(it => it.mate && it.mate.includes(targetEar));
@@ -853,7 +953,6 @@
                 matedPairs = pedigreeList.filter(it => it.ear === targetEar && it.mate && it.mate !== '-');
             }
 
-            // 2. 抓出該公/母豬生下來、且「已經留種建檔並進入配種/生產」的直系 F1 代次母豬
             let f1Sows = [];
             if (isMale) {
                 f1Sows = pedigreeList.filter(it => it.g5_sire === targetEar || (it.g3_sire_full && it.g3_sire_full.includes(targetEar)));
