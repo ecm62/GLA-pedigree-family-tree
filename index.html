@@ -7,9 +7,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            /* 嚴格品種配色規範：Y 黃、L 藍、D 紅、LY 綠 */
-            --breed-l-bg: #e0f2fe; --breed-l-border: #0284c7;
+            /* 嚴格品種配色：Y 粉黃、L 粉藍、D 粉紅、LY 粉綠 */
             --breed-y-bg: #fef3c7; --breed-y-border: #d97706;
+            --breed-l-bg: #e0f2fe; --breed-l-border: #0284c7;
             --breed-d-bg: #ffe4e6; --breed-d-border: #e11d48;
             --breed-ly-bg: #d1fae5; --breed-ly-border: #059669;
             --dead-border: #dc2626; --dead-bg: #fff1f2;
@@ -31,17 +31,16 @@
         .btn-breed { background-color: #f1f5f9; color: #64748b; padding: 6px 13px; font-size: 12.5px; border: 1.5px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-weight: 700; }
         .btn-breed.active { box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-color: #0f172a; }
         .btn-breed-all.active { background-color: #334155 !important; color: white !important; }
-        .btn-breed-ly.active  { background-color: #059669 !important; color: white !important; }
         .btn-breed-y.active   { background-color: #d97706 !important; color: white !important; }
         .btn-breed-l.active   { background-color: #0284c7 !important; color: white !important; }
         .btn-breed-d.active   { background-color: #e11d48 !important; color: white !important; }
+        .btn-breed-ly.active  { background-color: #059669 !important; color: white !important; }
 
         .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 16px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
         .color-badge { padding: 3px 9px; border-radius: 4px; font-weight: 800; font-size: 11.5px; }
 
-        /* 嚴格品種配色渲染 */
-        .breed-L  { background-color: var(--breed-l-bg) !important; border: 2.2px solid var(--breed-l-border) !important; }
         .breed-Y  { background-color: var(--breed-y-bg) !important; border: 2.2px solid var(--breed-y-border) !important; }
+        .breed-L  { background-color: var(--breed-l-bg) !important; border: 2.2px solid var(--breed-l-border) !important; }
         .breed-D  { background-color: var(--breed-d-bg) !important; border: 2.2px solid var(--breed-d-border) !important; }
         .breed-LY { background-color: var(--breed-ly-bg) !important; border: 2.2px solid var(--breed-ly-border) !important; }
         .breed-DEFAULT { background-color: #ffffff !important; border: 2.2px solid #94a3b8 !important; }
@@ -54,34 +53,40 @@
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
 
-        /* 節點卡片佈局：擴展高度 (88px) 容納兩行數值指標 */
-        .abs-node { position: absolute; border-radius: 7px; padding: 6px 9px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.06); z-index: 2; transition: transform 0.12s; cursor: pointer; }
-        .abs-node:hover { transform: scale(1.02); z-index: 10; }
+        /* 🌟 核心排版：卡片（框內）與白色指標盒（框外下方）徹底分離 */
+        .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.12s; cursor: pointer; }
+        .node-group-container:hover { transform: scale(1.02); z-index: 10; }
+
+        /* 1. 框內主卡片：僅保留耳號、父母代號、品系名 (無白底) */
+        .node-box-main { border-radius: 6px; padding: 7px 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.06); width: 100%; text-align: center; }
         .node-target-highlight { border: 3px solid #f59e0b !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.45) !important; }
-        
+
         .c-sub-label { font-size: 9px; font-weight: 800; color: #475569; display: flex; justify-content: space-between; }
-        
-        /* 🌟 紅色全名放大，支援自動折成兩行，絕不破框 */
-        .c-main-title { color: #dc2626; font-size: 12.5px; font-weight: 900; line-height: 1.25; word-break: break-word; margin: 1px 0; }
-        
-        /* 🌟 LINE 無底色，完全透明繼承卡片原色 */
+        .c-main-title { color: #dc2626; font-size: 13.5px; font-weight: 900; line-height: 1.25; word-break: break-word; margin: 2px 0; }
         .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 10px; display: inline-block; }
 
-        /* 🌟 指標列下移獨立，不切框 */
-        .metric-block-bottom { margin-top: 3px; border-top: 1px dashed rgba(0,0,0,0.12); padding-top: 2px; }
-        .c-metric-row-1 { display: flex; justify-content: space-between; font-size: 8.5px; white-space: nowrap; }
-        .c-metric-row-2 { display: flex; justify-content: space-between; font-size: 8px; color: #475569; margin-top: 1px; white-space: nowrap; }
+        /* 2. 框外下方純白指標膠囊 (底色為純白，徹底脫離邊框) */
+        .node-box-sub-capsule { background-color: #ffffff !important; border: 1px solid #cbd5e1; border-top: none; border-radius: 0 0 6px 6px; padding: 3px 6px; width: 92%; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 8.5px; color: #0f172a; font-weight: 700; white-space: nowrap; }
+        .sub-metric-row-2 { display: flex; justify-content: space-between; font-size: 8px; color: #64748b; font-weight: 600; margin-top: 1px; border-top: 1px dotted #e2e8f0; padding-top: 1px; white-space: nowrap; }
 
         svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
-        /* 資料總表 */
+        /* 表格樣式 */
         .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 6px; }
         .excel-data-table { width: 100%; border-collapse: collapse; font-size: 12px; background-color: #fff; white-space: nowrap; text-align: center; }
         .excel-data-table th { background-color: #1e293b; color: #ffffff; font-weight: 700; padding: 8px 10px; border: 1px solid #334155; }
         .excel-data-table td { padding: 6px 9px; border: 1px solid #e2e8f0; color: #000; font-weight: 600; }
 
+        /* 血統比例進度條卡片 */
+        .blood-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 12px; }
+        .blood-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .blood-name { font-weight: 800; font-size: 12px; color: #1e3a8a; margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .blood-bar-bg { background-color: #e2e8f0; border-radius: 4px; height: 8px; width: 100%; overflow: hidden; }
+        .blood-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
+
         #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.9); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; z-index: 99999; }
-        .placeholder-text { text-align: center; color: #94a3b8; padding: 60px 10px; font-size: 13px; font-weight: 600; }
+        .placeholder-text { text-align: center; color: #94a3b8; padding: 50px 10px; font-size: 13px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -101,19 +106,19 @@
         <div>
             <span style="font-size: 12px; font-weight: bold; color: #475569; margin-right: 4px;">品種快速篩選:</span>
             <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">All</button>
-            <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY</button>
             <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y</button>
             <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L</button>
             <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D</button>
+            <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY</button>
         </div>
     </div>
 
     <div class="legend-bar">
         <strong>品種識別標記:</strong>
-        <span class="color-badge breed-LY">LY (二元母豬/粉綠)</span>
         <span class="color-badge breed-Y">Yorkshire (大白/粉黃)</span>
         <span class="color-badge breed-L">Landrace (藍瑞斯/粉藍)</span>
         <span class="color-badge breed-D">Duroc (杜洛克/粉紅)</span>
+        <span class="color-badge breed-LY">LY (二元母豬/粉綠)</span>
         <span class="color-badge" style="background:#fff1f2; border:1px dashed #dc2626; color:#dc2626;">DIE / CULLED (已淘汰/死亡)</span>
     </div>
 
@@ -122,14 +127,26 @@
         <div class="card-header-bar">
             <div>
                 <h2 style="margin:0; font-size:16px; color:#0284c7; font-weight:900;">📜 1. Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">NSR Standard: 15-Node Symmetrical Binary Tree, Registered Lineages, MLI / SPI / TSI</p>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (框內純粹血統識別，框外白色膠囊展示 MLI/SPI/役期指標)</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('certExportCard', 'GLA_Official_Certificate')">📸 證書存檔 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 760px;">
+        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 780px;">
             <svg class="orthogonal-svg" id="certSvg"></svg>
             <div id="certBoxesContainer"><div class="placeholder-text">請在上方輸入耳號啟動四代造冊檢索...</div></div>
         </div>
+    </div>
+
+    <!-- 🧬 5. 育種與血統比例分析表 (新增專屬第五表) -->
+    <div class="tree-card-wrapper" id="bloodExportCard" style="border: 2px solid #10b981;">
+        <div class="card-header-bar">
+            <div>
+                <h3 style="margin:0; font-size:15px; color:#059669; font-weight:800;">🧬 5. Breed Purity & Ancestral Composition Analysis (育種與血統比例分析表)</h3>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">依據《📊 育種_血統比例》數據庫，精準解析該個體之純種品系源頭與血統純度貢獻率</p>
+            </div>
+            <div><button class="btn btn-export" onclick="exportHighRes('bloodExportCard', 'GLA_Blood_Composition')">📸 匯出比例 PNG</button></div>
+        </div>
+        <div id="bloodContainer"><div class="placeholder-text">請檢索個體以解析該個體之純種血統與品種貢獻比例...</div></div>
     </div>
 
     <!-- 📌 育種成績與評估資料表 -->
@@ -170,7 +187,7 @@
         <div class="card-header-bar">
             <div>
                 <h3 style="margin:0; font-size:15px; color:#0d6efd; font-weight:800;">🌳 3. Inbreeding Comparison Topology Family Tree (近親比對全系譜拓撲家族樹)</h3>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">左側：父系家族品系 (Sire Lineages) ⟵ 🎯 本體 ⟶ 右側：母系家族品系 (Dam Lineages)</p>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">左側：父系家族品系 (Sire Lines) ⟵ 🎯 本體 ⟶ 右側：母系家族品系 (Dam Lines)</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('macroTreePanel', 'GLA_Topology_Tree')">📸 匯出拓撲 PNG</button></div>
         </div>
@@ -180,7 +197,7 @@
         </div>
     </div>
 
-    <!-- 🌱 4. 全血統後代留種追蹤樹 (直系在場工作與配種子代) -->
+    <!-- 🌱 4. 全血統後代留種追蹤樹 -->
     <div class="tree-card-wrapper" id="descendantTreeArea">
         <div class="card-header-bar">
             <div>
@@ -199,6 +216,7 @@
         let pedigreeList = [];
         let deathInfoMap = new Map();
         let usIndex = {};
+        let bloodMap = {};
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
 
         function showToast(msg) {
@@ -219,6 +237,7 @@
                 .then(data => {
                     pedigreeList = data.pedigree || [];
                     usIndex = data.us_index || {};
+                    bloodMap = data.blood_map || {};
                     deathInfoMap.clear();
                     if (data.death_map) {
                         for (let k in data.death_map) deathInfoMap.set(k.toUpperCase(), data.death_map[k]);
@@ -235,7 +254,7 @@
             return (v === undefined || v === null || v === 'undefined' || v === 'NaN' || v === 'nan' || v === '') ? '-' : String(v).trim();
         }
 
-        /* 🌟 嚴格品種配色規範：Y 必為黃色、L 必為藍色、D 必為紅色、LY 必為綠色 */
+        /* 嚴格品種配色：Y 必粉黃、L 必粉藍、D 必粉紅、LY 必粉綠 */
         function getBreedClass(earOrBreed) {
             if (!earOrBreed || earOrBreed === '-') return 'breed-DEFAULT';
             const s = String(earOrBreed).trim().toUpperCase();
@@ -249,11 +268,10 @@
         function toggleBreedFilter(bKey) {
             if (bKey === 'ALL') selectedBreeds = selectedBreeds.size === 4 ? new Set() : new Set(['LY', 'Y', 'L', 'D']);
             else selectedBreeds.has(bKey) ? selectedBreeds.delete(bKey) : selectedBreeds.add(bKey);
-            ['LY', 'Y', 'L', 'D'].forEach(k => document.getElementById('btnBreed' + k).classList.toggle('active', selectedBreeds.has(k)));
+            ['Y', 'L', 'D', 'LY'].forEach(k => document.getElementById('btnBreed' + k).classList.toggle('active', selectedBreeds.has(k)));
             document.getElementById('btnBreedALL').classList.toggle('active', selectedBreeds.size === 4);
         }
 
-        /* 🌟 核心搜尋：公母雙向適配 */
         function searchPedigree() {
             const raw = document.getElementById('earInput').value.trim();
             if (!raw) return;
@@ -276,7 +294,7 @@
                         g3_dam_full: u.dam_full, g3_dam_line: u.dam_line, g3_dam_spi: u.dam_spi, g3_dam_mli: u.dam_mli,
                         ss_full: u.ss_full, ss_line: u.ss_line, sd_full: u.sd_full, sd_line: u.sd_line,
                         ds_full: u.ds_full, ds_line: u.ds_line, dd_full: u.dd_full, dd_line: u.dd_line,
-                        g1_nodes: u.g1_nodes
+                        g1_nodes: u.g1_nodes, blood: bloodMap[query] || {}
                     };
                     matched = [primary];
                 }
@@ -290,11 +308,13 @@
 
                     renderTable(tableItems, query, primary);
                     drawOfficialPedigree(primary);
+                    renderBloodComposition(primary);
                     drawBilateralTopology(primary);
                     drawDescendantTree(primary);
                 } else {
                     document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="14" class="placeholder-text">查無 "${query}" 之造冊資料</td></tr>`;
                     document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之官方四代家譜</div>`;
+                    document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之血統比例</div>`;
                     document.getElementById('macroBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之拓撲資料</div>`;
                     document.getElementById('descendantBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
                 }
@@ -332,15 +352,16 @@
             tbody.innerHTML = html;
         }
 
-        /* 📜 1. 官方四代家族系統圖 (全面升級版) */
+        /* 📜 1. 官方四代家族系統圖 (框內純粹血統，框外純白膠囊展示 MLI/SPI/役期) */
         function drawOfficialPedigree(target) {
             const container = document.getElementById('certBoxesContainer');
             const svgLayer = document.getElementById('certSvg');
             const scrollArea = document.getElementById('certScrollArea');
             container.innerHTML = ''; svgLayer.innerHTML = '';
 
-            // 擴展卡片寬度 (210px) 與高度 (88px)，留出足夠縱深與文字空間
-            const cardW = 210, cardH = 88, colGap = 55, totalHeight = 760;
+            const cardW = 210, boxMainH = 58, boxCapsuleH = 36;
+            const cardTotalH = boxMainH + boxCapsuleH; // 94px
+            const colGap = 55, totalHeight = 800;
             const totalWidth = (cardW * 4) + (colGap * 3) + 60;
 
             scrollArea.style.height = totalHeight + 'px';
@@ -350,46 +371,46 @@
             const colX = [25, 25 + cardW + colGap, 25 + (cardW + colGap) * 2, 25 + (cardW + colGap) * 3];
             const nodes = {};
 
-            // Gen 0: 本體
+            // Gen 0: 本體 (正中央)
             const isDead = deathInfoMap.has(target.ear);
             nodes['T'] = {
-                x: colX[0], y: totalHeight / 2 - cardH / 2,
+                x: colX[0], y: totalHeight / 2 - cardTotalH / 2,
                 ear: target.ear, breed: target.breed,
                 line: target.g3_sire_line || '-',
                 role: `🎯 TARGET (${target.sex==='MALE'?'♂ 公豬':'♀ 母豬'})`,
                 mli: target.mli, spi: target.spi, tsi: target.tsi,
-                age: target.current_age, used: target.used_years,
+                age: target.current_age, used: target.used_years, dob: target.dob,
                 isDead: isDead, deadTag: deathInfoMap.get(target.ear)
             };
 
-            // Gen 1: 父母 (生父向上拉升至 22%，生母拉升至 78%，擴展縱深)
+            // Gen 1: 父母 (生父向上挪至 20%，生母移至 80%，充分拉開縱深)
             nodes['S'] = {
-                x: colX[1], y: totalHeight * 0.22 - cardH / 2,
+                x: colX[1], y: totalHeight * 0.20 - cardTotalH / 2,
                 ear: target.g3_sire_full, breed: target.breed,
-                line: target.g3_sire_line, role: "♂ 1st SIRE (生父)",
+                line: target.g3_sire_line, role: "♂ 生父 (1st Sire)",
                 mli: target.g3_sire_mli, spi: target.g3_sire_spi, tsi: "-",
-                age: "-", used: "-", isDead: deathInfoMap.has(target.g3_sire_full)
+                age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_sire_full)
             };
             nodes['D'] = {
-                x: colX[1], y: totalHeight * 0.78 - cardH / 2,
+                x: colX[1], y: totalHeight * 0.80 - cardTotalH / 2,
                 ear: target.g3_dam_full, breed: target.breed,
-                line: target.g3_dam_line, role: "♀ 1st DAM (生母)",
+                line: target.g3_dam_line, role: "♀ 生母 (1st Dam)",
                 mli: target.g3_dam_mli, spi: target.g3_dam_spi, tsi: "-",
-                age: "-", used: "-", isDead: deathInfoMap.has(target.g3_dam_full)
+                age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_dam_full)
             };
 
             // Gen 2: 祖父母 (4節點)
             const g2List = [
-                { k: 'SS', full: target.ss_full, line: target.ss_line, role: "♂ 祖父 (SS)", yR: 0.11 },
-                { k: 'SD', full: target.sd_full, line: target.sd_line, role: "♀ 祖母 (SD)", yR: 0.33 },
-                { k: 'DS', full: target.ds_full, line: target.ds_line, role: "♂ 外祖父 (DS)", yR: 0.67 },
-                { k: 'DD', full: target.dd_full, line: target.dd_line, role: "♀ 外祖母 (DD)", yR: 0.89 }
+                { k: 'SS', full: target.ss_full, line: target.ss_line, role: "♂ 祖父 (SS)", yR: 0.10 },
+                { k: 'SD', full: target.sd_full, line: target.sd_line, role: "♀ 祖母 (SD)", yR: 0.32 },
+                { k: 'DS', full: target.ds_full, line: target.ds_line, role: "♂ 外祖父 (DS)", yR: 0.68 },
+                { k: 'DD', full: target.dd_full, line: target.dd_line, role: "♀ 外祖母 (DD)", yR: 0.90 }
             ];
             g2List.forEach(g => {
                 nodes[g.k] = {
-                    x: colX[2], y: totalHeight * g.yR - cardH / 2,
+                    x: colX[2], y: totalHeight * g.yR - cardTotalH / 2,
                     ear: g.full, breed: target.breed, line: g.line, role: g.role,
-                    mli: "-", spi: "-", tsi: "-", age: "-", used: "-", isDead: deathInfoMap.has(g.full)
+                    mli: "-", spi: "-", tsi: "-", age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(g.full)
                 };
             });
 
@@ -404,10 +425,10 @@
             for (let i = 0; i < 8; i++) {
                 const step = totalHeight / 8;
                 nodes[`G3_${i}`] = {
-                    x: colX[3], y: i * step + (step - cardH) / 2,
+                    x: colX[3], y: i * step + (step - cardTotalH) / 2,
                     ear: g3Defs[i].line !== "-" ? g3Defs[i].line : 'US FOUNDATION',
                     breed: target.breed, line: g3Defs[i].line, role: g3Defs[i].role,
-                    mli: "-", spi: "-", tsi: "-", age: "-", used: "-", isDead: false
+                    mli: "-", spi: "-", tsi: "-", age: "-", used: "-", dob: "-", isDead: false
                 };
             }
 
@@ -424,8 +445,8 @@
 
             links.forEach(([from, to]) => {
                 const f = nodes[from], t = nodes[to];
-                const x1 = f.x + cardW, y1 = f.y + cardH / 2;
-                const x2 = t.x, y2 = t.y + cardH / 2;
+                const x1 = f.x + cardW, y1 = f.y + boxMainH / 2;
+                const x2 = t.x, y2 = t.y + boxMainH / 2;
                 const midX = x1 + (x2 - x1) / 2;
                 const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
@@ -435,27 +456,25 @@
                 svgLayer.appendChild(p);
             });
 
-            // 節點 DOM 渲染
+            // 節點渲染：主卡片 (框內) + 框外下方獨立純白膠囊
             Object.keys(nodes).forEach(k => {
                 const n = nodes[k];
-                const card = document.createElement('div');
-                card.className = `abs-node ${getBreedClass(n.breed)} ${n.isDead ? 'node-dead' : ''} ${k === 'T' ? 'node-target-highlight' : ''}`;
-                card.style.left = n.x + 'px'; card.style.top = n.y + 'px';
-                card.style.width = cardW + 'px'; card.style.height = cardH + 'px';
+                const group = document.createElement('div');
+                group.className = 'node-group-container';
+                group.style.left = n.x + 'px'; group.style.top = n.y + 'px';
+                group.style.width = cardW + 'px';
 
-                // 品系家族名無底色，與卡片融為一體
                 const lineHtml = (n.line && n.line !== '-') ? `<span class="family-line-clean">Line: ${n.line}</span>` : '';
                 
-                // 使用年限資訊 (第二行)
                 let usageText = '';
                 if (n.age && n.age !== '-' && n.age !== '0') {
                     usageText = `年齡:${n.age}歲 | 役期:${n.used || '-'}年`;
-                } else if (k === 'T' && target.dob && target.dob !== '-') {
-                    usageText = `DOB:${target.dob}`;
+                } else if (n.dob && n.dob !== '-') {
+                    usageText = `DOB:${n.dob}`;
                 }
 
-                card.innerHTML = `
-                    <div>
+                group.innerHTML = `
+                    <div class="node-box-main ${getBreedClass(n.breed)} ${n.isDead ? 'node-dead' : ''} ${k === 'T' ? 'node-target-highlight' : ''}" style="height:${boxMainH}px;">
                         <div class="c-sub-label">
                             <span>${n.role}</span>
                             ${lineHtml}
@@ -464,20 +483,60 @@
                             ${n.ear} ${n.deadTag ? `<span class="badge-dead">${n.deadTag}</span>` : ''}
                         </div>
                     </div>
-                    <div class="metric-block-bottom">
-                        <div class="c-metric-row-1">
-                            <span>MLI:<b>${cleanVal(n.mli)}</b></span>
-                            <span>SPI:<b>${cleanVal(n.spi)}</b></span>
-                            <span>TSI:<b>${cleanVal(n.tsi)}</b></span>
+                    <div class="node-box-sub-capsule">
+                        <div class="sub-metric-row-1">
+                            <span>MLI: <b>${cleanVal(n.mli)}</b></span>
+                            <span>SPI: <b>${cleanVal(n.spi)}</b></span>
+                            <span>TSI: <b>${cleanVal(n.tsi)}</b></span>
                         </div>
-                        ${usageText ? `<div class="c-metric-row-2"><span>${usageText}</span></div>` : ''}
+                        <div class="sub-metric-row-2">
+                            <span>${usageText || '役期: 核心種源'}</span>
+                            <span>${n.breed}</span>
+                        </div>
                     </div>
                 `;
                 if (n.ear && n.ear !== '-' && !n.ear.includes('FOUNDATION')) {
-                    card.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
+                    group.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
                 }
-                container.appendChild(card);
+                container.appendChild(group);
             });
+        }
+
+        /* 🧬 5. 育種與血統比例分析表 (新增專屬第五表渲染) */
+        function renderBloodComposition(primary) {
+            const container = document.getElementById('bloodContainer');
+            const bloodData = primary.blood || bloodMap[primary.ear.toUpperCase()] || {};
+
+            let keys = Object.keys(bloodData);
+            if (keys.length === 0) {
+                // 若無細項，根據品種自動推導基準純度
+                const b = primary.breed.toUpperCase();
+                if (b === 'Y') bloodData = { 'Yorkshire (大白純種)': '100%' };
+                else if (b === 'L') bloodData = { 'Landrace (藍瑞斯純種)': '100%' };
+                else if (b === 'D') bloodData = { 'Duroc (杜洛克純種)': '100%' };
+                else if (b === 'LY') bloodData = { 'Landrace (母系)': '50%', 'Yorkshire (父系)': '50%' };
+                keys = Object.keys(bloodData);
+            }
+
+            let html = `<div class="blood-grid">`;
+            keys.forEach(k => {
+                let valStr = String(bloodData[k]).trim();
+                let pct = parseFloat(valStr.replace('%', ''));
+                if (isNaN(pct)) pct = 100;
+                html += `
+                    <div class="blood-card">
+                        <div class="blood-name">
+                            <span>${k}</span>
+                            <span style="color:#0284c7;">${valStr.includes('%') ? valStr : valStr + '%'}</span>
+                        </div>
+                        <div class="blood-bar-bg">
+                            <div class="blood-bar-fill" style="width: ${Math.min(pct, 100)}%;"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
         }
 
         /* 🌳 3. 近親比對全系譜拓撲家族樹 (左側父系 vs 正中央本體 vs 右側母系) */
@@ -492,13 +551,8 @@
             cardArea.style.height = totalHeight + 'px';
             svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
 
-            // 座標規劃：
-            // [Col 0: 父系曾祖] 25px -> [Col 1: 父系祖輩] 215px -> [Col 2: 生父] 405px
-            // [Col 3: 本體 Target] 595px (正中央)
-            // [Col 4: 生母] 785px -> [Col 5: 母系祖輩] 975px
-            const c0 = 25, c1 = 215, c2 = 405, cCenter = 470, c3 = 660, c4 = 850;
+            const c1 = 215, c2 = 405, cCenter = 470, c3 = 660, c4 = 850;
             const midY = totalHeight / 2 - cardH / 2;
-
             const tNodes = {};
 
             // 1. 本體 (正中央)
@@ -535,13 +589,10 @@
                 line: target.dd_line, role: "♀ 外祖母 (DD)"
             };
 
-            // 繪製左右雙向連線
             const topoLinks = [
-                // 向左連結父系
                 ['TARGET', 'SIRE', 'left'],
                 ['SIRE', 'SS', 'left'],
                 ['SIRE', 'SD', 'left'],
-                // 向右連結母系
                 ['TARGET', 'DAM', 'right'],
                 ['DAM', 'DS', 'right'],
                 ['DAM', 'DD', 'right']
@@ -551,14 +602,9 @@
                 const f = tNodes[from], t = tNodes[to];
                 if (!t || !t.ear || t.ear === '-') return;
 
-                let x1, x2;
-                if (dir === 'left') {
-                    x1 = f.x; x2 = t.x + cardW;
-                } else {
-                    x1 = f.x + cardW; x2 = t.x;
-                }
-                const y1 = f.y + cardH / 2;
-                const y2 = t.y + cardH / 2;
+                let x1 = (dir === 'left') ? f.x : f.x + cardW;
+                let x2 = (dir === 'left') ? t.x + cardW : t.x;
+                const y1 = f.y + cardH / 2, y2 = t.y + cardH / 2;
                 const midX = x1 + (x2 - x1) / 2;
 
                 const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -569,7 +615,6 @@
                 svgLayer.appendChild(p);
             });
 
-            // 渲染品系卡片（只凸顯家族名，清爽無多餘欄位）
             Object.keys(tNodes).forEach(k => {
                 const n = tNodes[k];
                 if (!n.ear || n.ear === '-') return;
@@ -595,7 +640,7 @@
             });
         }
 
-        /* 🌱 4. 全血統後代留種追蹤樹 (直系在場已配種工作子代) */
+        /* 🌱 4. 全血統後代留種追蹤樹 */
         function drawDescendantTree(primary) {
             const container = document.getElementById('descendantBoxesContainer');
             const svgLayer = document.getElementById('descendantSvg');
@@ -603,14 +648,11 @@
             container.innerHTML = ''; svgLayer.innerHTML = '';
 
             const targetEar = primary.ear.toUpperCase();
-            
-            // 檢索所有以該個體為父或為母、且「已在場建立生產履歷/開始配種」的留種子代 (F1)
             const f1List = [];
+
             pedigreeList.forEach(item => {
                 if (item.ear === targetEar) return;
-                
                 let isChild = false;
-                // 比對生父、生母全名或直屬欄位
                 if (item.g3_sire_full && item.g3_sire_full.includes(targetEar)) isChild = true;
                 if (item.g3_dam_full && item.g3_dam_full.includes(targetEar)) isChild = true;
                 if (item['G5_直屬父(Sire)'] === targetEar || item['G5_直屬母(Dam)'] === targetEar) isChild = true;
@@ -635,7 +677,6 @@
             const col0_X = 40, col1_X = col0_X + boxW + 90;
             const targetY = cardHeight / 2 - boxH / 2;
 
-            // 本體卡片
             const tDiv = document.createElement('div');
             tDiv.className = `abs-node node-target-highlight`;
             tDiv.style.left = col0_X + 'px'; tDiv.style.top = targetY + 'px';
@@ -643,11 +684,10 @@
             tDiv.innerHTML = `
                 <div class="c-sub-label"><span>🎯 留種源頭 (${primary.sex==='MALE'?'♂ 公豬':'♀ 母豬'})</span></div>
                 <div class="c-main-title">${targetEar}</div>
-                <div class="c-metric-row-2"><span>在場留種子代數: <b>${f1List.length} 頭</b></span></div>
+                <div style="font-size:9px; color:#475569;">在場留種子代數: <b>${f1List.length} 頭</b></div>
             `;
             container.appendChild(tDiv);
 
-            // 直系留種工作子代列表
             f1List.forEach((f1, idx) => {
                 const cy = targetY + (idx - (f1List.length - 1) / 2) * rowGap;
                 const f1Div = document.createElement('div');
@@ -662,12 +702,10 @@
                         ${isDead ? `<span class="badge-dead">淘汰</span>` : `<span class="badge-active">在役</span>`}
                     </div>
                     <div class="c-main-title">${f1.ear}</div>
-                    <div class="metric-block-bottom">
-                        <div class="c-metric-row-1">
-                            <span>活仔:<b>${cleanVal(f1.born_alive)}</b></span>
-                            <span>SPI:<b>${cleanVal(f1.spi)}</b></span>
-                            <span>配偶:<b>${cleanVal(f1.mate)}</b></span>
-                        </div>
+                    <div style="font-size:8.5px; color:#0f172a; margin-top:2px;">
+                        <span>活仔:<b>${cleanVal(f1.born_alive)}</b></span> |
+                        <span>SPI:<b>${cleanVal(f1.spi)}</b></span> |
+                        <span>配偶:<b>${cleanVal(f1.mate)}</b></span>
                     </div>
                 `;
                 f1Div.onclick = () => { document.getElementById('earInput').value = f1.ear; searchPedigree(); };
