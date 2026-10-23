@@ -1,684 +1,1204 @@
-import io
-import json
-import re
-import pandas as pd
-import requests
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GLA Official Pedigree Book & Lineage System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            /* 專業品種色系：Y 黃、L 藍、D 紅、LY 綠 */
+            --breed-y-bg: #fffbeb; --breed-y-border: #d97706; --breed-y-text: #92400e;
+            --breed-l-bg: #f0f9ff; --breed-l-border: #0284c7; --breed-l-text: #075985;
+            --breed-d-bg: #fff1f2; --breed-d-border: #e11d48; --breed-d-text: #9f1239;
+            --breed-ly-bg: #f0fdf4; --breed-ly-border: #059669; --breed-ly-text: #065f46;
+            --dead-border: #dc2626; --dead-bg: #fef2f2;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 0; padding: 12px; background-color: #f1f5f9; color: #0f172a; line-height: 1.4; }
+        
+        /* 頂部橫幅 (表面無任何權限與分級標籤) */
+        .system-header-banner { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0369a1 100%); color: #ffffff; padding: 12px 20px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); margin-bottom: 10px; position: relative; }
+        .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; }
+        .system-header-banner p { margin: 3px 0 0 0; font-size: 11.5px; opacity: 0.9; }
 
-SPREADSHEET_ID = "1uWXfIMrRidpoZTq_BYYTy9ho_0a194pMMSS_EQpJoeA"
+        /* 🌟 隱形後門小點：完全同色、無邊框、肉眼不可見，點擊啟動 Admin 驗證 */
+        .stealth-admin-trigger { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: transparent; cursor: pointer; vertical-align: middle; margin-left: 3px; }
 
-# 🌟 精確鎖定 4 個分頁 GID
-GID_MAIN = "0"  # 全期整合總表(配娩種)(PY)(轉)
-GID_SALES = "591794579"  # 全生命週期銷售與血統分析(PY)(轉)
-GID_US_ORIGIN = "1866228473"  # 美國原始種源數據(轉)
-GID_HIERARCHY = "1807731938"  # 📊 育種_家族階層清單(轉)
+        /* 緊湊搜尋工具列 */
+        .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 10px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+        input[type="text"] { padding: 6px 12px; font-size: 13.5px; border: 1.5px solid #cbd5e1; border-radius: 5px; width: 260px; outline: none; font-weight: 700; color: #0f172a; }
+        input[type="text"]:focus { border-color: #0284c7; box-shadow: 0 0 0 2.5px rgba(2,132,199,0.15); }
+        .btn { padding: 6px 16px; font-size: 13px; background-color: #0284c7; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; transition: background 0.15s; }
+        .btn:hover { background-color: #0369a1; }
+        .btn-export { background-color: #059669; }
+        .btn-export:hover { background-color: #047857; }
+        .btn-auth { background-color: #475569; }
+        .btn-auth:hover { background-color: #334155; }
 
+        .btn-breed { background-color: #f8fafc; color: #475569; padding: 5px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 700; }
+        .btn-breed.active { box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-color: #0f172a; }
+        .btn-breed-all.active { background-color: #334155 !important; color: white !important; }
+        .btn-breed-y.active   { background-color: #d97706 !important; color: white !important; }
+        .btn-breed-l.active   { background-color: #0284c7 !important; color: white !important; }
+        .btn-breed-d.active   { background-color: #e11d48 !important; color: white !important; }
+        .btn-breed-ly.active  { background-color: #059669 !important; color: white !important; }
 
-def fetch_sheet_csv(gid):
-  url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
-  try:
-    res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=50)
-    res.encoding = "utf-8-sig"
-    if res.status_code == 200:
-      return res.text
-    print(f"❌ 抓取 GID {gid} 失敗: HTTP {res.status_code}")
-  except Exception as e:
-    print(f"❌ 連線 GID {gid} 異常: {e}")
-  return ""
+        .legend-bar { display: flex; gap: 8px; font-size: 11.5px; background: #fff; padding: 6px 14px; border-radius: 5px; border: 1px solid #e2e8f0; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+        .color-badge { padding: 2px 8px; border-radius: 3px; font-weight: 800; font-size: 11px; }
 
+        .breed-Y  { background-color: var(--breed-y-bg) !important; border: 1.8px solid var(--breed-y-border) !important; }
+        .breed-L  { background-color: var(--breed-l-bg) !important; border: 1.8px solid var(--breed-l-border) !important; }
+        .breed-D  { background-color: var(--breed-d-bg) !important; border: 1.8px solid var(--breed-d-border) !important; }
+        .breed-LY { background-color: var(--breed-ly-bg) !important; border: 1.8px solid var(--breed-ly-border) !important; }
+        .breed-DEFAULT { background-color: #ffffff !important; border: 1.8px solid #94a3b8 !important; }
 
-def clean_val(val):
-  if pd.isna(val) or val is None:
-    return "-"
-  s = str(val).replace("\n", " ").replace("\r", "").strip()
-  return s if s.lower() not in ["nan", "none", "", "null"] else "-"
+        .node-dead { border: 2px dashed var(--dead-border) !important; background-color: var(--dead-bg) !important; }
+        .badge-dead { background-color: #dc2626; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; margin-left: 3px; }
+        .badge-active { background-color: #10b981; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; }
 
+        .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 5px; border: 1px solid #e2e8f0; }
 
-def clean_num(val):
-  s = clean_val(val)
-  if s == "-":
-    return "-"
-  m = re.search(r"^\d+(\.\d+)?$", s)
-  return m.group(0) if m else "-"
+        /* 圖一排版 */
+        .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.1s; cursor: pointer; }
+        .node-group-container:hover { transform: scale(1.02); z-index: 10; }
+        .node-box-main { border-radius: 5px; padding: 5px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; text-align: center; }
+        .node-target-highlight { border: 2.5px solid #f59e0b !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4) !important; }
+        .c-sub-label { font-size: 8.5px; font-weight: 800; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
+        .c-main-title { color: #dc2626; font-size: 13px; font-weight: 900; line-height: 1.2; word-break: break-word; margin: 1px 0; }
+        .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 9.5px; }
+        .node-text-sub-block { width: 100%; padding-top: 3px; box-sizing: border-box; text-align: center; }
+        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 8.5px; color: #0f172a; font-weight: 800; white-space: nowrap; line-height: 1.25; }
+        .sub-metric-row-2 { display: flex; justify-content: space-around; font-size: 7.8px; color: #64748b; font-weight: 600; margin-top: 1px; white-space: nowrap; line-height: 1.25; }
 
+        svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
-def main():
-  print("🚀 [1/4] 抓取《美國原始種源數據 (GID: 1866228473)》...")
-  raw_us = fetch_sheet_csv(GID_US_ORIGIN)
-  df_us = (
-      pd.read_csv(io.StringIO(raw_us), low_memory=False)
-      if raw_us
-      else pd.DataFrame()
-  )
-  df_us.columns = [
-      str(c).replace("\n", " ").replace("\r", "").strip() for c in df_us.columns
-  ]
+        /* 商業表格樣式 */
+        .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 5px; max-height: 480px; }
+        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: #fff; white-space: nowrap; text-align: center; }
+        .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 6px 8px; border: 1px solid #334155; font-size: 11px; position: sticky; top: 0; z-index: 5; }
+        .excel-data-table td { padding: 4.5px 8px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 600; }
+        .excel-data-table tr:nth-child(even) { background-color: #f8fafc; }
+        .excel-data-table tr:hover { background-color: #f1f5f9; }
 
-  us_dict = {}
-  for _, r in df_us.iterrows():
-    pen = r.get("手寫卡號 (Pen No)") or r.get("Pen No") or r.get("手寫卡號")
-    breed = clean_val(r.get("品種 (Breed)") or r.get("Breed") or r.get("品種"))
-    if pen is None or pd.isna(pen) or breed == "-":
-      continue
-    try:
-      pen_num = int(float(pen))
-    except:
-      continue
+        /* 圖三蝴蝶樹節點 */
+        .butterfly-node { position: absolute; border-radius: 5px; padding: 6px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
+        .butterfly-node:hover { transform: scale(1.03); z-index: 10; }
 
-    prefix = (
-        "D"
-        if "duroc" in breed.lower()
-        else (
-            "L"
-            if "land" in breed.lower()
-            else ("Y" if "york" in breed.lower() else "")
-        )
-    )
-    ear_tag = f"{prefix}{pen_num}"
-    sex_raw = clean_val(r.get("性別 (Sex)") or r.get("Sex") or r.get("性別"))
-    sex = "MALE" if "boar" in sex_raw.lower() or "公" in sex_raw else "FEMALE"
+        /* 圖五血統比例進度條卡片 */
+        .strain-overview-bar { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+        .strain-parent-card { flex: 1; min-width: 240px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .strain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+        .strain-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .strain-name { font-weight: 800; font-size: 11.5px; color: #1e3a8a; margin-bottom: 3px; display: flex; justify-content: space-between; }
+        .strain-bar-bg { background-color: #e2e8f0; border-radius: 3px; height: 7px; width: 100%; overflow: hidden; }
+        .strain-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
 
-    us_dict[ear_tag] = {
-        "ear": ear_tag,
-        "breed": breed.upper(),
-        "sex": sex,
-        "full_name": clean_val(r.get("G4_本代全名") or r.get("全名")),
-        "family_line": clean_val(
-            r.get("【G4_本代】品系家族名 (Family Line)")
-            or r.get("品系家族名")
-        ),
-        "spi": clean_num(r.get("G4_SPI") or r.get("SPI")),
-        "mli": clean_num(r.get("G4_MLI") or r.get("MLI")),
-        "tsi": clean_num(r.get("G4_TSI") or r.get("TSI")),
-        "sire_full": clean_val(
-            r.get("G3_父代Sire全名") or r.get("G3_美系父親Sire(全名)")
-        ),
-        "sire_line": clean_val(
-            r.get("【G3_父代Sire】品系家族名 (Family Line)")
-            or r.get("G3_父品系家族名")
-        ),
-        "sire_spi": clean_num(r.get("G3_父代SPI") or r.get("G3_父SPI")),
-        "sire_mli": clean_num(r.get("G3_父代MLI") or r.get("G3_父MLI")),
-        "dam_full": clean_val(
-            r.get("G3_母代Dam全名") or r.get("G3_美系母親Dam(全名)")
-        ),
-        "dam_line": clean_val(
-            r.get("【G3_母代Dam】品系家族名 (Family Line)")
-            or r.get("G3_母品系家族名")
-        ),
-        "dam_spi": clean_num(r.get("G3_母代SPI") or r.get("G3_母SPI")),
-        "dam_mli": clean_num(r.get("G3_母代MLI") or r.get("G3_母MLI")),
-        "ss_full": clean_val(
-            r.get("G2_祖父SS全名") or r.get("G2_祖父SS(全名)")
-        ),
-        "ss_line": clean_val(
-            r.get("【G2_祖父SS】品系家族名 (Family Line)")
-            or r.get("G2_祖父SS(品系名)")
-        ),
-        "sd_full": clean_val(
-            r.get("G2_祖母SD全名") or r.get("G2_祖母SD(全名)")
-        ),
-        "sd_line": clean_val(
-            r.get("【G2_祖母SD】品系家族名 (Family Line)")
-            or r.get("G2_祖母SD(品系名)")
-        ),
-        "ds_full": clean_val(
-            r.get("G2_外祖父DS全名") or r.get("G2_外祖父DS(全名)")
-        ),
-        "ds_line": clean_val(
-            r.get("【G2_外祖父DS】品系家族名 (Family Line)")
-            or r.get("G2_外祖父DS(品系名)")
-        ),
-        "dd_full": clean_val(
-            r.get("G2_外祖母DD全名") or r.get("G2_外祖母DD(全名)")
-        ),
-        "dd_line": clean_val(
-            r.get("【G2_外祖母DD】品系家族名 (Family Line)")
-            or r.get("G2_外祖母DD(品系名)")
-        ),
-        "g1_nodes": {
-            "sss": clean_val(
-                r.get("【G1_曾祖父SSS】品系家族名 (Family Line)")
-                or r.get("G1_曾祖父SSS(品系名)")
-            ),
-            "ssd": clean_val(
-                r.get("【G1_曾祖母SSD】品系家族名 (Family Line)")
-                or r.get("G1_曾祖母SSD(品系名)")
-            ),
-            "sds": clean_val(
-                r.get("【G1_曾祖父SDS】品系家族名 (Family Line)")
-                or r.get("G1_曾祖父SDS(品系名)")
-            ),
-            "sdd": clean_val(
-                r.get("【G1_曾祖母SDD】品系家族名 (Family Line)")
-                or r.get("G1_曾祖母SDD(品系名)")
-            ),
-            "dss": clean_val(
-                r.get("【G1_曾外祖父DSS】品系家族名 (Family Line)")
-                or r.get("G1_曾外祖父DSS(品系名)")
-            ),
-            "dsd": clean_val(
-                r.get("【G1_曾外祖母DSD】品系家族名 (Family Line)")
-                or r.get("G1_曾外祖母DSD(品系名)")
-            ),
-            "dds": clean_val(
-                r.get("【G1_曾外祖父DDS】品系家族名 (Family Line)")
-                or r.get("G1_曾外祖父DDS(品系名)")
-            ),
-            "ddd": clean_val(
-                r.get("【G1_曾外祖母DDD】品系家族名 (Family Line)")
-                or r.get("G1_曾外祖母DDD(品系名)")
-            ),
-        },
-    }
+        /* 圖六專屬 KPI 摘要卡 */
+        .kpi-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; }
+        .kpi-card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border-top: 3.5px solid #0284c7; text-align: center; }
+        .kpi-label { font-size: 10.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
+        .kpi-val { font-size: 17px; font-weight: 900; color: #0f172a; }
+        .defect-badge { background-color: #fee2e2; color: #dc2626; border: 1px solid #f87171; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; display: inline-block; margin: 1px; }
+        .defect-none { color: #10b981; font-weight: 700; font-size: 10px; }
 
-  print("🚀 [2/4] 抓取《育種家族階層清單 (GID: 1807731938)》取得年齡與役期...")
-  raw_hier = fetch_sheet_csv(GID_HIERARCHY)
-  df_hier = (
-      pd.read_csv(io.StringIO(raw_hier), low_memory=False)
-      if raw_hier
-      else pd.DataFrame()
-  )
-  df_hier.columns = [
-      str(c).replace("\n", " ").replace("\r", "").strip()
-      for c in df_hier.columns
-  ]
+        /* 中英文雙語私人資料聲明彈窗 (門禁) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 999999; }
+        .modal-box { background: #ffffff; border-radius: 8px; width: 90%; max-width: 440px; padding: 22px 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); text-align: center; }
+        .modal-title-cn { font-size: 17px; font-weight: 900; color: #dc2626; margin-bottom: 2px; }
+        .modal-title-en { font-size: 11px; font-weight: 800; color: #64748b; letter-spacing: 0.5px; margin-bottom: 12px; }
+        .modal-desc-cn { font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 4px; }
+        .modal-desc-en { font-size: 11px; color: #64748b; line-height: 1.4; margin-bottom: 16px; font-style: italic; }
 
-  age_map = {}
-  used_map = {}
-  if not df_hier.empty:
-    c_h_ear = next(
-        (c for c in df_hier.columns if "耳號" in c or "Ear" in c),
-        df_hier.columns[0],
-    )
-    c_h_age = next(
-        (c for c in df_hier.columns if "年齡" in c), "目前年齡(歲)"
-    )
-    c_h_used = next(
-        (c for c in df_hier.columns if "使用年限" in c), "已使用年限(年)"
-    )
-    for _, hr in df_hier.iterrows():
-      h_ear = clean_val(hr.get(c_h_ear)).upper()
-      if h_ear != "-" and h_ear != "耳號":
-        age_map[h_ear] = clean_num(hr.get(c_h_age))
-        used_map[h_ear] = clean_num(hr.get(c_h_used))
+        #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.92); color: #fff; padding: 7px 16px; border-radius: 20px; font-size: 11.5px; font-weight: 700; display: none; z-index: 99999; }
+        .placeholder-text { text-align: center; color: #94a3b8; padding: 40px 10px; font-size: 12.5px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div id="toastNotify">🐖 運算中...</div>
 
-  print("🚀 [3/4] 抓取《全期整合總表 (GID: 0)》...")
-  raw_main = fetch_sheet_csv(GID_MAIN)
-  df_main = (
-      pd.read_csv(io.StringIO(raw_main), low_memory=False)
-      if raw_main
-      else pd.DataFrame()
-  )
-  df_main.columns = [
-      str(c).replace("\n", " ").replace("\r", "").strip()
-      for c in df_main.columns
-  ]
+    <!-- 門禁驗證彈窗 (未授權時強行阻擋並顯示中英文聲明) -->
+    <div id="authGateModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-title-cn">⚠️ 公司內部機密資料 - 存取受限</div>
+            <div class="modal-title-en">CONFIDENTIAL INTERNAL RECORDS - RESTRICTED ACCESS</div>
+            <div class="modal-desc-cn">本系統包含本場育種與生產核心機密數據，非經授權嚴禁存取。請輸入作業通行密碼才可繼續查閱。</div>
+            <div class="modal-desc-en">This system contains proprietary swine breeding and production records. Unauthorized access is strictly prohibited. Please enter authorization password to proceed.</div>
+            <input type="password" id="userGatePassword" placeholder="輸入作業通行密碼..." style="width:85%; padding:8px 12px; margin-bottom:12px; font-size:14px; border:1.5px solid #cbd5e1; border-radius:5px; text-align:center;" onkeydown="if(event.key==='Enter') verifyGatePass()">
+            <br>
+            <button class="btn" onclick="verifyGatePass()" style="width:90%; padding:8px 0;">確認登入 / Verify Access</button>
+        </div>
+    </div>
 
-  def find_c(kws, df):
-    for kw in kws:
-      for c in df.columns:
-        if kw.lower() in c.lower():
-          return c
-    return None
+    <!-- 🌟 Admin 隱藏授權視窗 (只有點到小點才會彈出) -->
+    <div id="adminSecretModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box" style="background:#0f172a; color:#fff; border:1px solid #334155;">
+            <div style="font-size:15px; font-weight:900; color:#f59e0b; margin-bottom:2px;">🛡️ 管理者進階授權</div>
+            <div style="font-size:11px; color:#94a3b8; margin-bottom:14px;">Master Security Authentication</div>
+            <input type="text" id="adminSecretUser" placeholder="管理員帳號 (小寫)" style="width:85%; padding:7px 10px; margin-bottom:8px; font-size:13px; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#fff; text-align:center;"><br>
+            <input type="password" id="adminSecretPass" placeholder="管理密碼" style="width:85%; padding:7px 10px; margin-bottom:14px; font-size:13px; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#fff; text-align:center;" onkeydown="if(event.key==='Enter') verifyAdminMaster()"><br>
+            <button class="btn" onclick="verifyAdminMaster()" style="background:#f59e0b; color:#000; width:90%; font-weight:900; padding:8px 0;">解鎖進階全系譜模組</button>
+            <button class="btn btn-auth" onclick="closeAdminModal()" style="margin-top:6px; width:90%; font-size:11px; background:#334155;">取消</button>
+        </div>
+    </div>
 
-  c_ear = find_c(["耳號"], df_main) or "耳號"
-  c_sex = find_c(["Sex", "性別"], df_main) or "Sex"
-  c_p = find_c(["胎次(Parity)", "胎次", "Parity"], df_main) or "胎次"
-  c_mate = find_c(["當胎配種公豬", "配種公", "Mate"], df_main) or "當胎配種公豬"
-  c_md = find_c(["配種日期(Mating Date)", "配種日期"], df_main) or "配種日期"
-  c_fd = find_c(["當胎分娩日", "分娩日"], df_main) or "當胎分娩日"
-  c_dob = find_c(["DOB出生日期", "DOB", "出生日期"], df_main) or "DOB"
-  c_dod = find_c(["DOD/淘汰日期", "淘汰日期", "DOD"], df_main) or "DOD/淘汰日期"
-  c_breed = find_c(["Breed", "品種"], df_main) or "Breed"
+    <div class="system-header-banner">
+        <div>
+            <h1>GLA Official Pedigree Book & Lineage System</h1>
+            <!-- 🌟 隱藏小門：位於 System 後方，顏色與背景完全融為一體，點擊觸發 -->
+            <span class="stealth-admin-trigger" onclick="openAdminModal()" title=""></span>
+            <p>官方造冊血統書與全系譜拓撲追蹤 (Official Pedigree Certificate & Recursive Lineage System)</p>
+        </div>
+    </div>
 
-  # 🌟 關鍵修正：抓取 G5/G6 直屬生父生母欄位
-  c_g5_sire = (
-      find_c(
-          ["G5_直屬父(Sire)", "G5_直屬父", "G4_直屬父", "第一代公"],
-          df_main,
-      )
-      or "G5_直屬父(Sire)"
-  )
-  c_g5_dam = (
-      find_c(
-          ["G5_直屬母(Dam)", "G5_直屬母", "G4_直屬母", "第一代母"],
-          df_main,
-      )
-      or "G5_直屬母(Dam)"
-  )
+    <div class="control-bar">
+        <div>
+            <label for="earInput"><strong>耳號檢索 (Ear Tag):</strong></label>
+            <input type="text" id="earInput" placeholder="例如: D1400, L1426, Y1456, Y1266, LY3507" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <button class="btn" onclick="searchPedigree()">🔍 造冊檢索</button>
+        </div>
+        <div>
+            <span style="font-size: 11.5px; font-weight: bold; color: #475569; margin-right: 4px;">品種快速篩選:</span>
+            <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">All</button>
+            <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y</button>
+            <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L</button>
+            <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D</button>
+            <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY</button>
+        </div>
+    </div>
 
-  pedigree_list = []
-  death_map = {}
-  known_ears = set()
+    <div class="legend-bar">
+        <strong>品種識別:</strong>
+        <span class="color-badge breed-Y">Yorkshire (大白/粉黃)</span>
+        <span class="color-badge breed-L">Landrace (藍瑞斯/粉藍)</span>
+        <span class="color-badge breed-D">Duroc (杜洛克/粉紅)</span>
+        <span class="color-badge breed-LY">LY (二元母豬/粉綠)</span>
+        <span class="color-badge" style="background:#fff1f2; border:1px dashed #dc2626; color:#dc2626;">DIE / CULLED (已淘汰/死亡)</span>
+    </div>
 
-  for _, r in df_main.iterrows():
-    ear = clean_val(r.get(c_ear))
-    if ear == "-" or ear == "耳號":
-      continue
-    ear_upper = ear.upper()
-    known_ears.add(ear_upper)
+    <!-- 📜 官方四代家族系統圖 (User/Admin 開放) -->
+    <div class="tree-card-wrapper" id="certExportCard" style="border: 1.5px solid #0284c7;">
+        <div class="card-header-bar">
+            <div>
+                <h2 style="margin:0; font-size:15px; color:#0284c7; font-weight:900;">Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
+                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (圖框內純淨血統名冊，圖框下方文字展示 MLI/SPI/役期指標)</p>
+            </div>
+            <div><button class="btn btn-export" onclick="exportFullPage('certScrollArea', 'GLA_Official_Certificate')">📸 整頁存檔 PNG</button></div>
+        </div>
+        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 780px;">
+            <svg class="orthogonal-svg" id="certSvg"></svg>
+            <div id="certBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請在上方輸入耳號啟動四代造冊檢索...</div></div>
+        </div>
+    </div>
 
-    dod = clean_val(r.get(c_dod))
-    if dod != "-":
-      death_map[ear_upper] = dod
+    <!-- 📌 育種成績與評估資料表 (User/Admin 開放) -->
+    <div class="tree-card-wrapper" id="tableExportCard">
+        <div class="card-header-bar">
+            <div style="font-size:14.5px; color:#0f172a; font-weight:800;" id="cardTitle">Breeding Performance & Index Data (育種成績與評估總表)</div>
+            <div><button class="btn btn-export" onclick="exportFullPage('tableWrapper', 'GLA_Breeding_Table')">📸 整頁存檔 PNG</button></div>
+        </div>
+        <div class="data-table-wrapper" id="tableWrapper">
+            <table class="excel-data-table">
+                <thead>
+                    <tr>
+                        <th>耳號 (Ear Tag)</th>
+                        <th>品種 (Breed)</th>
+                        <th>性別 (Sex)</th>
+                        <th>出生日 (DOB)</th>
+                        <th>配種日 (Mating)</th>
+                        <th>分娩日 (Farrow)</th>
+                        <th>胎次 (Parity)</th>
+                        <th>當胎配種公 (Sire/Mate)</th>
+                        <th>總產 (TNB)</th>
+                        <th>活胎 (NBA)</th>
+                        <th>離乳 (Wean)</th>
+                        <th>SPI</th>
+                        <th>MLI</th>
+                        <th>TSI / PSI</th>
+                    </tr>
+                </thead>
+                <tbody id="excelTableBody">
+                    <tr><td colspan="14" class="placeholder-text">尚未載入資料...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-    breed = clean_val(r.get(c_breed)).upper()
-    if breed == "-":
-      breed = (
-          "LY"
-          if ear_upper.startswith("LY")
-          else (
-              "Y"
-              if ear_upper.startswith("Y")
-              else (
-                  "L"
-                  if ear_upper.startswith("L")
-                  else ("D" if ear_upper.startswith("D") else "UNKNOWN")
-              )
-          )
-      )
-    else:
-      if "YORK" in breed:
-        breed = "Y"
-      elif "LAND" in breed:
-        breed = "L"
-      elif "DUROC" in breed:
-        breed = "D"
-      elif "LY" in breed:
-        breed = "LY"
+    <!-- 🌳 蝴蝶對稱全系譜家族拓撲樹 (User/Admin 開放) -->
+    <div class="tree-card-wrapper" id="macroTreePanel" style="border: 1.5px solid #0d6efd;">
+        <div class="card-header-bar">
+            <div>
+                <h3 style="margin:0; font-size:14.5px; color:#0d6efd; font-weight:800;">Bilateral Butterfly Lineage Topology Tree (蝴蝶對稱全系譜家族拓撲樹)</h3>
+                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">左翼：父系家族品系完整展開 (Sire Lines) ⟵ 🎯 本體 ⟶ 右翼：母系家族品系完整展開 (Dam Lines)</p>
+            </div>
+            <div><button class="btn btn-export" onclick="exportFullPage('macroScrollArea', 'GLA_Butterfly_Topology')">📸 整頁存檔 PNG</button></div>
+        </div>
+        <div class="dynamic-scroll-area" id="macroScrollArea" style="min-height: 680px;">
+            <svg class="orthogonal-svg" id="macroSvg"></svg>
+            <div id="macroBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請檢索個體以展開蝴蝶型雙向全系譜家族樹...</div></div>
+        </div>
+    </div>
 
-    sire_full = clean_val(
-        r.get(
-            find_c(["G3_美系父親Sire(全名)", "G3_父代Sire全名", "第一代公"], df_main)
-        )
-    )
-    sire_line = clean_val(
-        r.get(find_c(["G3_父品系家族名", "【G3_父代Sire】品系家族名"], df_main))
-    )
-    dam_full = clean_val(
-        r.get(
-            find_c(["G3_美系母親Dam(全名)", "G3_母代Dam全名", "第一代母"], df_main)
-        )
-    )
-    dam_line = clean_val(
-        r.get(find_c(["G3_母品系家族名", "【G3_母代Dam】品系家族名"], df_main))
-    )
+    <!-- ==================== 隱密區塊：完全無提示，只有 Admin 輸入正確密碼才無縫顯示 ==================== -->
+    <div id="adminProtectedSection" style="display:none;">
+        <!-- 🌱 全血統後代留種追蹤樹狀階層總表 -->
+        <div class="tree-card-wrapper" id="descendantTreeArea" style="border: 1.5px solid #0284c7;">
+            <div class="card-header-bar">
+                <div>
+                    <h3 style="margin:0; font-size:14.5px; color:#0284c7; font-weight:800;">Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</h3>
+                    <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">配種母本與在役留種子代 (F1) 生產效能階層總表：追蹤在場母本表現與女兒在役胎次、活仔數、SPI 評估</p>
+                </div>
+                <div><button class="btn btn-export" onclick="exportFullPage('descendantTableWrapper', 'GLA_Descendant_Working_Status')">📸 整頁存檔 PNG</button></div>
+            </div>
+            <div id="descendantContainer"><div class="placeholder-text">檢索個體後自動追蹤在場第一代 (F1) 留種子代之生產與工作狀態...</div></div>
+        </div>
 
-    us_meta = us_dict.get(ear_upper, {})
-    if sire_full == "-" and us_meta:
-      sire_full = us_meta.get("sire_full", "-")
-      sire_line = us_meta.get("sire_line", "-")
-    if dam_full == "-" and us_meta:
-      dam_full = us_meta.get("dam_full", "-")
-      dam_line = us_meta.get("dam_line", "-")
+        <!-- 🧬 家族品系血統比例分析表 -->
+        <div class="tree-card-wrapper" id="bloodExportCard" style="border: 1.5px solid #10b981;">
+            <div class="card-header-bar">
+                <div>
+                    <h3 style="margin:0; font-size:14.5px; color:#059669; font-weight:800;">Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
+                    <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">依據父系家族與母系家族溯源解構，呈現各品系之純度佔比，倒推性能遺傳歸屬</p>
+                </div>
+                <div><button class="btn btn-export" onclick="exportFullPage('bloodContainer', 'GLA_Family_Line_Proportion')">📸 整頁存檔 PNG</button></div>
+            </div>
+            <div id="bloodContainer"><div class="placeholder-text">請檢索個體以解析該個體之家族品系血緣比例...</div></div>
+        </div>
 
-    current_age = age_map.get(
-        ear_upper,
-        clean_num(
-            r.get(
-                find_c(
-                    ["目前年齡(歲)", "目前年齡", "年齡(歲)", "年齡"], df_main
-                )
-            )
-        ),
-    )
-    used_years = used_map.get(
-        ear_upper,
-        clean_num(
-            r.get(find_c(["已使用年限(年)", "已使用年限", "使用年限"], df_main))
-        ),
-    )
+        <!-- 🥩 直系後裔屠體銷售與遺傳缺陷檢定表 -->
+        <div class="tree-card-wrapper" id="carcassExportCard" style="border: 1.5px solid #d97706;">
+            <div class="card-header-bar">
+                <div>
+                    <h3 style="margin:0; font-size:14.5px; color:#d97706; font-weight:800;">Offspring Carcass & Slaughter Performance with Genetic Defect Audit (直系後裔屠體銷售與遺傳缺陷檢定表)</h3>
+                    <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">直系出欄肉豬性能檢定：平均體重、日增重、出肉率，以及疝氣/隱睪/脫肛/肢蹄等遺傳缺陷監測</p>
+                </div>
+                <div><button class="btn btn-export" onclick="exportFullPage('carcassTableWrapper', 'GLA_Carcass_Audit')">📸 整頁存檔 PNG</button></div>
+            </div>
+            <div id="carcassContainer"><div class="placeholder-text">請檢索種公豬或種母豬，系統將自動匯總其直系出欄肉豬屠體表現與遺傳缺陷統計...</div></div>
+        </div>
 
-    # 直屬父母
-    g5_s = clean_val(r.get(c_g5_sire))
-    g5_d = clean_val(r.get(c_g5_dam))
+        <!-- 🛡️ 管理者專屬稽核日誌 -->
+        <div class="tree-card-wrapper" id="auditCard" style="border: 1.5px solid #64748b; background-color: #f8fafc;">
+            <div class="card-header-bar">
+                <div style="font-size:13px; font-weight:800; color:#334155;">System Access & Search Audit Trail (系統存取與搜尋稽核日誌)</div>
+                <button class="btn btn-export" onclick="exportFullPage('auditTableWrapper', 'GLA_Audit_Log')">📸 匯出日誌</button>
+            </div>
+            <div class="data-table-wrapper" id="auditTableWrapper" style="max-height: 200px;">
+                <table class="excel-data-table">
+                    <thead>
+                        <tr>
+                            <th>時間 (Timestamp)</th>
+                            <th>存取身份 (Auth Role)</th>
+                            <th>訪客 IP (Client IP)</th>
+                            <th>檢索目標 (Query Ear)</th>
+                            <th>狀態 (Status)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody">
+                        <tr><td colspan="5" style="color:#94a3b8;">尚無存取稽核紀錄</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-    entry = {
-        "ear": ear_upper,
-        "breed": breed,
-        "sex": (
-            "FEMALE"
-            if clean_val(r.get(c_sex)).upper() == "FEMALE"
-            or ear_upper.startswith("LY")
-            else "MALE"
-        ),
-        "parity": clean_num(r.get(c_p)),
-        "mate": clean_val(r.get(c_mate)),
-        "mating_date": clean_val(r.get(c_md)),
-        "farrow_date": clean_val(r.get(c_fd)),
-        "dob": clean_val(r.get(c_dob)),
-        "dod": dod,
-        "current_age": current_age,
-        "used_years": used_years,
-        # 🌟 寫入直屬生父生母，確保後代留種樹能秒級精確關聯
-        "g5_sire": g5_s,
-        "g5_dam": g5_d,
-        "total_born": clean_num(
-            r.get(find_c(["Total born同胎總生產數", "Total born", "總產"], df_main))
-        ),
-        "born_alive": clean_num(
-            r.get(find_c(["Born alive同胎次活胎數量", "Born alive", "活胎"], df_main))
-        ),
-        "weaning": clean_num(
-            r.get(find_c(["Weaning同胎次離乳數量", "Weaning", "離乳"], df_main))
-        ),
-        "spi": clean_num(r.get(find_c(["計算 SPI", "SPI"], df_main))),
-        "mli": clean_num(r.get(find_c(["母系指數 (MLI)", "MLI"], df_main))),
-        "tsi": clean_num(
-            r.get(find_c(["終端公豬指數 (TSI)", "TSI", "PSI"], df_main))
-        ),
-        "g3_sire_full": sire_full,
-        "g3_sire_line": sire_line,
-        "g3_sire_spi": clean_num(
-            r.get(find_c(["G3_父SPI", "G3_父代SPI"], df_main))
-        ),
-        "g3_sire_mli": clean_num(
-            r.get(find_c(["G3_父MLI", "G3_父代MLI"], df_main))
-        ),
-        "g3_dam_full": dam_full,
-        "g3_dam_line": dam_line,
-        "g3_dam_spi": clean_num(
-            r.get(find_c(["G3_母SPI", "G3_母代SPI"], df_main))
-        ),
-        "g3_dam_mli": clean_num(
-            r.get(find_c(["G3_母MLI", "G3_母代MLI"], df_main))
-        ),
-        "ss_full": clean_val(
-            r.get(find_c(["G2_祖父SS(全名)", "G2_祖父SS全名"], df_main))
-        ),
-        "ss_line": clean_val(
-            r.get(find_c(["G2_祖父SS(品系名)", "【G2_祖父SS】品系家族名"], df_main))
-        ),
-        "sd_full": clean_val(
-            r.get(find_c(["G2_祖母SD(全名)", "G2_祖母SD全名"], df_main))
-        ),
-        "sd_line": clean_val(
-            r.get(find_c(["G2_祖母SD(品系名)", "【G2_祖母SD】品系家族名"], df_main))
-        ),
-        "ds_full": clean_val(
-            r.get(find_c(["G2_外祖父DS(全名)", "G2_外祖父DS全名"], df_main))
-        ),
-        "ds_line": clean_val(
-            r.get(
-                find_c(
-                    ["G2_外祖父DS(品系名)", "【G2_外祖父DS】品系家族名"], df_main
-                )
-            )
-        ),
-        "dd_full": clean_val(
-            r.get(find_c(["G2_外祖母DD(全名)", "G2_外祖母DD全名"], df_main))
-        ),
-        "dd_line": clean_val(
-            r.get(
-                find_c(
-                    ["G2_外祖母DD(品系名)", "【G2_外祖母DD】品系家族名"], df_main
-                )
-            )
-        ),
-        "g1_nodes": {
-            "sss": clean_val(
-                r.get(
-                    find_c(
-                        [
-                            "G1_曾祖父SSS(品系名)",
-                            "【G1_曾祖父SSS】品系家族名",
-                        ],
-                        df_main,
-                    )
-                )
-            ),
-            "ssd": clean_val(
-                r.get(
-                    find_c(
-                        [
-                            "G1_曾祖母SSD(品系名)",
-                            "【G1_曾祖母SSD】品系家族名",
-                        ],
-                        df_main,
-                    )
-                )
-            ),
-            "sds": clean_val(
-                r.get(
-                    find_c(
-                        [
-                            "G1_曾祖父SDS(品系名)",
-                            "【G1_曾祖父SDS】品系家族名",
-                        ],
-                        df_main,
-                    )
-                )
-            ),
-            "sdd": clean_val(
-                r.get(
-                    find_c(
-                        [
-                            "G1_曾祖母SDD(品系名)",
-                            "【G1_曾祖母SDD】品系家族名",
-                        ],
-                        df_main,
-                    )
-                )
-            ),
-            "dss": clean_val(
-                r.get(
-                    find_c(
-                        [
-                            "G1_曾外祖父DSS(品系名)",
-                            "【G1_曾外祖父DSS】品系家族名",
-                        ],
-                        df_main,
-                    )
-                )
-            ),
-            "dsd": clean_val(
-                r.get(
-                    find_c(
-                        [
-                            "G1_曾外祖母DSD(品系名)",
-                            "【G1_曾外祖母DSD】品系家族名",
-                        ],
-                        df_main,
-                    )
-                )
-            ),
-            "dds": clean_val(
-                r.get(
-                    find_c(
-                        [
-                            "G1_曾外祖父DDS(品系名)",
-                            "【G1_曾外祖父DDS】品系家族名",
-                        ],
-                        df_main,
-                    )
-                )
-            ),
-            "ddd": clean_val(
-                r.get(
-                    find_c(
-                        [
-                            "G1_曾外祖母DDD(品系名)",
-                            "【G1_曾外祖母DDD】品系家族名",
-                        ],
-                        df_main,
-                    )
-                )
-            ),
-        },
-    }
-    pedigree_list.append(entry)
+    <script>
+        let isUserUnlocked = false;
+        let isAdminUnlocked = false;
+        let clientIP = 'Fetching...';
+        let auditLogs = [];
 
-  for boar_ear, bdata in us_dict.items():
-    if boar_ear not in known_ears:
-      pedigree_list.append({
-          "ear": boar_ear,
-          "breed": (
-              bdata["breed"][0]
-              if bdata["breed"] in ["LANDRACE", "YORKSHIRE", "DUROC"]
-              else bdata["breed"]
-          ),
-          "sex": bdata["sex"],
-          "parity": "0",
-          "mate": "-",
-          "mating_date": "-",
-          "farrow_date": "-",
-          "dob": "-",
-          "dod": "-",
-          "current_age": age_map.get(boar_ear, "-"),
-          "used_years": used_map.get(boar_ear, "-"),
-          "g5_sire": "-",
-          "g5_dam": "-",
-          "total_born": "-",
-          "born_alive": "-",
-          "weaning": "-",
-          "spi": bdata["spi"],
-          "mli": bdata["mli"],
-          "tsi": bdata["tsi"],
-          "g3_sire_full": bdata["sire_full"],
-          "g3_sire_line": bdata["sire_line"],
-          "g3_sire_spi": bdata["sire_spi"],
-          "g3_sire_mli": bdata["sire_mli"],
-          "g3_dam_full": bdata["dam_full"],
-          "g3_dam_line": bdata["dam_line"],
-          "g3_dam_spi": bdata["dam_spi"],
-          "g3_dam_mli": bdata["dam_mli"],
-          "ss_full": bdata["ss_full"],
-          "ss_line": bdata["ss_line"],
-          "sd_full": bdata["sd_full"],
-          "sd_line": bdata["sd_line"],
-          "ds_full": bdata["ds_full"],
-          "ds_line": bdata["ds_line"],
-          "dd_full": bdata["dd_full"],
-          "dd_line": bdata["dd_line"],
-          "g1_nodes": bdata["g1_nodes"],
-      })
+        let pedigreeList = [];
+        let deathInfoMap = new Map();
+        let usIndex = {};
+        let carcassSales = [];
+        let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
 
-  print(
-      "🚀 [4/4] 抓取《全生命週期銷售與血統分析 (GID: 591794579)》屠體與遺傳缺陷庫..."
-  )
-  raw_sales = fetch_sheet_csv(GID_SALES)
-  df_sales = pd.DataFrame()
-  if raw_sales:
-    df_sales = pd.read_csv(io.StringIO(raw_sales), low_memory=False)
-  else:
-    try:
-      df_sales = pd.read_csv(
-          "2_PY_族譜家族樹_GLA-pedigree-family_全生命週期銷售與血統分析_PY_轉.csv",
-          low_memory=False,
-      )
-    except:
-      pass
+        function showToast(msg) {
+            const t = document.getElementById('toastNotify');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 900);
+        }
 
-  carcass_list = []
-  if not df_sales.empty:
-    for _, r in df_sales.iterrows():
-      sire = str(r.get("G4-m", "")).strip() if pd.notna(r.get("G4-m")) else "-"
-      dam = str(r.get("G4-f", "")).strip() if pd.notna(r.get("G4-f")) else "-"
-      ear = (
-          str(r.get("Ear Notch", "")).strip()
-          if pd.notna(r.get("Ear Notch"))
-          else "-"
-      )
-      if ear == "-" or (sire == "-" and dam == "-"):
-        continue
+        function getTodayDateStr() {
+            const d = new Date();
+            return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+        }
 
-      defects = []
-      if pd.notna(r.get("Hernia")) and str(r.get("Hernia")).strip() not in [
-          "0",
-          "0.0",
-          "-",
-      ]:
-        defects.append("疝氣(Hernia)")
-      if pd.notna(r.get("Cryptorchidism")) and str(
-          r.get("Cryptorchidism")
-      ).strip() not in ["0", "0.0", "-"]:
-        defects.append("隱睪(Crypt)")
-      if pd.notna(r.get("Rectal prolapse")) and str(
-          r.get("Rectal prolapse")
-      ).strip() not in ["0", "0.0", "-"]:
-        defects.append("脫肛(Prolapse)")
-      if pd.notna(r.get("Leg Problem")) and str(
-          r.get("Leg Problem")
-      ).strip() not in ["0", "0.0", "-"]:
-        defects.append("肢蹄問題(Leg)")
-      if pd.notna(r.get("Stunted")) and str(r.get("Stunted")).strip() not in [
-          "0",
-          "0.0",
-          "-",
-      ]:
-        defects.append("僵豬(Stunted)")
-      if pd.notna(r.get("Abnormal")) and str(r.get("Abnormal")).strip() not in [
-          "0",
-          "0.0",
-          "-",
-      ]:
-        defects.append("畸形(Abnormal)")
-      if pd.notna(r.get("reject")) and str(r.get("reject")).strip() not in [
-          "0",
-          "0.0",
-          "-",
-      ]:
-        defects.append("淘汰(Reject)")
+        async function fetchClientIP() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const data = await res.json();
+                clientIP = data.ip || 'Unknown';
+            } catch(e) {
+                clientIP = 'Internal / Local';
+            }
+        }
 
-      carcass_list.append({
-          "ear": ear,
-          "sire": sire,
-          "dam": dam,
-          "g3_m": str(r.get("G3-m", "-")).strip(),
-          "g3_f": str(r.get("G3-f", "-")).strip(),
-          "wt": (
-              round(float(r["Weight(kg)的AVERAGE"]), 1)
-              if pd.notna(r.get("Weight(kg)的AVERAGE"))
-              else None
-          ),
-          "adg1": (
-              round(float(r["ADG1的AVERAGE"]), 1)
-              if pd.notna(r.get("ADG1的AVERAGE"))
-              else None
-          ),
-          "adg2": (
-              round(float(r["ADG2的AVERAGE"]), 1)
-              if pd.notna(r.get("ADG2的AVERAGE"))
-              else None
-          ),
-          "b_wk": (
-              int(float(r["Birth Week num"]))
-              if pd.notna(r.get("Birth Week num"))
-              else None
-          ),
-          "s_wk": (
-              int(float(r["Sold week num"]))
-              if pd.notna(r.get("Sold week num"))
-              else None
-          ),
-          "dr": (
-              round(float(r["出肉率/屠體率 (Dressing Rate %)"]), 1)
-              if pd.notna(r.get("出肉率/屠體率 (Dressing Rate %)"))
-              else None
-          ),
-          "ckg": (
-              round(float(r["Carcass kg的AVERAGE"]), 1)
-              if pd.notna(r.get("Carcass kg的AVERAGE"))
-              else None
-          ),
-          "defects": defects,
-      })
-  print(f"   ✓ 成功收錄 {len(carcass_list)} 筆出欄屠體與遺傳缺陷記錄。")
+        function logAudit(query, statusMsg) {
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            const roleStr = isAdminUnlocked ? 'ADMIN' : (isUserUnlocked ? 'USER' : 'UNAUTHORIZED');
+            auditLogs.unshift({
+                time: timeStr,
+                role: roleStr,
+                ip: clientIP,
+                query: query || '-',
+                result: statusMsg
+            });
+            renderAuditTable();
+        }
 
-  final_payload = {
-      "pedigree": pedigree_list,
-      "death_map": death_map,
-      "us_index": us_dict,
-      "carcass_sales": carcass_list,
-  }
+        function renderAuditTable() {
+            const tbody = document.getElementById('auditTableBody');
+            if (!tbody) return;
+            let html = '';
+            auditLogs.slice(0, 50).forEach(log => {
+                html += `
+                    <tr>
+                        <td>${log.time}</td>
+                        <td><b style="color:${log.role==='ADMIN'?'#d97706':(log.role==='USER'?'#0284c7':'#dc2626')}">${log.role}</b></td>
+                        <td>${log.ip}</td>
+                        <td><b style="color:#0f172a;">${log.query}</b></td>
+                        <td>${log.result}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
 
-  with open("data.json", "w", encoding="utf-8") as f:
-    json.dump(final_payload, f, ensure_ascii=False)
+        // 🌟 第一道門禁：一般 User 通行密碼
+        function verifyGatePass() {
+            const p = document.getElementById('userGatePassword').value.trim();
+            if (p === 'gla@8888') {
+                isUserUnlocked = true;
+                sessionStorage.setItem('GLA_USER_AUTH', '1');
+                document.getElementById('authGateModal').style.display = 'none';
+                showToast("✅ 通行密碼驗證成功！");
+                logAudit('GATE_AUTH', '通行成功 (User)');
+            } else {
+                alert("❌ 密碼錯誤！本系統為公司內部機密資料，未經許可嚴禁查閱。\nIncorrect password. Access denied.");
+                logAudit('GATE_AUTH', '密碼錯誤拒絕');
+            }
+        }
 
-  print(
-      f"🎉 產出成功！共收錄 {len(pedigree_list)} 頭種豬，{len(carcass_list)} 筆出欄肉豬。"
-  )
+        // 🌟 第二道隱形小門：點擊小點啟動 Admin 驗證
+        function openAdminModal() {
+            document.getElementById('adminSecretModal').style.display = 'flex';
+            document.getElementById('adminSecretUser').focus();
+        }
 
+        function closeAdminModal() {
+            document.getElementById('adminSecretModal').style.display = 'none';
+        }
 
-if __name__ == "__main__":
-  main()
+        // 🌟 Admin 驗證邏輯：帳號 admin，密碼更新為 510067
+        function verifyAdminMaster() {
+            const u = document.getElementById('adminSecretUser').value.trim().toLowerCase();
+            const p = document.getElementById('adminSecretPass').value.trim();
+
+            if (u === 'admin' && p === '510067') {
+                isAdminUnlocked = true;
+                isUserUnlocked = true;
+                sessionStorage.setItem('GLA_ADMIN_AUTH', '1');
+                document.getElementById('adminSecretModal').style.display = 'none';
+                document.getElementById('adminProtectedSection').style.display = 'block';
+                showToast("👑 管理權限驗證通過！進階全模組已解鎖。");
+                logAudit('ADMIN_MASTER_AUTH', 'Master 解鎖成功');
+
+                const currentQuery = document.getElementById('earInput').value.trim();
+                if (currentQuery) searchPedigree();
+            } else {
+                alert("驗證失敗。");
+                closeAdminModal();
+                logAudit('ADMIN_MASTER_AUTH', 'Admin 密碼錯誤');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchClientIP();
+
+            if (sessionStorage.getItem('GLA_ADMIN_AUTH') === '1') {
+                isAdminUnlocked = true;
+                isUserUnlocked = true;
+                document.getElementById('adminProtectedSection').style.display = 'block';
+            } else if (sessionStorage.getItem('GLA_USER_AUTH') === '1') {
+                isUserUnlocked = true;
+            } else {
+                document.getElementById('authGateModal').style.display = 'flex';
+            }
+
+            fetch('data.json?v=' + Date.now())
+                .then(r => r.json())
+                .then(data => {
+                    pedigreeList = data.pedigree || [];
+                    usIndex = data.us_index || {};
+                    carcassSales = data.carcass_sales || [];
+                    deathInfoMap.clear();
+                    if (data.death_map) {
+                        for (let k in data.death_map) deathInfoMap.set(k.toUpperCase(), data.death_map[k]);
+                    }
+                    logAudit('INIT_LOAD', `載入數據成功 (${pedigreeList.length}筆)`);
+                })
+                .catch(err => {
+                    console.error("載入 data.json 失敗:", err);
+                    showToast("❌ data.json 讀取失敗，請確認檔案已推送到 GitHub。");
+                    logAudit('INIT_LOAD', '載入失敗');
+                });
+        });
+
+        function cleanVal(v) {
+            return (v === undefined || v === null || v === 'undefined' || v === 'NaN' || v === 'nan' || v === '') ? '-' : String(v).trim();
+        }
+
+        function getBreedClass(earOrBreed) {
+            if (!earOrBreed || earOrBreed === '-') return 'breed-DEFAULT';
+            const s = String(earOrBreed).trim().toUpperCase();
+            if (s.startsWith('LY') || s.includes('CROSS')) return 'breed-LY';
+            if (s.startsWith('Y') || s.includes('YORK')) return 'breed-Y';
+            if (s.startsWith('L') || s.includes('LAND')) return 'breed-L';
+            if (s.startsWith('D') || s.includes('DUROC')) return 'breed-D';
+            return 'breed-DEFAULT';
+        }
+
+        function toggleBreedFilter(bKey) {
+            if (bKey === 'ALL') selectedBreeds = selectedBreeds.size === 4 ? new Set() : new Set(['LY', 'Y', 'L', 'D']);
+            else selectedBreeds.has(bKey) ? selectedBreeds.delete(bKey) : selectedBreeds.add(bKey);
+            ['Y', 'L', 'D', 'LY'].forEach(k => document.getElementById('btnBreed' + k).classList.toggle('active', selectedBreeds.has(k)));
+            document.getElementById('btnBreedALL').classList.toggle('active', selectedBreeds.size === 4);
+        }
+
+        function searchPedigree() {
+            if (!isUserUnlocked) {
+                document.getElementById('authGateModal').style.display = 'flex';
+                return;
+            }
+
+            const raw = document.getElementById('earInput').value.trim();
+            if (!raw) return;
+            const query = raw.toUpperCase();
+
+            showToast("🔍 檢索血統庫中...");
+            setTimeout(() => {
+                let matched = pedigreeList.filter(it => it.ear === query);
+                let primary = matched.length > 0 ? matched[0] : null;
+
+                if (!primary && usIndex[query]) {
+                    const u = usIndex[query];
+                    primary = {
+                        ear: query, breed: u.breed[0] || u.breed, sex: u.sex, parity: "0",
+                        mate: "-", mating_date: "-", farrow_date: "-", dob: "-", dod: "-",
+                        current_age: "-", used_years: "-", g5_sire: "-", g5_dam: "-",
+                        total_born: "-", born_alive: "-", weaning: "-",
+                        spi: u.spi, mli: u.mli, tsi: u.tsi,
+                        g3_sire_full: u.sire_full, g3_sire_line: u.sire_line, g3_sire_spi: u.sire_spi, g3_sire_mli: u.sire_mli,
+                        g3_dam_full: u.dam_full, g3_dam_line: u.dam_line, g3_dam_spi: u.dam_spi, g3_dam_mli: u.dam_mli,
+                        ss_full: u.ss_full, ss_line: u.ss_line, sd_full: u.sd_full, sd_line: u.sd_line,
+                        ds_full: u.ds_full, ds_line: u.ds_line, dd_full: u.dd_full, dd_line: u.dd_line,
+                        g1_nodes: u.g1_nodes
+                    };
+                    matched = [primary];
+                }
+
+                if (primary) {
+                    let tableItems = matched;
+                    if (primary.sex === 'MALE' || (!query.startsWith('LY') && (query.startsWith('L') || query.startsWith('Y') || query.startsWith('D')))) {
+                        const matedSows = pedigreeList.filter(it => it.mate && it.mate.includes(query));
+                        if (matedSows.length > 0) tableItems = [...matched, ...matedSows];
+                    }
+
+                    // 基礎模組 (User 可視)
+                    drawOfficialPedigree(primary);
+                    renderTable(tableItems, query, primary);
+                    drawButterflyTopologyTree(primary);
+
+                    // 進階模組 (Admin 登入才算)
+                    if (isAdminUnlocked) {
+                        renderDescendantSplitView(primary);
+                        renderFamilyLineProportion(primary);
+                        renderCarcassPerformanceAudit(primary);
+                    }
+
+                    logAudit(query, `檢索成功 (匹配${tableItems.length}筆)`);
+                } else {
+                    document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="14" class="placeholder-text">查無 "${query}" 之造冊資料</td></tr>`;
+                    document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之官方四代家譜</div>`;
+                    document.getElementById('macroBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之蝴蝶拓撲資料</div>`;
+                    if (isAdminUnlocked) {
+                        document.getElementById('descendantContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
+                        document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
+                        document.getElementById('carcassContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之屠體檢定資料</div>`;
+                    }
+                    logAudit(query, '查無此豬');
+                }
+            }, 30);
+        }
+
+        /* 育種成績總表 */
+        function renderTable(items, query, primary) {
+            const tbody = document.getElementById('excelTableBody');
+            const isMale = primary && primary.sex === 'MALE';
+            document.getElementById('cardTitle').innerHTML = `Breeding Performance & Index Data: <span style="color:#0284c7;">"${query}"</span> ${isMale ? `(公豬本體及在場配種母豬共 ${items.length} 筆)` : `(共 ${items.length} 筆生產紀錄)`}`;
+            let html = '';
+            items.forEach(it => {
+                const isDead = deathInfoMap.has(it.ear);
+                const badge = isDead ? `<span class="badge-dead">${deathInfoMap.get(it.ear)}</span>` : `<span class="badge-active">ACTIVE</span>`;
+                html += `
+                    <tr>
+                        <td><b style="color:#dc2626;">${it.ear}</b> ${badge}</td>
+                        <td>${it.breed}</td>
+                        <td style="color:${it.sex==='MALE'?'#0284c7':'#e11d48'}; font-weight:800;">${it.sex}</td>
+                        <td>${cleanVal(it.dob)}</td>
+                        <td>${cleanVal(it.mating_date)}</td>
+                        <td>${cleanVal(it.farrow_date)}</td>
+                        <td><b>${cleanVal(it.parity)}</b></td>
+                        <td style="color:#0284c7; font-weight:700;">${cleanVal(it.mate)}</td>
+                        <td><b>${cleanVal(it.total_born)}</b></td>
+                        <td><b style="color:#059669;">${cleanVal(it.born_alive)}</b></td>
+                        <td><b>${cleanVal(it.weaning)}</b></td>
+                        <td><b>${cleanVal(it.spi)}</b></td>
+                        <td><b>${cleanVal(it.mli)}</b></td>
+                        <td><b>${cleanVal(it.tsi)}</b></td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        /* 官方四代家族系統圖 */
+        function drawOfficialPedigree(target) {
+            const container = document.getElementById('certBoxesContainer');
+            const svgLayer = document.getElementById('certSvg');
+            const scrollArea = document.getElementById('certScrollArea');
+            container.innerHTML = ''; svgLayer.innerHTML = '';
+
+            const cardW = 205, boxMainH = 54, textSubH = 34;
+            const cardTotalH = boxMainH + textSubH;
+            const colGap = 50, totalHeight = 780;
+            const totalWidth = (cardW * 4) + (colGap * 3) + 50;
+
+            scrollArea.style.height = totalHeight + 'px';
+            container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
+            svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
+
+            const colX = [20, 20 + cardW + colGap, 20 + (cardW + colGap) * 2, 20 + (cardW + colGap) * 3];
+            const nodes = {};
+
+            const isDead = deathInfoMap.has(target.ear);
+            nodes['T'] = {
+                x: colX[0], y: totalHeight / 2 - cardTotalH / 2,
+                ear: target.ear, breed: target.breed,
+                line: target.g3_sire_line || '-',
+                role: `TARGET (${target.sex==='MALE'?'♂ 公豬':'♀ 母豬'})`,
+                mli: target.mli, spi: target.spi, tsi: target.tsi,
+                age: target.current_age, used: target.used_years, dob: target.dob,
+                isDead: isDead, deadTag: deathInfoMap.get(target.ear)
+            };
+
+            nodes['S'] = {
+                x: colX[1], y: totalHeight * 0.20 - cardTotalH / 2,
+                ear: target.g3_sire_full, breed: target.breed,
+                line: target.g3_sire_line, role: "生父 (Sire)",
+                mli: target.g3_sire_mli, spi: target.g3_sire_spi, tsi: "-",
+                age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_sire_full)
+            };
+            nodes['D'] = {
+                x: colX[1], y: totalHeight * 0.80 - cardTotalH / 2,
+                ear: target.g3_dam_full, breed: target.breed,
+                line: target.g3_dam_line, role: "生母 (Dam)",
+                mli: target.g3_dam_mli, spi: target.g3_dam_spi, tsi: "-",
+                age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_dam_full)
+            };
+
+            const g2List = [
+                { k: 'SS', full: target.ss_full, line: target.ss_line, role: "祖父 (SS)", yR: 0.10 },
+                { k: 'SD', full: target.sd_full, line: target.sd_line, role: "祖母 (SD)", yR: 0.32 },
+                { k: 'DS', full: target.ds_full, line: target.ds_line, role: "外祖父 (DS)", yR: 0.68 },
+                { k: 'DD', full: target.dd_full, line: target.dd_line, role: "外祖母 (DD)", yR: 0.90 }
+            ];
+            g2List.forEach(g => {
+                nodes[g.k] = {
+                    x: colX[2], y: totalHeight * g.yR - cardTotalH / 2,
+                    ear: g.full, breed: target.breed, line: g.line, role: g.role,
+                    mli: "-", spi: "-", tsi: "-", age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(g.full)
+                };
+            });
+
+            const g1 = target.g1_nodes || {};
+            const g3Defs = [
+                { k: 'SSS', line: g1.sss, role: "曾祖父" }, { k: 'SSD', line: g1.ssd, role: "曾祖母" },
+                { k: 'SDS', line: g1.sds, role: "曾祖父" }, { k: 'SDD', line: g1.sdd, role: "曾祖母" },
+                { k: 'DSS', line: g1.dss, role: "曾外祖父" }, { k: 'DSD', line: g1.dsd, role: "曾外祖母" },
+                { k: 'DDS', line: g1.dds, role: "曾外祖父" }, { k: 'DDD', line: g1.ddd, role: "曾外祖母" }
+            ];
+            for (let i = 0; i < 8; i++) {
+                const step = totalHeight / 8;
+                nodes[`G3_${i}`] = {
+                    x: colX[3], y: i * step + (step - cardTotalH) / 2,
+                    ear: g3Defs[i].line !== "-" ? g3Defs[i].line : 'US FOUNDATION',
+                    breed: target.breed, line: g3Defs[i].line, role: g3Defs[i].role,
+                    mli: "-", spi: "-", tsi: "-", age: "-", used: "-", dob: "-", isDead: false
+                };
+            }
+
+            const links = [
+                ['T', 'S'], ['T', 'D'],
+                ['S', 'SS'], ['S', 'SD'],
+                ['D', 'DS'], ['D', 'DD'],
+                ['SS', 'G3_0'], ['SS', 'G3_1'],
+                ['SD', 'G3_2'], ['SD', 'G3_3'],
+                ['DS', 'G3_4'], ['DS', 'G3_5'],
+                ['DD', 'G3_6'], ['DD', 'G3_7']
+            ];
+
+            links.forEach(([from, to]) => {
+                const f = nodes[from], t = nodes[to];
+                const x1 = f.x + cardW, y1 = f.y + boxMainH / 2;
+                const x2 = t.x, y2 = t.y + boxMainH / 2;
+                const midX = x1 + (x2 - x1) / 2;
+                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
+                p.setAttribute('fill', 'none');
+                p.setAttribute('stroke', '#64748b');
+                p.setAttribute('stroke-width', '1.6');
+                svgLayer.appendChild(p);
+            });
+
+            Object.keys(nodes).forEach(k => {
+                const n = nodes[k];
+                const group = document.createElement('div');
+                group.className = 'node-group-container';
+                group.style.left = n.x + 'px'; group.style.top = n.y + 'px';
+                group.style.width = cardW + 'px';
+
+                const lineHtml = (n.line && n.line !== '-') ? `<span class="family-line-clean">Line: ${n.line}</span>` : '';
+                
+                let usageText = '';
+                if (n.age && n.age !== '-' && n.age !== '0') {
+                    usageText = `年齡: ${n.age}歲 | 役期: ${n.used || '-'}年`;
+                } else if (n.dob && n.dob !== '-') {
+                    usageText = `DOB: ${n.dob}`;
+                }
+
+                group.innerHTML = `
+                    <div class="node-box-main ${getBreedClass(n.breed)} ${n.isDead ? 'node-dead' : ''} ${k === 'T' ? 'node-target-highlight' : ''}" style="height:${boxMainH}px;">
+                        <div class="c-sub-label">
+                            <span>${n.role}</span>
+                            ${lineHtml}
+                        </div>
+                        <div class="c-main-title" title="${n.ear}">
+                            ${n.ear} ${n.deadTag ? `<span class="badge-dead">${n.deadTag}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="node-text-sub-block">
+                        <div class="sub-metric-row-1">
+                            <span>MLI: ${cleanVal(n.mli)}</span>
+                            <span>SPI: ${cleanVal(n.spi)}</span>
+                            <span>TSI: ${cleanVal(n.tsi)}</span>
+                        </div>
+                        <div class="sub-metric-row-2">
+                            <span>${usageText || '役期: 核心原種'}</span>
+                            <span style="font-weight:700;">${n.breed}</span>
+                        </div>
+                    </div>
+                `;
+                if (n.ear && n.ear !== '-' && !n.ear.includes('FOUNDATION')) {
+                    group.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
+                }
+                container.appendChild(group);
+            });
+        }
+
+        /* 🌳 蝴蝶對稱全系譜家族拓撲樹 */
+        function drawButterflyTopologyTree(target) {
+            const container = document.getElementById('macroBoxesContainer');
+            const svgLayer = document.getElementById('macroSvg');
+            const cardArea = document.getElementById('macroScrollArea');
+            container.innerHTML = ''; svgLayer.innerHTML = '';
+
+            const cardW = 155, cardH = 58;
+            const totalWidth = 1420, totalHeight = 660;
+            cardArea.style.height = totalHeight + 'px';
+            container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
+            svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
+
+            const cCenter = 632;
+            const cL1 = 440, cL2 = 250, cL3 = 50;
+            const cR1 = 825, cR2 = 1015, cR3 = 1215;
+            const midY = totalHeight / 2 - cardH / 2;
+
+            const tNodes = {};
+            const g1 = target.g1_nodes || {};
+
+            tNodes['TARGET'] = {
+                x: cCenter, y: midY, ear: target.ear, breed: target.breed,
+                line: target.g3_sire_line || '-', role: `TARGET (${target.sex==='MALE'?'♂':'♀'})`
+            };
+
+            // 左翼：父系
+            if (target.g3_sire_full && target.g3_sire_full !== '-') {
+                tNodes['SIRE'] = { x: cL1, y: midY, ear: target.g3_sire_full, breed: target.breed, line: target.g3_sire_line, role: "生父 (Sire)" };
+            }
+            if (target.ss_full && target.ss_full !== '-') {
+                tNodes['SS'] = { x: cL2, y: totalHeight * 0.25 - cardH / 2, ear: target.ss_full, breed: target.breed, line: target.ss_line, role: "祖父 (SS)" };
+            }
+            if (target.sd_full && target.sd_full !== '-') {
+                tNodes['SD'] = { x: cL2, y: totalHeight * 0.75 - cardH / 2, ear: target.sd_full, breed: target.breed, line: target.sd_line, role: "祖母 (SD)" };
+            }
+            const g1Left = [
+                { k: 'SSS', line: g1.sss, role: "曾祖父", yR: 0.125 },
+                { k: 'SSD', line: g1.ssd, role: "曾祖母", yR: 0.375 },
+                { k: 'SDS', line: g1.sds, role: "曾祖父", yR: 0.625 },
+                { k: 'SDD', line: g1.sdd, role: "曾祖母", yR: 0.875 }
+            ];
+            g1Left.forEach(g => {
+                if (g.line && g.line !== '-') {
+                    tNodes[g.k] = { x: cL3, y: totalHeight * g.yR - cardH / 2, ear: g.line, breed: target.breed, line: g.line, role: g.role };
+                }
+            });
+
+            // 右翼：母系
+            if (target.g3_dam_full && target.g3_dam_full !== '-') {
+                tNodes['DAM'] = { x: cR1, y: midY, ear: target.g3_dam_full, breed: target.breed, line: target.g3_dam_line, role: "生母 (Dam)" };
+            }
+            if (target.ds_full && target.ds_full !== '-') {
+                tNodes['DS'] = { x: cR2, y: totalHeight * 0.25 - cardH / 2, ear: target.ds_full, breed: target.breed, line: target.ds_line, role: "外祖父 (DS)" };
+            }
+            if (target.dd_full && target.dd_full !== '-') {
+                tNodes['DD'] = { x: cR2, y: totalHeight * 0.75 - cardH / 2, ear: target.dd_full, breed: target.breed, line: target.dd_line, role: "外祖母 (DD)" };
+            }
+            const g1Right = [
+                { k: 'DSS', line: g1.dss, role: "曾外祖父", yR: 0.125 },
+                { k: 'DSD', line: g1.dsd, role: "曾外祖母", yR: 0.375 },
+                { k: 'DDS', line: g1.dds, role: "曾外祖父", yR: 0.625 },
+                { k: 'DDD', line: g1.ddd, role: "曾外祖母", yR: 0.875 }
+            ];
+            g1Right.forEach(g => {
+                if (g.line && g.line !== '-') {
+                    tNodes[g.k] = { x: cR3, y: totalHeight * g.yR - cardH / 2, ear: g.line, breed: target.breed, line: g.line, role: g.role };
+                }
+            });
+
+            const topoLinks = [
+                ['TARGET', 'SIRE', 'left'],
+                ['SIRE', 'SS', 'left'],
+                ['SIRE', 'SD', 'left'],
+                ['SS', 'SSS', 'left'],
+                ['SS', 'SSD', 'left'],
+                ['SD', 'SDS', 'left'],
+                ['SD', 'SDD', 'left'],
+                ['TARGET', 'DAM', 'right'],
+                ['DAM', 'DS', 'right'],
+                ['DAM', 'DD', 'right'],
+                ['DS', 'DSS', 'right'],
+                ['DS', 'DSD', 'right'],
+                ['DD', 'DDS', 'right'],
+                ['DD', 'DDD', 'right']
+            ];
+
+            topoLinks.forEach(([from, to, dir]) => {
+                const f = tNodes[from], t = tNodes[to];
+                if (!f || !t) return;
+
+                let x1 = (dir === 'left') ? f.x : f.x + cardW;
+                let x2 = (dir === 'left') ? t.x + cardW : t.x;
+                const y1 = f.y + cardH / 2;
+                const y2 = t.y + cardH / 2;
+                const midX = x1 + (x2 - x1) / 2;
+
+                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
+                p.setAttribute('fill', 'none');
+                p.setAttribute('stroke', dir === 'left' ? '#0284c7' : '#e11d48');
+                p.setAttribute('stroke-width', '1.8');
+                svgLayer.appendChild(p);
+            });
+
+            Object.keys(tNodes).forEach(k => {
+                const n = tNodes[k];
+                const card = document.createElement('div');
+                card.className = `butterfly-node ${getBreedClass(n.breed)} ${k === 'TARGET' ? 'node-target-highlight' : ''}`;
+                card.style.left = n.x + 'px'; card.style.top = n.y + 'px';
+                card.style.width = cardW + 'px'; card.style.height = cardH + 'px';
+
+                card.innerHTML = `
+                    <div style="font-size:8.5px; font-weight:800; color:#64748b;">${n.role}</div>
+                    <div style="font-size:12px; font-weight:900; color:#1e3a8a; margin: 1px 0;">
+                        Line: ${n.line || '-'}
+                    </div>
+                    <div style="font-size:9.5px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
+                        ${n.ear}
+                    </div>
+                `;
+                if (n.ear && n.ear !== '-' && !n.ear.includes('FOUNDATION')) {
+                    card.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
+                }
+                container.appendChild(card);
+            });
+        }
+
+        /* 🌱 全血統後代留種追蹤：公豬配偶與在役留種後代生產效能階層總表 (Admin 專屬) */
+        function renderDescendantSplitView(primary) {
+            const container = document.getElementById('descendantContainer');
+            const targetEar = primary.ear.toUpperCase();
+            const isMale = primary.sex === 'MALE';
+
+            // 1. 抓出所有「配種母豬」以及該胎次產仔數據 (當胎總產、活胎、離乳)
+            let matedPairs = [];
+            if (isMale) {
+                matedPairs = pedigreeList.filter(it => it.mate && it.mate.includes(targetEar));
+            } else {
+                matedPairs = pedigreeList.filter(it => it.ear === targetEar && it.mate && it.mate !== '-');
+            }
+
+            // 2. 抓出該公/母豬生下來、且「已經留種建檔並進入配種/生產」的直系 F1 代次母豬
+            let f1Sows = [];
+            if (isMale) {
+                f1Sows = pedigreeList.filter(it => it.g5_sire === targetEar || (it.g3_sire_full && it.g3_sire_full.includes(targetEar)));
+            } else {
+                f1Sows = pedigreeList.filter(it => it.g5_dam === targetEar || (it.g3_dam_full && it.g3_dam_full.includes(targetEar)));
+            }
+
+            if (matedPairs.length === 0 && f1Sows.length === 0) {
+                container.innerHTML = `<div class="placeholder-text">個體 "${targetEar}" 暫無配種母豬或在場留種子代生產紀錄。</div>`;
+                return;
+            }
+
+            const sowGroups = {};
+            matedPairs.forEach(m => {
+                const sEar = m.ear.toUpperCase();
+                if (!sowGroups[sEar]) {
+                    sowGroups[sEar] = {
+                        sowEar: sEar,
+                        breed: m.breed,
+                        matingDate: m.mating_date,
+                        farrowDate: m.farrow_date,
+                        tnb: m.total_born,
+                        nba: m.born_alive,
+                        wean: m.weaning,
+                        spi: m.spi,
+                        daughters: []
+                    };
+                }
+            });
+
+            f1Sows.forEach(d => {
+                const damEar = (d.g5_dam || d.dam || '').toUpperCase();
+                if (sowGroups[damEar]) {
+                    if (!sowGroups[damEar].daughters.some(x => x.ear === d.ear && x.parity === d.parity)) {
+                        sowGroups[damEar].daughters.push(d);
+                    }
+                } else {
+                    if (!sowGroups['OTHER_DAMS']) sowGroups['OTHER_DAMS'] = { sowEar: '其他在場母本', breed: '-', matingDate: '-', farrowDate: '-', tnb: '-', nba: '-', wean: '-', spi: '-', daughters: [] };
+                    if (!sowGroups['OTHER_DAMS'].daughters.some(x => x.ear === d.ear && x.parity === d.parity)) {
+                        sowGroups['OTHER_DAMS'].daughters.push(d);
+                    }
+                }
+            });
+
+            const totalMatedSows = Object.keys(sowGroups).filter(k => k !== 'OTHER_DAMS').length;
+            const totalReplacements = f1Sows.map(x => x.ear).filter((v, i, a) => a.indexOf(v) === i).length;
+
+            let html = `
+                <div style="font-size:12px; font-weight:700; color:#334155; margin-bottom:8px; display:flex; justify-content:space-between; background:#f8fafc; padding:8px 12px; border-radius:5px; border:1px solid #e2e8f0;">
+                    <span>🎯 檢索源頭: <b style="color:#0284c7; font-size:13.5px;">${targetEar} (${primary.sex==='MALE'?'公豬':'母豬'})</b></span>
+                    <span>曾配母豬總數: <b style="color:#0f172a;">${totalMatedSows} 頭</b> | 在場在役直系留種子代數: <b style="color:#059669; font-size:13px;">${totalReplacements} 頭</b></span>
+                </div>
+
+                <div class="data-table-wrapper" id="descendantTableWrapper">
+                    <table class="excel-data-table">
+                        <thead>
+                            <tr>
+                                <th style="width:160px; text-align:left; padding-left:12px;">層級關係 (Hierarchy)</th>
+                                <th>耳號 (Ear Tag)</th>
+                                <th>品種 (Breed)</th>
+                                <th>配種公豬 (Sire Mated)</th>
+                                <th>配種日期 (Mating)</th>
+                                <th>分娩日期 (Farrow)</th>
+                                <th>胎次 (Parity)</th>
+                                <th>總產 (TNB)</th>
+                                <th>活胎 (NBA)</th>
+                                <th>離乳 (Wean)</th>
+                                <th>SPI 指數</th>
+                                <th>目前狀態 (Status)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            Object.values(sowGroups).forEach(group => {
+                const hasDaughters = group.daughters.length > 0;
+                html += `
+                    <tr style="background-color: #f1f5f9; border-top: 1.5px solid #cbd5e1;">
+                        <td style="text-align:left; font-weight:800; color:#0f172a; padding-left:10px;">
+                            ♀ 配種母豬 ${hasDaughters ? `<span style="background:#10b981; color:#fff; font-size:9px; padding:1px 5px; border-radius:3px; margin-left:4px;">有留種 (${group.daughters.length}胎次)</span>` : ''}
+                        </td>
+                        <td><b style="color:#0284c7; cursor:pointer;" onclick="document.getElementById('earInput').value='${group.sowEar}'; searchPedigree();">${group.sowEar}</b></td>
+                        <td><b>${group.breed}</b></td>
+                        <td style="color:#64748b;">${targetEar}</td>
+                        <td>${cleanVal(group.matingDate)}</td>
+                        <td>${cleanVal(group.farrowDate)}</td>
+                        <td>-</td>
+                        <td><b style="color:#0f172a;">${cleanVal(group.tnb)}</b></td>
+                        <td><b style="color:#059669;">${cleanVal(group.nba)}</b></td>
+                        <td><b>${cleanVal(group.wean)}</b></td>
+                        <td><b>${cleanVal(group.spi)}</b></td>
+                        <td><span class="badge-active">母本</span></td>
+                    </tr>
+                `;
+
+                if (hasDaughters) {
+                    group.daughters.forEach(d => {
+                        const isDead = deathInfoMap.has(d.ear);
+                        html += `
+                            <tr style="background-color: #ffffff;">
+                                <td style="text-align:left; padding-left:26px; color:#e11d48; font-weight:700;">
+                                    ↳ 🌸 直系留種後代 (F1)
+                                </td>
+                                <td><b style="color:#dc2626; cursor:pointer;" onclick="document.getElementById('earInput').value='${d.ear}'; searchPedigree();">${d.ear}</b></td>
+                                <td>${d.breed}</td>
+                                <td style="color:#0284c7; font-weight:700;">${cleanVal(d.mate)}</td>
+                                <td>${cleanVal(d.mating_date)}</td>
+                                <td>${cleanVal(d.farrow_date)}</td>
+                                <td><b>${cleanVal(d.parity)}</b></td>
+                                <td><b>${cleanVal(d.total_born)}</b></td>
+                                <td><b style="color:#059669;">${cleanVal(d.born_alive)}</b></td>
+                                <td><b>${cleanVal(d.weaning)}</b></td>
+                                <td><b style="color:#0284c7;">${cleanVal(d.spi)}</b></td>
+                                <td>${isDead ? `<span class="badge-dead">已淘汰</span>` : `<span class="badge-active">在場生產</span>`}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /* 🧬 家族品系血統比例分析表 (Admin 專屬) */
+        function renderFamilyLineProportion(primary) {
+            const container = document.getElementById('bloodContainer');
+            
+            const sLine = primary.g3_sire_line || (primary.sire_line) || '未知父系';
+            const dLine = primary.g3_dam_line || (primary.dam_line) || '未知母系';
+
+            const g1 = primary.g1_nodes || {};
+            const ancestors = [
+                { key: 'sss', line: g1.sss || primary.ss_line, side: 'Sire Side (父系)', weight: 12.5 },
+                { key: 'ssd', line: g1.ssd || primary.sd_line, side: 'Sire Side (父系)', weight: 12.5 },
+                { key: 'sds', line: g1.sds || primary.ss_line, side: 'Sire Side (父系)', weight: 12.5 },
+                { key: 'sdd', line: g1.sdd || primary.sd_line, side: 'Sire Side (父系)', weight: 12.5 },
+                { key: 'dss', line: g1.dss || primary.ds_line, side: 'Dam Side (母系)', weight: 12.5 },
+                { key: 'dsd', line: g1.dsd || primary.dd_line, side: 'Dam Side (母系)', weight: 12.5 },
+                { key: 'dds', line: g1.dds || primary.ds_line, side: 'Dam Side (母系)', weight: 12.5 },
+                { key: 'ddd', line: g1.ddd || primary.dd_line, side: 'Dam Side (母系)', weight: 12.5 }
+            ];
+
+            const lineSummary = {};
+            ancestors.forEach(a => {
+                const l = (a.line && a.line !== '-') ? a.line : 'FOUNDATION';
+                lineSummary[l] = (lineSummary[l] || 0) + a.weight;
+            });
+
+            const sortedLines = Object.entries(lineSummary).sort((a, b) => b[1] - a[1]);
+
+            let html = `
+                <div class="strain-overview-bar">
+                    <div class="strain-parent-card" style="border-left: 4px solid #0284c7;">
+                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">父系家族品系 (Sire Strain) - 貢獻率 50%</div>
+                        <div style="font-size: 17px; font-weight: 900; color: #0284c7; margin: 3px 0;">Line: ${sLine}</div>
+                        <div style="font-size: 11px; color: #475569;">父本全名: <b>${primary.g3_sire_full || '-'}</b></div>
+                    </div>
+                    <div class="strain-parent-card" style="border-left: 4px solid #e11d48;">
+                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">母系家族品系 (Dam Strain) - 貢獻率 50%</div>
+                        <div style="font-size: 17px; font-weight: 900; color: #e11d48; margin: 3px 0;">Line: ${dLine}</div>
+                        <div style="font-size: 11px; color: #475569;">母本全名: <b>${primary.g3_dam_full || '-'}</b></div>
+                    </div>
+                </div>
+
+                <div style="font-size: 12px; font-weight: 800; color: #1e293b; margin: 8px 0 6px 2px;">
+                    祖先家族品系累計純度分佈 (Ancestral Lineage Proportion):
+                </div>
+                <div class="strain-grid">
+            `;
+
+            sortedLines.forEach(([lName, pct]) => {
+                html += `
+                    <div class="strain-card">
+                        <div class="strain-name">
+                            <span>Line: <b>${lName}</b></span>
+                            <span style="color: #0284c7; font-size: 12px;">${pct.toFixed(1)}%</span>
+                        </div>
+                        <div class="strain-bar-bg">
+                            <div class="strain-bar-fill" style="width: ${pct}%;"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        /* 🥩 直系後裔屠體銷售與遺傳缺陷檢定表 (Admin 專屬) */
+        function renderCarcassPerformanceAudit(primary) {
+            const container = document.getElementById('carcassContainer');
+            const targetEar = primary.ear.toUpperCase();
+
+            const matches = carcassSales.filter(p => p.sire === targetEar || p.dam === targetEar || p.ear === targetEar);
+
+            if (matches.length === 0) {
+                container.innerHTML = `<div class="placeholder-text">個體 "${targetEar}" 暫無直系出欄肉豬之屠體數據或屠宰紀錄。</div>`;
+                return;
+            }
+
+            let totalWt = 0, countWt = 0;
+            let totalADG1 = 0, countADG1 = 0;
+            let totalADG2 = 0, countADG2 = 0;
+            let totalDR = 0, countDR = 0;
+            let defectPorkers = 0;
+
+            matches.forEach(m => {
+                if (m.wt !== null && !isNaN(m.wt)) { totalWt += m.wt; countWt++; }
+                if (m.adg1 !== null && !isNaN(m.adg1)) { totalADG1 += m.adg1; countADG1++; }
+                if (m.adg2 !== null && !isNaN(m.adg2)) { totalADG2 += m.adg2; countADG2++; }
+                if (m.dr !== null && !isNaN(m.dr)) { totalDR += m.dr; countDR++; }
+                if (m.defects && m.defects.length > 0) defectPorkers++;
+            });
+
+            const avgWt = countWt > 0 ? (totalWt / countWt).toFixed(1) : '-';
+            const avgADG1 = countADG1 > 0 ? (totalADG1 / countADG1).toFixed(0) : '-';
+            const avgADG2 = countADG2 > 0 ? (totalADG2 / countADG2).toFixed(0) : '-';
+            const avgDR = countDR > 0 ? (totalDR / countDR).toFixed(1) + '%' : '-';
+            const defectPct = ((defectPorkers / matches.length) * 100).toFixed(1) + '%';
+
+            let html = `
+                <div class="kpi-summary-grid">
+                    <div class="kpi-card" style="border-color:#0284c7;">
+                        <div class="kpi-label">出欄肉豬總數</div>
+                        <div class="kpi-val" style="color:#0284c7;">${matches.length} 頭</div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#059669;">
+                        <div class="kpi-label">平均出欄體重 (Weight)</div>
+                        <div class="kpi-val" style="color:#059669;">${avgWt} <small style="font-size:12px;">kg</small></div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#d97706;">
+                        <div class="kpi-label">平均生長 ADG1 / ADG2</div>
+                        <div class="kpi-val" style="color:#d97706;">${avgADG1} / ${avgADG2} <small style="font-size:11px;">g/d</small></div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#6366f1;">
+                        <div class="kpi-label">平均出肉/屠體率</div>
+                        <div class="kpi-val" style="color:#6366f1;">${avgDR}</div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#dc2626;">
+                        <div class="kpi-label">遺傳疾病與不良率</div>
+                        <div class="kpi-val" style="color:#dc2626;">${defectPct} <small style="font-size:11px;">(${defectPorkers}頭)</small></div>
+                    </div>
+                </div>
+
+                <div class="data-table-wrapper" id="carcassTableWrapper">
+                    <table class="excel-data-table">
+                        <thead>
+                            <tr>
+                                <th>肉豬耳號 (Porker Ear)</th>
+                                <th>父本公豬 (Sire)</th>
+                                <th>母本母豬 (Dam)</th>
+                                <th>祖代公/母品系 (G3 Strains)</th>
+                                <th>出生/出欄週次</th>
+                                <th>出欄體重 (kg)</th>
+                                <th>ADG1 (g/d)</th>
+                                <th>ADG2 (g/d)</th>
+                                <th>出肉率 (%)</th>
+                                <th>屠體重 (kg)</th>
+                                <th>遺傳缺陷檢定 (Defect Audit)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            matches.forEach(m => {
+                let defectHtml = '<span class="defect-none">✔ 正常 (Normal)</span>';
+                if (m.defects && m.defects.length > 0) {
+                    defectHtml = m.defects.map(d => `<span class="defect-badge">${d}</span>`).join(' ');
+                }
+
+                html += `
+                    <tr>
+                        <td><b>${m.ear}</b></td>
+                        <td style="color:#0284c7; font-weight:700;">${m.sire}</td>
+                        <td style="color:#e11d48; font-weight:700;">${m.dam}</td>
+                        <td style="color:#475569;">${m.g3_m} × ${m.g3_f}</td>
+                        <td>${m.b_wk ? 'W'+m.b_wk : '-'} / ${m.s_wk ? 'W'+m.s_wk : '-'}</td>
+                        <td><b style="color:#0f172a;">${m.wt !== null ? m.wt : '-'}</b></td>
+                        <td>${m.adg1 !== null ? m.adg1 : '-'}</td>
+                        <td>${m.adg2 !== null ? m.adg2 : '-'}</td>
+                        <td>${m.dr !== null ? m.dr + '%' : '-'}</td>
+                        <td>${m.ckg !== null ? m.ckg : '-'}</td>
+                        <td>${defectHtml}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        /* 📸 整頁完整展開無截斷匯出 (全高度長圖下載) */
+        function exportFullPage(elemId, prefix) {
+            const originalElem = document.getElementById(elemId);
+            if (!originalElem) return;
+
+            showToast("📷 正在生成整頁無截斷高解析長圖...");
+
+            const clone = originalElem.cloneNode(true);
+            clone.style.maxHeight = 'none';
+            clone.style.height = 'auto';
+            clone.style.overflow = 'visible';
+            clone.style.position = 'absolute';
+            clone.style.top = '-99999px';
+            clone.style.left = '0px';
+            clone.style.width = originalElem.scrollWidth + 'px';
+            clone.style.backgroundColor = '#ffffff';
+
+            clone.querySelectorAll('.data-table-wrapper, .dynamic-scroll-area, table').forEach(el => {
+                el.style.maxHeight = 'none';
+                el.style.height = 'auto';
+                el.style.overflow = 'visible';
+            });
+
+            document.body.appendChild(clone);
+
+            html2canvas(clone, {
+                scale: 2.0,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                width: clone.scrollWidth,
+                height: clone.scrollHeight
+            }).then(canvas => {
+                document.body.removeChild(clone);
+                const a = document.createElement('a');
+                a.download = `${prefix}_${getTodayDateStr()}.png`;
+                a.href = canvas.toDataURL();
+                a.click();
+                showToast("✅ 整頁圖檔已成功下載！");
+            }).catch(err => {
+                console.error("Export error:", err);
+                if (document.body.contains(clone)) document.body.removeChild(clone);
+                showToast("❌ 匯出失敗，請重試。");
+            });
+        }
+    </script>
+</body>
+</html>
