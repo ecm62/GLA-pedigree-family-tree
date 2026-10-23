@@ -5,8 +5,11 @@ import pandas as pd
 import requests
 
 SPREADSHEET_ID = "1uWXfIMrRidpoZTq_BYYTy9ho_0a194pMMSS_EQpJoeA"
-GID_US_ORIGIN = "1866228473"
-GID_MAIN = "0"
+
+# 🌟 分頁 GID 定位
+GID_US_ORIGIN = "1866228473"  # 美國原始種源數據
+GID_MAIN = "0"  # 全期整合總表
+GID_BLOOD = "60312190"  # 📊 育種_血統比例(轉)
 
 
 def fetch_sheet_csv(gid):
@@ -38,12 +41,13 @@ def clean_num(val):
 
 
 def main():
-  print("🚀 [1/3] 正在由 Google 雲端抓取美國原種庫...")
+  print("🚀 [1/4] 抓取《美國原始種源數據》...")
   raw_us = fetch_sheet_csv(GID_US_ORIGIN)
-  if not raw_us:
-    raise ValueError("無法讀取美國原始種源數據！")
-
-  df_us = pd.read_csv(io.StringIO(raw_us), low_memory=False)
+  df_us = (
+      pd.read_csv(io.StringIO(raw_us), low_memory=False)
+      if raw_us
+      else pd.DataFrame()
+  )
   df_us.columns = [
       str(c).replace("\n", " ").replace("\r", "").strip() for c in df_us.columns
   ]
@@ -166,12 +170,44 @@ def main():
         },
     }
 
-  print("🚀 [2/3] 正在由 Google 雲端抓取主生產清單...")
-  raw_main = fetch_sheet_csv(GID_MAIN)
-  if not raw_main:
-    raise ValueError("無法讀取主生產表！")
+  print("🚀 [2/4] 抓取《📊 育種_血統比例(轉)》...")
+  raw_blood = fetch_sheet_csv(GID_BLOOD)
+  df_blood = (
+      pd.read_csv(io.StringIO(raw_blood), low_memory=False)
+      if raw_blood
+      else pd.DataFrame()
+  )
+  df_blood.columns = [
+      str(c).replace("\n", " ").replace("\r", "").strip()
+      for c in df_blood.columns
+  ]
 
-  df_main = pd.read_csv(io.StringIO(raw_main), low_memory=False)
+  blood_map = {}
+  if not df_blood.empty:
+    c_b_ear = next(
+        (c for c in df_blood.columns if "耳號" in c or "Ear" in c),
+        df_blood.columns[0],
+    )
+    for _, br in df_blood.iterrows():
+      b_ear = clean_val(br.get(c_b_ear)).upper()
+      if b_ear == "-" or b_ear == "耳號":
+        continue
+      # 收集該豬隻的所有血統比例欄位
+      details = {}
+      for col in df_blood.columns:
+        val = clean_val(br.get(col))
+        if val != "-" and col != c_b_ear:
+          details[col] = val
+      blood_map[b_ear] = details
+  print(f"   ✓ 成功收錄 {len(blood_map)} 頭豬隻之血統比例明細。")
+
+  print("🚀 [3/4] 抓取主生產清單...")
+  raw_main = fetch_sheet_csv(GID_MAIN)
+  df_main = (
+      pd.read_csv(io.StringIO(raw_main), low_memory=False)
+      if raw_main
+      else pd.DataFrame()
+  )
   df_main.columns = [
       str(c).replace("\n", " ").replace("\r", "").strip()
       for c in df_main.columns
@@ -392,10 +428,11 @@ def main():
                 )
             ),
         },
+        "blood": blood_map.get(ear_upper, {}),
     }
     pedigree_list.append(entry)
 
-  # 補齊美系原原種公豬
+  # 補齊美系種公豬
   for boar_ear, bdata in us_dict.items():
     if boar_ear not in known_ears:
       pedigree_list.append({
@@ -437,12 +474,14 @@ def main():
           "dd_full": bdata["dd_full"],
           "dd_line": bdata["dd_line"],
           "g1_nodes": bdata["g1_nodes"],
+          "blood": blood_map.get(boar_ear, {}),
       })
 
   final_payload = {
       "pedigree": pedigree_list,
       "death_map": death_map,
       "us_index": us_dict,
+      "blood_map": blood_map,
   }
 
   with open("data.json", "w", encoding="utf-8") as f:
