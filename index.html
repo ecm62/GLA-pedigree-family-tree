@@ -7,88 +7,105 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            /* 嚴格品種配色規範：Y 黃、L 藍、D 紅、LY 綠 */
-            --breed-y-bg: #fef3c7; --breed-y-border: #d97706;
-            --breed-l-bg: #e0f2fe; --breed-l-border: #0284c7;
-            --breed-d-bg: #ffe4e6; --breed-d-border: #e11d48;
-            --breed-ly-bg: #d1fae5; --breed-ly-border: #059669;
-            --dead-border: #dc2626; --dead-bg: #fff1f2;
+            /* 專業嚴格品種色系：Y 黃、L 藍、D 紅、LY 綠 */
+            --breed-y-bg: #fffbeb; --breed-y-border: #d97706; --breed-y-text: #92400e;
+            --breed-l-bg: #f0f9ff; --breed-l-border: #0284c7; --breed-l-text: #075985;
+            --breed-d-bg: #fff1f2; --breed-d-border: #e11d48; --breed-d-text: #9f1239;
+            --breed-ly-bg: #f0fdf4; --breed-ly-border: #059669; --breed-ly-text: #065f46;
+            --dead-border: #dc2626; --dead-bg: #fef2f2;
         }
-        body { font-family: "Segoe UI", "PingFang TC", "Microsoft JhengHei", Arial, sans-serif; margin: 0; padding: 14px; background-color: #f8fafc; color: #0f172a; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 0; padding: 12px; background-color: #f1f5f9; color: #0f172a; line-height: 1.4; }
         
-        .system-header-banner { background: linear-gradient(135deg, #1e3a8a 0%, #0369a1 100%); color: #ffffff; padding: 16px 22px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 14px; }
-        .system-header-banner h1 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: 0.5px; }
-        .system-header-banner p { margin: 4px 0 0 0; font-size: 12.5px; opacity: 0.92; }
+        /* 系統頂部橫幅 (專業深邃商用質感) */
+        .system-header-banner { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0369a1 100%); color: #ffffff; padding: 12px 20px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); margin-bottom: 10px; }
+        .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
+        .system-header-banner p { margin: 3px 0 0 0; font-size: 11.5px; opacity: 0.9; }
 
-        .control-bar { background: #ffffff; padding: 12px 18px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 12px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-        input[type="text"] { padding: 8px 14px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 6px; width: 280px; outline: none; font-weight: 600; }
-        input[type="text"]:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.15); }
-        .btn { padding: 7px 18px; font-size: 13.5px; background-color: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; transition: background 0.2s; }
+        /* 緊湊搜尋工具列 */
+        .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 10px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+        input[type="text"] { padding: 6px 12px; font-size: 13.5px; border: 1.5px solid #cbd5e1; border-radius: 5px; width: 260px; outline: none; font-weight: 700; color: #0f172a; }
+        input[type="text"]:focus { border-color: #0284c7; box-shadow: 0 0 0 2.5px rgba(2,132,199,0.15); }
+        .btn { padding: 6px 16px; font-size: 13px; background-color: #0284c7; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; transition: background 0.15s; }
         .btn:hover { background-color: #0369a1; }
-        .btn-export { background-color: #10b981; }
-        .btn-export:hover { background-color: #059669; }
+        .btn-export { background-color: #059669; }
+        .btn-export:hover { background-color: #047857; }
 
-        .btn-breed { background-color: #f1f5f9; color: #64748b; padding: 6px 13px; font-size: 12.5px; border: 1.5px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-weight: 700; }
-        .btn-breed.active { box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-color: #0f172a; }
+        .btn-breed { background-color: #f8fafc; color: #475569; padding: 5px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 700; }
+        .btn-breed.active { box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-color: #0f172a; }
         .btn-breed-all.active { background-color: #334155 !important; color: white !important; }
         .btn-breed-y.active   { background-color: #d97706 !important; color: white !important; }
         .btn-breed-l.active   { background-color: #0284c7 !important; color: white !important; }
         .btn-breed-d.active   { background-color: #e11d48 !important; color: white !important; }
         .btn-breed-ly.active  { background-color: #059669 !important; color: white !important; }
 
-        .legend-bar { display: flex; gap: 10px; font-size: 12px; background: #fff; padding: 8px 16px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
-        .color-badge { padding: 3px 9px; border-radius: 4px; font-weight: 800; font-size: 11.5px; }
+        .legend-bar { display: flex; gap: 8px; font-size: 11.5px; background: #fff; padding: 6px 14px; border-radius: 5px; border: 1px solid #e2e8f0; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+        .color-badge { padding: 2px 8px; border-radius: 3px; font-weight: 800; font-size: 11px; }
 
-        .breed-Y  { background-color: var(--breed-y-bg) !important; border: 2.2px solid var(--breed-y-border) !important; }
-        .breed-L  { background-color: var(--breed-l-bg) !important; border: 2.2px solid var(--breed-l-border) !important; }
-        .breed-D  { background-color: var(--breed-d-bg) !important; border: 2.2px solid var(--breed-d-border) !important; }
-        .breed-LY { background-color: var(--breed-ly-bg) !important; border: 2.2px solid var(--breed-ly-border) !important; }
-        .breed-DEFAULT { background-color: #ffffff !important; border: 2.2px solid #94a3b8 !important; }
+        /* 品種嚴格配色 */
+        .breed-Y  { background-color: var(--breed-y-bg) !important; border: 1.8px solid var(--breed-y-border) !important; }
+        .breed-L  { background-color: var(--breed-l-bg) !important; border: 1.8px solid var(--breed-l-border) !important; }
+        .breed-D  { background-color: var(--breed-d-bg) !important; border: 1.8px solid var(--breed-d-border) !important; }
+        .breed-LY { background-color: var(--breed-ly-bg) !important; border: 1.8px solid var(--breed-ly-border) !important; }
+        .breed-DEFAULT { background-color: #ffffff !important; border: 1.8px solid #94a3b8 !important; }
 
-        .node-dead { border: 2.5px dashed var(--dead-border) !important; background-color: var(--dead-bg) !important; }
-        .badge-dead { background-color: #dc2626; color: #fff; font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
-        .badge-active { background-color: #10b981; color: #fff; font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 3px; }
+        .node-dead { border: 2px dashed var(--dead-border) !important; background-color: var(--dead-bg) !important; }
+        .badge-dead { background-color: #dc2626; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; margin-left: 3px; }
+        .badge-active { background-color: #10b981; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; }
 
-        .tree-card-wrapper { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        /* 卡片包裝盒 (緊湊精緻) */
+        .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 5px; border: 1px solid #e2e8f0; }
 
-        /* 🌟 核心排版：圖框與框下純文字無膠囊感分離 */
-        .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.12s; cursor: pointer; }
+        /* 節點定位母容器 (必須為 absolute) */
+        .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.1s; cursor: pointer; }
         .node-group-container:hover { transform: scale(1.02); z-index: 10; }
 
-        /* 1. 框內：僅保留身分角色、耳號、品系名 (無白底) */
-        .node-box-main { border-radius: 6px; padding: 6px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); width: 100%; text-align: center; }
-        .node-target-highlight { border: 3px solid #f59e0b !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.45) !important; }
+        /* 圖一框內純粹血統 */
+        .node-box-main { border-radius: 5px; padding: 5px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); width: 100%; text-align: center; }
+        .node-target-highlight { border: 2.5px solid #f59e0b !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4) !important; }
 
-        .c-sub-label { font-size: 9px; font-weight: 800; color: #475569; display: flex; justify-content: space-between; align-items: center; }
-        .c-main-title { color: #dc2626; font-size: 13.5px; font-weight: 900; line-height: 1.2; word-break: break-word; margin: 2px 0; }
-        .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 10px; display: inline-block; }
+        .c-sub-label { font-size: 8.5px; font-weight: 800; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
+        .c-main-title { color: #dc2626; font-size: 13px; font-weight: 900; line-height: 1.2; word-break: break-word; margin: 1px 0; }
+        .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 9.5px; }
 
-        /* 2. 框外下方：無膠囊框線感，純文字兩行呈現 */
-        .node-text-sub-block { width: 100%; padding-top: 4px; box-sizing: border-box; text-align: center; }
-        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 9px; color: #0f172a; font-weight: 800; white-space: nowrap; line-height: 1.3; }
-        .sub-metric-row-2 { display: flex; justify-content: space-around; font-size: 8px; color: #64748b; font-weight: 600; margin-top: 2px; white-space: nowrap; line-height: 1.3; }
+        /* 圖一框下純文字無膠囊感 */
+        .node-text-sub-block { width: 100%; padding-top: 3px; box-sizing: border-box; text-align: center; }
+        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 8.5px; color: #0f172a; font-weight: 800; white-space: nowrap; line-height: 1.25; }
+        .sub-metric-row-2 { display: flex; justify-content: space-around; font-size: 7.8px; color: #64748b; font-weight: 600; margin-top: 1px; white-space: nowrap; line-height: 1.25; }
 
         svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
-        /* 表格樣式 */
-        .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 6px; }
-        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 12px; background-color: #fff; white-space: nowrap; text-align: center; }
-        .excel-data-table th { background-color: #1e293b; color: #ffffff; font-weight: 700; padding: 8px 10px; border: 1px solid #334155; }
-        .excel-data-table td { padding: 6px 9px; border: 1px solid #e2e8f0; color: #000; font-weight: 600; }
+        /* 表格精緻化 (高密度商業排版，無多餘浪費空間) */
+        .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 5px; }
+        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: #fff; white-space: nowrap; text-align: center; }
+        .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 6px 8px; border: 1px solid #334155; font-size: 11px; }
+        .excel-data-table td { padding: 4.5px 8px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 600; }
+        .excel-data-table tr:nth-child(even) { background-color: #f8fafc; }
+        .excel-data-table tr:hover { background-color: #f1f5f9; }
 
-        /* 圖五：家族品系血統比例卡片群 */
-        .strain-overview-bar { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
-        .strain-parent-card { flex: 1; min-width: 260px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 7px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-        .strain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 6px 0; }
-        .strain-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
-        .strain-name { font-weight: 800; font-size: 12px; color: #1e3a8a; margin-bottom: 4px; display: flex; justify-content: space-between; }
-        .strain-bar-bg { background-color: #e2e8f0; border-radius: 4px; height: 8px; width: 100%; overflow: hidden; }
+        /* 圖三蝴蝶樹專用節點樣式 */
+        .butterfly-node { position: absolute; border-radius: 5px; padding: 6px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
+        .butterfly-node:hover { transform: scale(1.03); z-index: 10; }
+
+        /* 圖四後代留種雙欄分流 */
+        .descendant-dual-cols { display: flex; gap: 14px; width: 100%; }
+        .descendant-col-box { flex: 1; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; }
+        .desc-col-title { font-size: 13px; font-weight: 800; padding-bottom: 6px; border-bottom: 2px solid; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .desc-card { border-radius: 5px; padding: 8px 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.1s; }
+        .desc-card:hover { transform: translateX(2px); }
+
+        /* 圖五血統比例進度條卡片 */
+        .strain-overview-bar { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+        .strain-parent-card { flex: 1; min-width: 240px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .strain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+        .strain-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .strain-name { font-weight: 800; font-size: 11.5px; color: #1e3a8a; margin-bottom: 3px; display: flex; justify-content: space-between; }
+        .strain-bar-bg { background-color: #e2e8f0; border-radius: 3px; height: 7px; width: 100%; overflow: hidden; }
         .strain-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
 
-        #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.9); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; z-index: 99999; }
-        .placeholder-text { text-align: center; color: #94a3b8; padding: 50px 10px; font-size: 13px; font-weight: 600; }
+        #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.92); color: #fff; padding: 7px 16px; border-radius: 20px; font-size: 11.5px; font-weight: 700; display: none; z-index: 99999; }
+        .placeholder-text { text-align: center; color: #94a3b8; padding: 40px 10px; font-size: 12.5px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -96,17 +113,17 @@
 
     <div class="system-header-banner">
         <h1>GLA Official Pedigree Book & Lineage System</h1>
-        <p>官方四代造冊血統書與全系譜拓撲追蹤 (4-Generation Pedigree Certificate & Recursive Lineage System)</p>
+        <p>官方四代造冊血統書與全系譜拓撲追蹤 (Official Pedigree Certificate & Recursive Lineage System)</p>
     </div>
 
     <div class="control-bar">
         <div>
             <label for="earInput"><strong>耳號檢索 (Ear Tag):</strong></label>
-            <input type="text" id="earInput" placeholder="例如: L1426, Y1456, Y1266, D1067" onkeydown="if(event.key==='Enter') searchPedigree()">
+            <input type="text" id="earInput" placeholder="例如: L1426, Y1456, Y1266, LY3507" onkeydown="if(event.key==='Enter') searchPedigree()">
             <button class="btn" onclick="searchPedigree()">🔍 造冊檢索</button>
         </div>
         <div>
-            <span style="font-size: 12px; font-weight: bold; color: #475569; margin-right: 4px;">品種快速篩選:</span>
+            <span style="font-size: 11.5px; font-weight: bold; color: #475569; margin-right: 4px;">品種快速篩選:</span>
             <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">All</button>
             <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y</button>
             <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L</button>
@@ -116,7 +133,7 @@
     </div>
 
     <div class="legend-bar">
-        <strong>品種識別標記:</strong>
+        <strong>品種識別:</strong>
         <span class="color-badge breed-Y">Yorkshire (大白/粉黃)</span>
         <span class="color-badge breed-L">Landrace (藍瑞斯/粉藍)</span>
         <span class="color-badge breed-D">Duroc (杜洛克/粉紅)</span>
@@ -125,36 +142,24 @@
     </div>
 
     <!-- 📜 1. 官方四代家族系統圖 -->
-    <div class="tree-card-wrapper" id="certExportCard" style="border: 2px solid #0284c7;">
+    <div class="tree-card-wrapper" id="certExportCard" style="border: 1.5px solid #0284c7;">
         <div class="card-header-bar">
             <div>
-                <h2 style="margin:0; font-size:16px; color:#0284c7; font-weight:900;">📜 1. Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (圖框內純淨血統名冊，圖框下方文字展示 MLI/SPI/役期指標)</p>
+                <h2 style="margin:0; font-size:15px; color:#0284c7; font-weight:900;">📜 1. Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
+                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (圖框內純淨血統名冊，圖框下方文字展示 MLI/SPI/役期指標)</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('certExportCard', 'GLA_Official_Certificate')">📸 證書存檔 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 820px;">
+        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 780px;">
             <svg class="orthogonal-svg" id="certSvg"></svg>
-            <div id="certBoxesContainer"><div class="placeholder-text">請在上方輸入耳號啟動四代造冊檢索...</div></div>
+            <div id="certBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請在上方輸入耳號啟動四代造冊檢索...</div></div>
         </div>
     </div>
 
-    <!-- 🧬 5. 家族品系血統比例分析表 -->
-    <div class="tree-card-wrapper" id="bloodExportCard" style="border: 2px solid #10b981;">
-        <div class="card-header-bar">
-            <div>
-                <h3 style="margin:0; font-size:15px; color:#059669; font-weight:800;">🧬 5. Ancestral Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">依據父系家族與母系家族溯源解構，呈現各品系之純度佔比，倒推性能遺傳歸屬</p>
-            </div>
-            <div><button class="btn btn-export" onclick="exportHighRes('bloodExportCard', 'GLA_Family_Line_Proportion')">📸 匯出比例 PNG</button></div>
-        </div>
-        <div id="bloodContainer"><div class="placeholder-text">請檢索個體以解析該個體之家族品系血緣比例...</div></div>
-    </div>
-
-    <!-- 📌 育種成績與評估資料表 -->
+    <!-- 📌 2. 育種成績與評估資料表 -->
     <div class="tree-card-wrapper" id="tableExportCard">
         <div class="card-header-bar">
-            <div style="font-size:15px; color:#0f172a; font-weight:800;" id="cardTitle">📌 Breeding Performance & Index Data (育種成績與評估總表)</div>
+            <div style="font-size:14.5px; color:#0f172a; font-weight:800;" id="cardTitle">📌 2. Breeding Performance & Index Data (育種成績與評估總表)</div>
             <div><button class="btn btn-export" onclick="exportHighRes('tableExportCard', 'GLA_Breeding_Table')">📸 匯出總表 PNG</button></div>
         </div>
         <div class="data-table-wrapper">
@@ -185,33 +190,42 @@
     </div>
 
     <!-- 🌳 3. 蝴蝶對稱全系譜家族拓撲樹 (正宗對稱蝴蝶型) -->
-    <div class="tree-card-wrapper" id="macroTreePanel" style="border: 2px solid #0d6efd;">
+    <div class="tree-card-wrapper" id="macroTreePanel" style="border: 1.5px solid #0d6efd;">
         <div class="card-header-bar">
             <div>
-                <h3 style="margin:0; font-size:15px; color:#0d6efd; font-weight:800;">🌳 3. Bilateral Butterfly Lineage Topology Tree (蝴蝶對稱全系譜家族拓撲樹)</h3>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">左翼：父系家族品系三代完整展開 (Sire Lines) ⟵ 🎯 本體 ⟶ 右翼：母系家族品系三代完整展開 (Dam Lines)</p>
+                <h3 style="margin:0; font-size:14.5px; color:#0d6efd; font-weight:800;">🌳 3. Bilateral Butterfly Lineage Topology Tree (蝴蝶對稱全系譜家族拓撲樹)</h3>
+                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">左翼：父系家族品系完整展開 (Sire Lines) ⟵ 🎯 本體 ⟶ 右翼：母系家族品系完整展開 (Dam Lines)</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('macroTreePanel', 'GLA_Butterfly_Topology')">📸 匯出拓撲 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="macroScrollArea" style="min-height: 720px;">
+        <div class="dynamic-scroll-area" id="macroScrollArea" style="min-height: 680px;">
             <svg class="orthogonal-svg" id="macroSvg"></svg>
-            <div id="macroBoxesContainer"><div class="placeholder-text">請檢索個體以展開蝴蝶型雙向全系譜家族樹...</div></div>
+            <div id="macroBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請檢索個體以展開蝴蝶型雙向全系譜家族樹...</div></div>
         </div>
     </div>
 
-    <!-- 🌱 4. 全血統後代留種追蹤樹 -->
-    <div class="tree-card-wrapper" id="descendantTreeArea">
+    <!-- 🌱 4. 全血統後代留種追蹤樹 (公母分流、使用年限評估) -->
+    <div class="tree-card-wrapper" id="descendantTreeArea" style="border: 1.5px solid #0284c7;">
         <div class="card-header-bar">
             <div>
-                <h3 style="margin:0; font-size:15px; color:#0284c7; font-weight:800;">🌱 4. Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</h3>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">追蹤已進入系統並開始配種工作之直系子代 (F1)，評估兩年使用年限與推遲留種決策</p>
+                <h3 style="margin:0; font-size:14.5px; color:#0284c7; font-weight:800;">🌱 4. Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</h3>
+                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">追蹤已進入系統並開始配種工作之直系子代 (F1)，公母分欄顯示，評估兩年使用年限與推遲留種決策</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('descendantTreeArea', 'GLA_Descendant_Tree')">📸 匯出後代樹 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="descendantCard" style="min-height: 480px;">
-            <svg class="orthogonal-svg" id="descendantSvg"></svg>
-            <div id="descendantBoxesContainer"><div class="placeholder-text">檢索個體後自動追蹤在場第一代 (F1) 留種子代之生產與工作狀態...</div></div>
+        <div id="descendantContainer"><div class="placeholder-text">檢索個體後自動追蹤在場第一代 (F1) 留種子代之生產與工作狀態...</div></div>
+    </div>
+
+    <!-- 🧬 5. 家族品系血統比例分析表 -->
+    <div class="tree-card-wrapper" id="bloodExportCard" style="border: 1.5px solid #10b981;">
+        <div class="card-header-bar">
+            <div>
+                <h3 style="margin:0; font-size:14.5px; color:#059669; font-weight:800;">🧬 5. Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
+                <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">依據父系家族與母系家族溯源解構，呈現各品系之純度佔比，倒推性能遺傳歸屬</p>
+            </div>
+            <div><button class="btn btn-export" onclick="exportHighRes('bloodExportCard', 'GLA_Family_Line_Proportion')">📸 匯出比例 PNG</button></div>
         </div>
+        <div id="bloodContainer"><div class="placeholder-text">請檢索個體以解析該個體之家族品系血緣比例...</div></div>
     </div>
 
     <script>
@@ -306,25 +320,27 @@
                         if (matedSows.length > 0) tableItems = [...matched, ...matedSows];
                     }
 
-                    renderTable(tableItems, query, primary);
-                    drawOfficialPedigree(primary);
-                    renderFamilyLineProportion(primary);
-                    drawButterflyTopologyTree(primary);
-                    drawDescendantTree(primary);
+                    // 依序執行 5 大項目
+                    drawOfficialPedigree(primary);                // 1
+                    renderTable(tableItems, query, primary);     // 2
+                    drawButterflyTopologyTree(primary);          // 3
+                    renderDescendantSplitView(primary);          // 4
+                    renderFamilyLineProportion(primary);         // 5
                 } else {
                     document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="14" class="placeholder-text">查無 "${query}" 之造冊資料</td></tr>`;
                     document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之官方四代家譜</div>`;
-                    document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
                     document.getElementById('macroBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之蝴蝶拓撲資料</div>`;
-                    document.getElementById('descendantBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
+                    document.getElementById('descendantContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
+                    document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
                 }
             }, 30);
         }
 
+        /* 📌 2. 育種成績與評估資料表 */
         function renderTable(items, query, primary) {
             const tbody = document.getElementById('excelTableBody');
             const isMale = primary && primary.sex === 'MALE';
-            document.getElementById('cardTitle').innerHTML = `📌 Breeding Performance & Index Data: <span style="color:#0284c7;">"${query}"</span> ${isMale ? `(公豬本體及在場配種母豬共 ${items.length} 筆)` : `(共 ${items.length} 筆生產紀錄)`}`;
+            document.getElementById('cardTitle').innerHTML = `📌 2. Breeding Performance & Index Data: <span style="color:#0284c7;">"${query}"</span> ${isMale ? `(公豬本體及在場配種母豬共 ${items.length} 筆)` : `(共 ${items.length} 筆生產紀錄)`}`;
             let html = '';
             items.forEach(it => {
                 const isDead = deathInfoMap.has(it.ear);
@@ -358,16 +374,16 @@
             const scrollArea = document.getElementById('certScrollArea');
             container.innerHTML = ''; svgLayer.innerHTML = '';
 
-            const cardW = 210, boxMainH = 56, textSubH = 36;
-            const cardTotalH = boxMainH + textSubH; // 92px
-            const colGap = 55, totalHeight = 820;
-            const totalWidth = (cardW * 4) + (colGap * 3) + 60;
+            const cardW = 205, boxMainH = 54, textSubH = 34;
+            const cardTotalH = boxMainH + textSubH;
+            const colGap = 50, totalHeight = 780;
+            const totalWidth = (cardW * 4) + (colGap * 3) + 50;
 
             scrollArea.style.height = totalHeight + 'px';
             container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
             svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
 
-            const colX = [25, 25 + cardW + colGap, 25 + (cardW + colGap) * 2, 25 + (cardW + colGap) * 3];
+            const colX = [20, 20 + cardW + colGap, 20 + (cardW + colGap) * 2, 20 + (cardW + colGap) * 3];
             const nodes = {};
 
             // Gen 0: 本體
@@ -431,7 +447,7 @@
                 };
             }
 
-            // 正交向量折線
+            // 正交折線
             const links = [
                 ['T', 'S'], ['T', 'D'],
                 ['S', 'SS'], ['S', 'SD'],
@@ -451,11 +467,11 @@
                 p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
                 p.setAttribute('fill', 'none');
                 p.setAttribute('stroke', '#64748b');
-                p.setAttribute('stroke-width', '1.8');
+                p.setAttribute('stroke-width', '1.6');
                 svgLayer.appendChild(p);
             });
 
-            // 節點渲染：框內純淨血統 + 框外下方純文字（無膠囊感）
+            // 節點渲染 (框內純粹 + 框下直接純文字)
             Object.keys(nodes).forEach(k => {
                 const n = nodes[k];
                 const group = document.createElement('div');
@@ -465,7 +481,6 @@
 
                 const lineHtml = (n.line && n.line !== '-') ? `<span class="family-line-clean">Line: ${n.line}</span>` : '';
                 
-                // 框下第二行文字：出生日、年齡與已使用年限 (役期)
                 let usageText = '';
                 if (n.age && n.age !== '-' && n.age !== '0') {
                     usageText = `年齡: ${n.age}歲 | 役期: ${n.used || '-'}年`;
@@ -502,7 +517,254 @@
             });
         }
 
-        /* 🧬 5. 家族品系血統比例分析表 (Family Strain Genetic Contribution) */
+        /* 🌳 3. 蝴蝶對稱全系譜家族拓撲樹 (徹底修復位移，左右嚴格對稱) */
+        function drawButterflyTopologyTree(target) {
+            const container = document.getElementById('macroBoxesContainer');
+            const svgLayer = document.getElementById('macroSvg');
+            const cardArea = document.getElementById('macroScrollArea');
+            container.innerHTML = ''; svgLayer.innerHTML = '';
+
+            const cardW = 155, cardH = 58;
+            const totalWidth = 1420, totalHeight = 660;
+            cardArea.style.height = totalHeight + 'px';
+            container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
+            svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
+
+            // 🦋 軸心座標：中心 X = 632
+            // 左翼 (父系)：L1=440, L2=250, L3=50
+            // 右翼 (母系)：R1=820, R2=1010, R3=1210
+            const cCenter = 632;
+            const cL1 = 440, cL2 = 250, cL3 = 50;
+            const cR1 = 825, cR2 = 1015, cR3 = 1215;
+            const midY = totalHeight / 2 - cardH / 2;
+
+            const tNodes = {};
+            const g1 = target.g1_nodes || {};
+
+            // 1. 正中心本體
+            tNodes['TARGET'] = {
+                x: cCenter, y: midY, ear: target.ear, breed: target.breed,
+                line: target.g3_sire_line || '-', role: `🎯 TARGET (${target.sex==='MALE'?'♂':'♀'})`
+            };
+
+            // 2. 左翼：父系家族節點
+            if (target.g3_sire_full && target.g3_sire_full !== '-') {
+                tNodes['SIRE'] = { x: cL1, y: midY, ear: target.g3_sire_full, breed: target.breed, line: target.g3_sire_line, role: "♂ 生父 (Sire)" };
+            }
+            if (target.ss_full && target.ss_full !== '-') {
+                tNodes['SS'] = { x: cL2, y: totalHeight * 0.25 - cardH / 2, ear: target.ss_full, breed: target.breed, line: target.ss_line, role: "♂ 祖父 (SS)" };
+            }
+            if (target.sd_full && target.sd_full !== '-') {
+                tNodes['SD'] = { x: cL2, y: totalHeight * 0.75 - cardH / 2, ear: target.sd_full, breed: target.breed, line: target.sd_line, role: "♀ 祖母 (SD)" };
+            }
+            const g1Left = [
+                { k: 'SSS', line: g1.sss, role: "♂ 曾祖父", yR: 0.125 },
+                { k: 'SSD', line: g1.ssd, role: "♀ 曾祖母", yR: 0.375 },
+                { k: 'SDS', line: g1.sds, role: "♂ 曾祖父", yR: 0.625 },
+                { k: 'SDD', line: g1.sdd, role: "♀ 曾祖母", yR: 0.875 }
+            ];
+            g1Left.forEach(g => {
+                if (g.line && g.line !== '-') {
+                    tNodes[g.k] = { x: cL3, y: totalHeight * g.yR - cardH / 2, ear: g.line, breed: target.breed, line: g.line, role: g.role };
+                }
+            });
+
+            // 3. 右翼：母系家族節點
+            if (target.g3_dam_full && target.g3_dam_full !== '-') {
+                tNodes['DAM'] = { x: cR1, y: midY, ear: target.g3_dam_full, breed: target.breed, line: target.g3_dam_line, role: "♀ 生母 (Dam)" };
+            }
+            if (target.ds_full && target.ds_full !== '-') {
+                tNodes['DS'] = { x: cR2, y: totalHeight * 0.25 - cardH / 2, ear: target.ds_full, breed: target.breed, line: target.ds_line, role: "♂ 外祖父 (DS)" };
+            }
+            if (target.dd_full && target.dd_full !== '-') {
+                tNodes['DD'] = { x: cR2, y: totalHeight * 0.75 - cardH / 2, ear: target.dd_full, breed: target.breed, line: target.dd_line, role: "♀ 外祖母 (DD)" };
+            }
+            const g1Right = [
+                { k: 'DSS', line: g1.dss, role: "♂ 曾外祖父", yR: 0.125 },
+                { k: 'DSD', line: g1.dsd, role: "♀ 曾外祖母", yR: 0.375 },
+                { k: 'DDS', line: g1.dds, role: "♂ 曾外祖父", yR: 0.625 },
+                { k: 'DDD', line: g1.ddd, role: "♀ 曾外祖母", yR: 0.875 }
+            ];
+            g1Right.forEach(g => {
+                if (g.line && g.line !== '-') {
+                    tNodes[g.k] = { x: cR3, y: totalHeight * g.yR - cardH / 2, ear: g.line, breed: target.breed, line: g.line, role: g.role };
+                }
+            });
+
+            // 連線清單
+            const topoLinks = [
+                // 向左連線 (父系側)
+                ['TARGET', 'SIRE', 'left'],
+                ['SIRE', 'SS', 'left'],
+                ['SIRE', 'SD', 'left'],
+                ['SS', 'SSS', 'left'],
+                ['SS', 'SSD', 'left'],
+                ['SD', 'SDS', 'left'],
+                ['SD', 'SDD', 'left'],
+                // 向右連線 (母系側)
+                ['TARGET', 'DAM', 'right'],
+                ['DAM', 'DS', 'right'],
+                ['DAM', 'DD', 'right'],
+                ['DS', 'DSS', 'right'],
+                ['DS', 'DSD', 'right'],
+                ['DD', 'DDS', 'right'],
+                ['DD', 'DDD', 'right']
+            ];
+
+            topoLinks.forEach(([from, to, dir]) => {
+                const f = tNodes[from], t = tNodes[to];
+                if (!f || !t) return;
+
+                let x1 = (dir === 'left') ? f.x : f.x + cardW;
+                let x2 = (dir === 'left') ? t.x + cardW : t.x;
+                const y1 = f.y + cardH / 2;
+                const y2 = t.y + cardH / 2;
+                const midX = x1 + (x2 - x1) / 2;
+
+                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
+                p.setAttribute('fill', 'none');
+                p.setAttribute('stroke', dir === 'left' ? '#0284c7' : '#e11d48');
+                p.setAttribute('stroke-width', '1.8');
+                svgLayer.appendChild(p);
+            });
+
+            // 節點渲染 (絕對定位至 #macroBoxesContainer)
+            Object.keys(tNodes).forEach(k => {
+                const n = tNodes[k];
+                const card = document.createElement('div');
+                card.className = `butterfly-node ${getBreedClass(n.breed)} ${k === 'TARGET' ? 'node-target-highlight' : ''}`;
+                card.style.left = n.x + 'px'; card.style.top = n.y + 'px';
+                card.style.width = cardW + 'px'; card.style.height = cardH + 'px';
+
+                card.innerHTML = `
+                    <div style="font-size:8.5px; font-weight:800; color:#64748b;">${n.role}</div>
+                    <div style="font-size:12px; font-weight:900; color:#1e3a8a; margin: 1px 0;">
+                        Line: ${n.line || '-'}
+                    </div>
+                    <div style="font-size:9.5px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
+                        ${n.ear}
+                    </div>
+                `;
+                if (n.ear && n.ear !== '-' && !n.ear.includes('FOUNDATION')) {
+                    card.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
+                }
+                container.appendChild(card);
+            });
+        }
+
+        /* 🌱 4. 全血統後代留種追蹤樹 (分流公母雙欄排版、役期評估) */
+        function renderDescendantSplitView(primary) {
+            const container = document.getElementById('descendantContainer');
+            const targetEar = primary.ear.toUpperCase();
+            
+            const maleDescendants = [];
+            const femaleDescendants = [];
+
+            pedigreeList.forEach(item => {
+                if (item.ear === targetEar) return;
+                
+                let isChild = false;
+                if (item.g3_sire_full && item.g3_sire_full.includes(targetEar)) isChild = true;
+                if (item.g3_dam_full && item.g3_dam_full.includes(targetEar)) isChild = true;
+                if (item['G5_直屬父(Sire)'] === targetEar || item['G5_直屬母(Dam)'] === targetEar) isChild = true;
+
+                if (isChild) {
+                    const isM = (item.sex === 'MALE' || item.breed === 'D' || (!item.ear.startsWith('LY') && item.mate && item.mate !== '-'));
+                    if (isM) {
+                        if (!maleDescendants.some(d => d.ear === item.ear)) maleDescendants.push(item);
+                    } else {
+                        if (!femaleDescendants.some(d => d.ear === item.ear)) femaleDescendants.push(item);
+                    }
+                }
+            });
+
+            if (maleDescendants.length === 0 && femaleDescendants.length === 0) {
+                container.innerHTML = `<div class="placeholder-text">個體 "${targetEar}" 尚未建立直系已留種或在場工作之第一代 (F1) 子代。</div>`;
+                return;
+            }
+
+            let html = `
+                <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:8px;">
+                    🎯 留種源頭: <b style="color:#0f172a;">${targetEar}</b> | 累計在役留種子代: <b>${maleDescendants.length + femaleDescendants.length} 頭</b> (公豬: ${maleDescendants.length} 頭 / 母豬: ${femaleDescendants.length} 頭)
+                </div>
+                <div class="descendant-dual-cols">
+                    <!-- 左欄：公豬 (藍色主題) -->
+                    <div class="descendant-col-box" style="border-top: 3px solid #0284c7;">
+                        <div class="desc-col-title" style="color:#0284c7; border-color:#0284c7;">
+                            <span>♂ 直系留種公豬 (Boars)</span>
+                            <span>${maleDescendants.length} 頭</span>
+                        </div>
+            `;
+
+            if (maleDescendants.length === 0) {
+                html += `<div style="text-align:center; color:#94a3b8; padding:30px 0; font-size:12px;">無留種公豬紀錄</div>`;
+            } else {
+                maleDescendants.forEach(m => {
+                    const isDead = deathInfoMap.has(m.ear);
+                    html += `
+                        <div class="desc-card" style="background:#f0f9ff; border:1.5px solid #0284c7;" onclick="document.getElementById('earInput').value='${m.ear}'; searchPedigree();">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:13px; font-weight:900; color:#dc2626;">${m.ear}</span>
+                                <span style="font-size:9.5px; font-weight:800; background:#0284c7; color:#fff; padding:1px 5px; border-radius:3px;">♂ 公豬</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#0f172a; margin-top:3px; font-weight:700;">
+                                <span>SPI: <b>${cleanVal(m.spi)}</b></span>
+                                <span>TSI: <b>${cleanVal(m.tsi)}</b></span>
+                                <span>活仔: <b>${cleanVal(m.born_alive)}</b></span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:9.5px; color:#64748b; margin-top:2px;">
+                                <span>首用: ${cleanVal(m.mating_date)}</span>
+                                <span>役期: ${m.used_years || '-'}年 (年齡:${m.current_age || '-'}歲)</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `
+                    </div>
+                    <!-- 右欄：母豬 (粉紅色主題) -->
+                    <div class="descendant-col-box" style="border-top: 3px solid #e11d48;">
+                        <div class="desc-col-title" style="color:#e11d48; border-color:#e11d48;">
+                            <span>♀ 直系留種母豬 (Gilts/Sows)</span>
+                            <span>${femaleDescendants.length} 頭</span>
+                        </div>
+            `;
+
+            if (femaleDescendants.length === 0) {
+                html += `<div style="text-align:center; color:#94a3b8; padding:30px 0; font-size:12px;">無留種母豬紀錄</div>`;
+            } else {
+                femaleDescendants.forEach(f => {
+                    const isDead = deathInfoMap.has(f.ear);
+                    html += `
+                        <div class="desc-card" style="background:#fff1f2; border:1.5px solid #e11d48;" onclick="document.getElementById('earInput').value='${f.ear}'; searchPedigree();">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:13px; font-weight:900; color:#dc2626;">${f.ear}</span>
+                                <span style="font-size:9.5px; font-weight:800; background:#e11d48; color:#fff; padding:1px 5px; border-radius:3px;">♀ 胎次:${cleanVal(f.parity)}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#0f172a; margin-top:3px; font-weight:700;">
+                                <span>SPI: <b>${cleanVal(f.spi)}</b></span>
+                                <span>活仔: <b>${cleanVal(f.born_alive)}</b></span>
+                                <span>配偶: <b>${cleanVal(f.mate)}</b></span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:9.5px; color:#64748b; margin-top:2px;">
+                                <span>首配: ${cleanVal(f.mating_date)}</span>
+                                <span>役期: ${f.used_years || '-'}年 (年齡:${f.current_age || '-'}歲)</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        /* 🧬 5. 家族品系血統比例分析表 (Family Line Proportion) */
         function renderFamilyLineProportion(primary) {
             const container = document.getElementById('bloodContainer');
             
@@ -531,20 +793,20 @@
 
             let html = `
                 <div class="strain-overview-bar">
-                    <div class="strain-parent-card" style="border-left: 5px solid #0284c7;">
-                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">♂ 父系家族血統 (Sire Strain) - 貢獻率 50%</div>
-                        <div style="font-size: 18px; font-weight: 900; color: #0284c7; margin: 4px 0;">${sLine}</div>
-                        <div style="font-size: 11px; color: #475569;">父本個體: <b>${primary.g3_sire_full || '-'}</b></div>
+                    <div class="strain-parent-card" style="border-left: 4px solid #0284c7;">
+                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">♂ 父系家族品系 (Sire Strain) - 貢獻率 50%</div>
+                        <div style="font-size: 17px; font-weight: 900; color: #0284c7; margin: 3px 0;">Line: ${sLine}</div>
+                        <div style="font-size: 11px; color: #475569;">父本全名: <b>${primary.g3_sire_full || '-'}</b></div>
                     </div>
-                    <div class="strain-parent-card" style="border-left: 5px solid #e11d48;">
-                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">♀ 母系家族血統 (Dam Strain) - 貢獻率 50%</div>
-                        <div style="font-size: 18px; font-weight: 900; color: #e11d48; margin: 4px 0;">${dLine}</div>
-                        <div style="font-size: 11px; color: #475569;">母本個體: <b>${primary.g3_dam_full || '-'}</b></div>
+                    <div class="strain-parent-card" style="border-left: 4px solid #e11d48;">
+                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">♀ 母系家族品系 (Dam Strain) - 貢獻率 50%</div>
+                        <div style="font-size: 17px; font-weight: 900; color: #e11d48; margin: 3px 0;">Line: ${dLine}</div>
+                        <div style="font-size: 11px; color: #475569;">母本全名: <b>${primary.g3_dam_full || '-'}</b></div>
                     </div>
                 </div>
 
-                <div style="font-size: 12.5px; font-weight: 800; color: #1e293b; margin: 10px 0 6px 2px;">
-                    🧬 祖先家族品系累計純度分佈 (Ancestral Strain Proportion):
+                <div style="font-size: 12px; font-weight: 800; color: #1e293b; margin: 8px 0 6px 2px;">
+                    🧬 祖先家族品系累計純度分佈 (Ancestral Lineage Proportion):
                 </div>
                 <div class="strain-grid">
             `;
@@ -554,7 +816,7 @@
                     <div class="strain-card">
                         <div class="strain-name">
                             <span>Line: <b>${lName}</b></span>
-                            <span style="color: #0284c7; font-size: 13px;">${pct.toFixed(1)}%</span>
+                            <span style="color: #0284c7; font-size: 12px;">${pct.toFixed(1)}%</span>
                         </div>
                         <div class="strain-bar-bg">
                             <div class="strain-bar-fill" style="width: ${pct}%;"></div>
@@ -567,234 +829,7 @@
             container.innerHTML = html;
         }
 
-        /* 🌳 3. 蝴蝶對稱全系譜家族拓撲樹 (左右三代嚴格對稱、有多少資料放多少) */
-        function drawButterflyTopologyTree(target) {
-            const container = document.getElementById('macroBoxesContainer');
-            const svgLayer = document.getElementById('macroSvg');
-            const cardArea = document.getElementById('macroScrollArea');
-            container.innerHTML = ''; svgLayer.innerHTML = '';
-
-            const cardW = 165, cardH = 62;
-            const totalWidth = 1480, totalHeight = 720;
-            cardArea.style.height = totalHeight + 'px';
-            container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
-            svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
-
-            // 🦋 蝴蝶型座標軸心設定：
-            // 中心 X = 650
-            // 左翼（父系向左開展）：Sire(450) -> G2祖輩(260) -> G3曾祖輩(60)
-            // 右翼（母系向右開展）：Dam(850) -> G2祖輩(1040) -> G3曾祖輩(1240)
-            const cCenter = 650;
-            const cL1 = 450, cL2 = 255, cL3 = 60;
-            const cR1 = 850, cR2 = 1045, cR3 = 1240;
-            const midY = totalHeight / 2 - cardH / 2;
-
-            const tNodes = {};
-            const g1 = target.g1_nodes || {};
-
-            // 1. 正中心本體
-            tNodes['TARGET'] = {
-                x: cCenter, y: midY, ear: target.ear, breed: target.breed,
-                line: target.g3_sire_line || '-', role: `🎯 TARGET (${target.sex==='MALE'?'♂':'♀'})`
-            };
-
-            // 2. 左翼：父系家族節點
-            // L1: 生父
-            if (target.g3_sire_full && target.g3_sire_full !== '-') {
-                tNodes['SIRE'] = { x: cL1, y: midY, ear: target.g3_sire_full, breed: target.breed, line: target.g3_sire_line, role: "♂ 生父 (Sire)" };
-            }
-            // L2: 祖父 SS、祖母 SD
-            if (target.ss_full && target.ss_full !== '-') {
-                tNodes['SS'] = { x: cL2, y: totalHeight * 0.25 - cardH / 2, ear: target.ss_full, breed: target.breed, line: target.ss_line, role: "♂ 祖父 (SS)" };
-            }
-            if (target.sd_full && target.sd_full !== '-') {
-                tNodes['SD'] = { x: cL2, y: totalHeight * 0.75 - cardH / 2, ear: target.sd_full, breed: target.breed, line: target.sd_line, role: "♀ 祖母 (SD)" };
-            }
-            // L3: 曾祖代父系 4 節點 (SSS, SSD, SDS, SDD)
-            const g1Left = [
-                { k: 'SSS', line: g1.sss, role: "♂ 曾祖父", yR: 0.125 },
-                { k: 'SSD', line: g1.ssd, role: "♀ 曾祖母", yR: 0.375 },
-                { k: 'SDS', line: g1.sds, role: "♂ 曾祖父", yR: 0.625 },
-                { k: 'SDD', line: g1.sdd, role: "♀ 曾祖母", yR: 0.875 }
-            ];
-            g1Left.forEach(g => {
-                if (g.line && g.line !== '-') {
-                    tNodes[g.k] = { x: cL3, y: totalHeight * g.yR - cardH / 2, ear: g.line, breed: target.breed, line: g.line, role: g.role };
-                }
-            });
-
-            // 3. 右翼：母系家族節點
-            // R1: 生母
-            if (target.g3_dam_full && target.g3_dam_full !== '-') {
-                tNodes['DAM'] = { x: cR1, y: midY, ear: target.g3_dam_full, breed: target.breed, line: target.g3_dam_line, role: "♀ 生母 (Dam)" };
-            }
-            // R2: 外祖父 DS、外祖母 DD
-            if (target.ds_full && target.ds_full !== '-') {
-                tNodes['DS'] = { x: cR2, y: totalHeight * 0.25 - cardH / 2, ear: target.ds_full, breed: target.breed, line: target.ds_line, role: "♂ 外祖父 (DS)" };
-            }
-            if (target.dd_full && target.dd_full !== '-') {
-                tNodes['DD'] = { x: cR2, y: totalHeight * 0.75 - cardH / 2, ear: target.dd_full, breed: target.breed, line: target.dd_line, role: "♀ 外祖母 (DD)" };
-            }
-            // R3: 曾祖代母系 4 節點 (DSS, DSD, DDS, DDD)
-            const g1Right = [
-                { k: 'DSS', line: g1.dss, role: "♂ 曾外祖父", yR: 0.125 },
-                { k: 'DSD', line: g1.dsd, role: "♀ 曾外祖母", yR: 0.375 },
-                { k: 'DDS', line: g1.dds, role: "♂ 曾外祖父", yR: 0.625 },
-                { k: 'DDD', line: g1.ddd, role: "♀ 曾外祖母", yR: 0.875 }
-            ];
-            g1Right.forEach(g => {
-                if (g.line && g.line !== '-') {
-                    tNodes[g.k] = { x: cR3, y: totalHeight * g.yR - cardH / 2, ear: g.line, breed: target.breed, line: g.line, role: g.role };
-                }
-            });
-
-            // 蝴蝶翅膀連線清單 (有多少資料就連多少線)
-            const topoLinks = [
-                // 向左連線 (父系側)
-                ['TARGET', 'SIRE', 'left'],
-                ['SIRE', 'SS', 'left'],
-                ['SIRE', 'SD', 'left'],
-                ['SS', 'SSS', 'left'],
-                ['SS', 'SSD', 'left'],
-                ['SD', 'SDS', 'left'],
-                ['SD', 'SDD', 'left'],
-                // 向右連線 (母系側)
-                ['TARGET', 'DAM', 'right'],
-                ['DAM', 'DS', 'right'],
-                ['DAM', 'DD', 'right'],
-                ['DS', 'DSS', 'right'],
-                ['DS', 'DSD', 'right'],
-                ['DD', 'DDS', 'right'],
-                ['DD', 'DDD', 'right']
-            ];
-
-            topoLinks.forEach(([from, to, dir]) => {
-                const f = tNodes[from], t = tNodes[to];
-                if (!f || !t) return;
-
-                let x1, x2;
-                if (dir === 'left') {
-                    x1 = f.x; x2 = t.x + cardW;
-                } else {
-                    x1 = f.x + cardW; x2 = t.x;
-                }
-                const y1 = f.y + cardH / 2;
-                const y2 = t.y + cardH / 2;
-                const midX = x1 + (x2 - x1) / 2;
-
-                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
-                p.setAttribute('fill', 'none');
-                p.setAttribute('stroke', dir === 'left' ? '#0284c7' : '#e11d48');
-                p.setAttribute('stroke-width', '1.8');
-                svgLayer.appendChild(p);
-            });
-
-            // 節點渲染 (只突出家族品系名與耳號，乾淨清晰)
-            Object.keys(tNodes).forEach(k => {
-                const n = tNodes[k];
-                const card = document.createElement('div');
-                card.className = `abs-node ${getBreedClass(n.breed)} ${k === 'TARGET' ? 'node-target-highlight' : ''}`;
-                card.style.left = n.x + 'px'; card.style.top = n.y + 'px';
-                card.style.width = cardW + 'px'; card.style.height = cardH + 'px';
-
-                card.innerHTML = `
-                    <div class="c-sub-label">
-                        <span>${n.role}</span>
-                    </div>
-                    <div style="font-size:12.5px; font-weight:900; color:#1e3a8a; margin: 2px 0;">
-                        Line: ${n.line || '-'}
-                    </div>
-                    <div style="font-size:10px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
-                        ${n.ear}
-                    </div>
-                `;
-                if (n.ear && n.ear !== '-' && !n.ear.includes('FOUNDATION')) {
-                    card.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
-                }
-                container.appendChild(card);
-            });
-        }
-
-        /* 🌱 4. 全血統後代留種追蹤樹 */
-        function drawDescendantTree(primary) {
-            const container = document.getElementById('descendantBoxesContainer');
-            const svgLayer = document.getElementById('descendantSvg');
-            const card = document.getElementById('descendantCard');
-            container.innerHTML = ''; svgLayer.innerHTML = '';
-
-            const targetEar = primary.ear.toUpperCase();
-            const f1List = [];
-
-            pedigreeList.forEach(item => {
-                if (item.ear === targetEar) return;
-                
-                let isChild = false;
-                if (item.g3_sire_full && item.g3_sire_full.includes(targetEar)) isChild = true;
-                if (item.g3_dam_full && item.g3_dam_full.includes(targetEar)) isChild = true;
-                if (item['G5_直屬父(Sire)'] === targetEar || item['G5_直屬母(Dam)'] === targetEar) isChild = true;
-
-                if (isChild && !f1List.some(d => d.ear === item.ear)) {
-                    f1List.push(item);
-                }
-            });
-
-            if (f1List.length === 0) {
-                container.innerHTML = `<div class="placeholder-text">個體 "${targetEar}" 尚未建立直系已留種或在場工作之第一代 (F1) 子代。</div>`;
-                return;
-            }
-
-            const boxW = 180, boxH = 68, rowGap = 75;
-            const cardHeight = Math.max(f1List.length * rowGap + 90, 480);
-            const totalWidth = 720;
-
-            card.style.height = cardHeight + 'px';
-            svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', cardHeight);
-
-            const col0_X = 40, col1_X = col0_X + boxW + 90;
-            const targetY = cardHeight / 2 - boxH / 2;
-
-            const tDiv = document.createElement('div');
-            tDiv.className = `abs-node node-target-highlight`;
-            tDiv.style.left = col0_X + 'px'; tDiv.style.top = targetY + 'px';
-            tDiv.style.width = boxW + 'px'; tDiv.style.height = boxH + 'px';
-            tDiv.innerHTML = `
-                <div class="c-sub-label"><span>🎯 留種源頭 (${primary.sex==='MALE'?'♂ 公豬':'♀ 母豬'})</span></div>
-                <div class="c-main-title">${targetEar}</div>
-                <div style="font-size:9px; color:#475569;">在場留種子代數: <b>${f1List.length} 頭</b></div>
-            `;
-            container.appendChild(tDiv);
-
-            f1List.forEach((f1, idx) => {
-                const cy = targetY + (idx - (f1List.length - 1) / 2) * rowGap;
-                const f1Div = document.createElement('div');
-                const isDead = deathInfoMap.has(f1.ear);
-                f1Div.className = `abs-node ${getBreedClass(f1.breed)} ${isDead ? 'node-dead' : ''}`;
-                f1Div.style.left = col1_X + 'px'; f1Div.style.top = cy + 'px';
-                f1Div.style.width = boxW + 'px'; f1Div.style.height = boxH + 'px';
-                
-                f1Div.innerHTML = `
-                    <div class="c-sub-label">
-                        <span>${f1.sex==='MALE'?'♂ F1 留種公':'♀ F1 留種母'} (胎次:${f1.parity || '1'})</span>
-                        ${isDead ? `<span class="badge-dead">淘汰</span>` : `<span class="badge-active">在役</span>`}
-                    </div>
-                    <div class="c-main-title">${f1.ear}</div>
-                    <div style="font-size:8.5px; color:#0f172a; margin-top:2px;">
-                        <span>活仔:<b>${cleanVal(f1.born_alive)}</b></span> |
-                        <span>SPI:<b>${cleanVal(f1.spi)}</b></span> |
-                        <span>配偶:<b>${cleanVal(f1.mate)}</b></span>
-                    </div>
-                `;
-                f1Div.onclick = () => { document.getElementById('earInput').value = f1.ear; searchPedigree(); };
-                container.appendChild(f1Div);
-
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                path.setAttribute('d', `M ${col0_X + boxW} ${targetY + boxH/2} H ${(col0_X + boxW + col1_X)/2} V ${cy + boxH/2} H ${col1_X}`);
-                path.setAttribute('fill', 'none'); path.setAttribute('stroke', '#059669'); path.setAttribute('stroke-width', '1.8');
-                svgLayer.appendChild(path);
-            });
-        }
-
+        /* 📸 高解析圖表匯出 */
         function exportHighRes(elemId, prefix) {
             const el = document.getElementById(elemId);
             if (!el) return;
