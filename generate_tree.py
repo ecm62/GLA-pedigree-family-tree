@@ -6,11 +6,11 @@ import requests
 
 SPREADSHEET_ID = "1uWXfIMrRidpoZTq_BYYTy9ho_0a194pMMSS_EQpJoeA"
 
-# 🌟 精確鎖定 4 個分頁 GID
+# 🌟 4 個核心分頁精確 GID
 GID_MAIN = "0"  # 全期整合總表(配娩種)(PY)(轉)
-GID_SALES = "591794579"  # 全生命週期銷售與血統分析(PY)(轉)
+GID_SALES = "591794579"  # 全生命週期銷售與血統分析(PY)(轉) [屠體與缺陷檢定]
 GID_US_ORIGIN = "1866228473"  # 美國原始種源數據(轉)
-GID_HIERARCHY = "1807731938"  # 📊 育種_家族階層清單(轉)
+GID_HIERARCHY = "1807731938"  # 📊 育種_家族階層清單(轉) [目前年齡與已使用年限]
 
 
 def fetch_sheet_csv(gid):
@@ -231,7 +231,7 @@ def main():
   c_dod = find_c(["DOD/淘汰日期", "淘汰日期", "DOD"], df_main) or "DOD/淘汰日期"
   c_breed = find_c(["Breed", "品種"], df_main) or "Breed"
 
-  # 🌟 關鍵修正：抓取 G5/G6 直屬生父生母欄位
+  # 🌟 提取 G5/G6 直屬生父生母
   c_g5_sire = (
       find_c(
           ["G5_直屬父(Sire)", "G5_直屬父", "G4_直屬父", "第一代公"],
@@ -329,7 +329,6 @@ def main():
         ),
     )
 
-    # 直屬父母
     g5_s = clean_val(r.get(c_g5_sire))
     g5_d = clean_val(r.get(c_g5_dam))
 
@@ -350,7 +349,6 @@ def main():
         "dod": dod,
         "current_age": current_age,
         "used_years": used_years,
-        # 🌟 寫入直屬生父生母，確保後代留種樹能秒級精確關聯
         "g5_sire": g5_s,
         "g5_dam": g5_d,
         "total_born": clean_num(
