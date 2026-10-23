@@ -53,22 +53,22 @@
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
 
-        /* 🌟 核心排版：卡片（框內）與白色指標盒（框外下方）徹底分離 */
+        /* 🌟 核心排版：圖框與框下純文字無膠囊分離設計 */
         .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.12s; cursor: pointer; }
         .node-group-container:hover { transform: scale(1.02); z-index: 10; }
 
-        /* 1. 框內主卡片：僅保留耳號、父母代號、品系名 (無白底) */
-        .node-box-main { border-radius: 6px; padding: 7px 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.06); width: 100%; text-align: center; }
+        /* 1. 框內：僅保留身分角色、耳號、品系名 (無白底) */
+        .node-box-main { border-radius: 6px; padding: 6px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); width: 100%; text-align: center; }
         .node-target-highlight { border: 3px solid #f59e0b !important; box-shadow: 0 0 14px rgba(245, 158, 11, 0.45) !important; }
 
-        .c-sub-label { font-size: 9px; font-weight: 800; color: #475569; display: flex; justify-content: space-between; }
-        .c-main-title { color: #dc2626; font-size: 13.5px; font-weight: 900; line-height: 1.25; word-break: break-word; margin: 2px 0; }
+        .c-sub-label { font-size: 9px; font-weight: 800; color: #475569; display: flex; justify-content: space-between; align-items: center; }
+        .c-main-title { color: #dc2626; font-size: 13.5px; font-weight: 900; line-height: 1.2; word-break: break-word; margin: 2px 0; }
         .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 10px; display: inline-block; }
 
-        /* 2. 框外下方純白指標膠囊 (底色為純白，徹底脫離邊框) */
-        .node-box-sub-capsule { background-color: #ffffff !important; border: 1px solid #cbd5e1; border-top: none; border-radius: 0 0 6px 6px; padding: 3px 6px; width: 92%; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
-        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 8.5px; color: #0f172a; font-weight: 700; white-space: nowrap; }
-        .sub-metric-row-2 { display: flex; justify-content: space-between; font-size: 8px; color: #64748b; font-weight: 600; margin-top: 1px; border-top: 1px dotted #e2e8f0; padding-top: 1px; white-space: nowrap; }
+        /* 2. 框外下方：無膠囊框線感，純文字兩行呈現 */
+        .node-text-sub-block { width: 100%; padding-top: 4px; box-sizing: border-box; }
+        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 9px; color: #0f172a; font-weight: 800; white-space: nowrap; line-height: 1.3; }
+        .sub-metric-row-2 { display: flex; justify-content: space-between; font-size: 8px; color: #64748b; font-weight: 600; margin-top: 2px; white-space: nowrap; line-height: 1.3; }
 
         svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
@@ -78,12 +78,14 @@
         .excel-data-table th { background-color: #1e293b; color: #ffffff; font-weight: 700; padding: 8px 10px; border: 1px solid #334155; }
         .excel-data-table td { padding: 6px 9px; border: 1px solid #e2e8f0; color: #000; font-weight: 600; }
 
-        /* 血統比例進度條卡片 */
-        .blood-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 12px; }
-        .blood-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
-        .blood-name { font-weight: 800; font-size: 12px; color: #1e3a8a; margin-bottom: 4px; display: flex; justify-content: space-between; }
-        .blood-bar-bg { background-color: #e2e8f0; border-radius: 4px; height: 8px; width: 100%; overflow: hidden; }
-        .blood-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
+        /* 圖五：家族品系血統比例卡片群 */
+        .strain-overview-bar { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+        .strain-parent-card { flex: 1; min-width: 260px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 7px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .strain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 6px 0; }
+        .strain-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .strain-name { font-weight: 800; font-size: 12px; color: #1e3a8a; margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .strain-bar-bg { background-color: #e2e8f0; border-radius: 4px; height: 8px; width: 100%; overflow: hidden; }
+        .strain-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
 
         #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.9); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; z-index: 99999; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 50px 10px; font-size: 13px; font-weight: 600; }
@@ -127,26 +129,26 @@
         <div class="card-header-bar">
             <div>
                 <h2 style="margin:0; font-size:16px; color:#0284c7; font-weight:900;">📜 1. Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (框內純粹血統識別，框外白色膠囊展示 MLI/SPI/役期指標)</p>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (圖框內純淨血統名冊，圖框下方文字展示 MLI/SPI/役期指標)</p>
             </div>
             <div><button class="btn btn-export" onclick="exportHighRes('certExportCard', 'GLA_Official_Certificate')">📸 證書存檔 PNG</button></div>
         </div>
-        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 780px;">
+        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 800px;">
             <svg class="orthogonal-svg" id="certSvg"></svg>
             <div id="certBoxesContainer"><div class="placeholder-text">請在上方輸入耳號啟動四代造冊檢索...</div></div>
         </div>
     </div>
 
-    <!-- 🧬 5. 育種與血統比例分析表 (新增專屬第五表) -->
+    <!-- 🧬 5. 家族品系血統比例分析表 -->
     <div class="tree-card-wrapper" id="bloodExportCard" style="border: 2px solid #10b981;">
         <div class="card-header-bar">
             <div>
-                <h3 style="margin:0; font-size:15px; color:#059669; font-weight:800;">🧬 5. Breed Purity & Ancestral Composition Analysis (育種與血統比例分析表)</h3>
-                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">依據《📊 育種_血統比例》數據庫，精準解析該個體之純種品系源頭與血統純度貢獻率</p>
+                <h3 style="margin:0; font-size:15px; color:#059669; font-weight:800;">🧬 5. Ancestral Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
+                <p style="margin:2px 0 0 0; font-size:11px; color:#64748b;">依據父系家族與母系家族溯源解構，呈現各品系之純度佔比，倒推性能遺傳歸屬</p>
             </div>
-            <div><button class="btn btn-export" onclick="exportHighRes('bloodExportCard', 'GLA_Blood_Composition')">📸 匯出比例 PNG</button></div>
+            <div><button class="btn btn-export" onclick="exportHighRes('bloodExportCard', 'GLA_Family_Line_Proportion')">📸 匯出比例 PNG</button></div>
         </div>
-        <div id="bloodContainer"><div class="placeholder-text">請檢索個體以解析該個體之純種血統與品種貢獻比例...</div></div>
+        <div id="bloodContainer"><div class="placeholder-text">請檢索個體以解析該個體之家族品系血緣比例...</div></div>
     </div>
 
     <!-- 📌 育種成績與評估資料表 -->
@@ -182,7 +184,7 @@
         </div>
     </div>
 
-    <!-- 🌳 3. 近親比對全系譜拓撲家族樹 (左側父系 vs 正中央本體 vs 右側母系) -->
+    <!-- 🌳 3. 近親比對全系譜拓撲家族樹 -->
     <div class="tree-card-wrapper" id="macroTreePanel" style="border: 2px solid #0d6efd;">
         <div class="card-header-bar">
             <div>
@@ -216,7 +218,6 @@
         let pedigreeList = [];
         let deathInfoMap = new Map();
         let usIndex = {};
-        let bloodMap = {};
         let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
 
         function showToast(msg) {
@@ -237,7 +238,6 @@
                 .then(data => {
                     pedigreeList = data.pedigree || [];
                     usIndex = data.us_index || {};
-                    bloodMap = data.blood_map || {};
                     deathInfoMap.clear();
                     if (data.death_map) {
                         for (let k in data.death_map) deathInfoMap.set(k.toUpperCase(), data.death_map[k]);
@@ -254,7 +254,6 @@
             return (v === undefined || v === null || v === 'undefined' || v === 'NaN' || v === 'nan' || v === '') ? '-' : String(v).trim();
         }
 
-        /* 嚴格品種配色：Y 必粉黃、L 必粉藍、D 必粉紅、LY 必粉綠 */
         function getBreedClass(earOrBreed) {
             if (!earOrBreed || earOrBreed === '-') return 'breed-DEFAULT';
             const s = String(earOrBreed).trim().toUpperCase();
@@ -294,7 +293,7 @@
                         g3_dam_full: u.dam_full, g3_dam_line: u.dam_line, g3_dam_spi: u.dam_spi, g3_dam_mli: u.dam_mli,
                         ss_full: u.ss_full, ss_line: u.ss_line, sd_full: u.sd_full, sd_line: u.sd_line,
                         ds_full: u.ds_full, ds_line: u.ds_line, dd_full: u.dd_full, dd_line: u.dd_line,
-                        g1_nodes: u.g1_nodes, blood: bloodMap[query] || {}
+                        g1_nodes: u.g1_nodes
                     };
                     matched = [primary];
                 }
@@ -308,20 +307,19 @@
 
                     renderTable(tableItems, query, primary);
                     drawOfficialPedigree(primary);
-                    renderBloodComposition(primary);
+                    renderFamilyLineProportion(primary);
                     drawBilateralTopology(primary);
                     drawDescendantTree(primary);
                 } else {
                     document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="14" class="placeholder-text">查無 "${query}" 之造冊資料</td></tr>`;
                     document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之官方四代家譜</div>`;
-                    document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之血統比例</div>`;
+                    document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
                     document.getElementById('macroBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之拓撲資料</div>`;
                     document.getElementById('descendantBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
                 }
             }, 30);
         }
 
-        /* 📌 渲染育種總表 */
         function renderTable(items, query, primary) {
             const tbody = document.getElementById('excelTableBody');
             const isMale = primary && primary.sex === 'MALE';
@@ -352,16 +350,16 @@
             tbody.innerHTML = html;
         }
 
-        /* 📜 1. 官方四代家族系統圖 (框內純粹血統，框外純白膠囊展示 MLI/SPI/役期) */
+        /* 📜 1. 官方四代家族系統圖 (圖框與下方文字徹底無膠囊分離) */
         function drawOfficialPedigree(target) {
             const container = document.getElementById('certBoxesContainer');
             const svgLayer = document.getElementById('certSvg');
             const scrollArea = document.getElementById('certScrollArea');
             container.innerHTML = ''; svgLayer.innerHTML = '';
 
-            const cardW = 210, boxMainH = 58, boxCapsuleH = 36;
-            const cardTotalH = boxMainH + boxCapsuleH; // 94px
-            const colGap = 55, totalHeight = 800;
+            const cardW = 210, boxMainH = 56, textSubH = 36;
+            const cardTotalH = boxMainH + textSubH; // 92px
+            const colGap = 55, totalHeight = 820;
             const totalWidth = (cardW * 4) + (colGap * 3) + 60;
 
             scrollArea.style.height = totalHeight + 'px';
@@ -371,7 +369,7 @@
             const colX = [25, 25 + cardW + colGap, 25 + (cardW + colGap) * 2, 25 + (cardW + colGap) * 3];
             const nodes = {};
 
-            // Gen 0: 本體 (正中央)
+            // Gen 0: 本體
             const isDead = deathInfoMap.has(target.ear);
             nodes['T'] = {
                 x: colX[0], y: totalHeight / 2 - cardTotalH / 2,
@@ -383,18 +381,18 @@
                 isDead: isDead, deadTag: deathInfoMap.get(target.ear)
             };
 
-            // Gen 1: 父母 (生父向上挪至 20%，生母移至 80%，充分拉開縱深)
+            // Gen 1: 父母 (生父 20%，生母 80%)
             nodes['S'] = {
                 x: colX[1], y: totalHeight * 0.20 - cardTotalH / 2,
                 ear: target.g3_sire_full, breed: target.breed,
-                line: target.g3_sire_line, role: "♂ 生父 (1st Sire)",
+                line: target.g3_sire_line, role: "♂ 生父 (Sire)",
                 mli: target.g3_sire_mli, spi: target.g3_sire_spi, tsi: "-",
                 age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_sire_full)
             };
             nodes['D'] = {
                 x: colX[1], y: totalHeight * 0.80 - cardTotalH / 2,
                 ear: target.g3_dam_full, breed: target.breed,
-                line: target.g3_dam_line, role: "♀ 生母 (1st Dam)",
+                line: target.g3_dam_line, role: "♀ 生母 (Dam)",
                 mli: target.g3_dam_mli, spi: target.g3_dam_spi, tsi: "-",
                 age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_dam_full)
             };
@@ -432,7 +430,7 @@
                 };
             }
 
-            // 正交向量折線繪製
+            // 正交向量折線
             const links = [
                 ['T', 'S'], ['T', 'D'],
                 ['S', 'SS'], ['S', 'SD'],
@@ -456,7 +454,7 @@
                 svgLayer.appendChild(p);
             });
 
-            // 節點渲染：主卡片 (框內) + 框外下方獨立純白膠囊
+            // 節點渲染：框內純淨血統 + 框外下方純文字（無膠囊感）
             Object.keys(nodes).forEach(k => {
                 const n = nodes[k];
                 const group = document.createElement('div');
@@ -466,11 +464,12 @@
 
                 const lineHtml = (n.line && n.line !== '-') ? `<span class="family-line-clean">Line: ${n.line}</span>` : '';
                 
+                // 框下第二行文字：出生日、年齡與已使用年限 (役期)
                 let usageText = '';
                 if (n.age && n.age !== '-' && n.age !== '0') {
-                    usageText = `年齡:${n.age}歲 | 役期:${n.used || '-'}年`;
+                    usageText = `年齡: ${n.age}歲 | 役期: ${n.used || '-'}年`;
                 } else if (n.dob && n.dob !== '-') {
-                    usageText = `DOB:${n.dob}`;
+                    usageText = `DOB: ${n.dob}`;
                 }
 
                 group.innerHTML = `
@@ -483,15 +482,15 @@
                             ${n.ear} ${n.deadTag ? `<span class="badge-dead">${n.deadTag}</span>` : ''}
                         </div>
                     </div>
-                    <div class="node-box-sub-capsule">
+                    <div class="node-text-sub-block">
                         <div class="sub-metric-row-1">
-                            <span>MLI: <b>${cleanVal(n.mli)}</b></span>
-                            <span>SPI: <b>${cleanVal(n.spi)}</b></span>
-                            <span>TSI: <b>${cleanVal(n.tsi)}</b></span>
+                            <span>MLI: ${cleanVal(n.mli)}</span>
+                            <span>SPI: ${cleanVal(n.spi)}</span>
+                            <span>TSI: ${cleanVal(n.tsi)}</span>
                         </div>
                         <div class="sub-metric-row-2">
-                            <span>${usageText || '役期: 核心種源'}</span>
-                            <span>${n.breed}</span>
+                            <span>${usageText || '役期: 核心原種'}</span>
+                            <span style="font-weight:700;">${n.breed}</span>
                         </div>
                     </div>
                 `;
@@ -502,44 +501,72 @@
             });
         }
 
-        /* 🧬 5. 育種與血統比例分析表 (新增專屬第五表渲染) */
-        function renderBloodComposition(primary) {
+        /* 🧬 5. 家族品系血統比例分析表 (Family Strain Genetic Contribution) */
+        function renderFamilyLineProportion(primary) {
             const container = document.getElementById('bloodContainer');
-            const bloodData = primary.blood || bloodMap[primary.ear.toUpperCase()] || {};
+            
+            const sLine = primary.g3_sire_line || (primary.sire_line) || '未知父系';
+            const dLine = primary.g3_dam_line || (primary.dam_line) || '未知母系';
 
-            let keys = Object.keys(bloodData);
-            if (keys.length === 0) {
-                // 若無細項，根據品種自動推導基準純度
-                const b = primary.breed.toUpperCase();
-                if (b === 'Y') bloodData = { 'Yorkshire (大白純種)': '100%' };
-                else if (b === 'L') bloodData = { 'Landrace (藍瑞斯純種)': '100%' };
-                else if (b === 'D') bloodData = { 'Duroc (杜洛克純種)': '100%' };
-                else if (b === 'LY') bloodData = { 'Landrace (母系)': '50%', 'Yorkshire (父系)': '50%' };
-                keys = Object.keys(bloodData);
-            }
+            const g1 = primary.g1_nodes || {};
+            const ancestors = [
+                { key: 'sss', line: g1.sss || primary.ss_line, side: 'Sire Side (父系)', weight: 12.5 },
+                { key: 'ssd', line: g1.ssd || primary.sd_line, side: 'Sire Side (父系)', weight: 12.5 },
+                { key: 'sds', line: g1.sds || primary.ss_line, side: 'Sire Side (父系)', weight: 12.5 },
+                { key: 'sdd', line: g1.sdd || primary.sd_line, side: 'Sire Side (父系)', weight: 12.5 },
+                { key: 'dss', line: g1.dss || primary.ds_line, side: 'Dam Side (母系)', weight: 12.5 },
+                { key: 'dsd', line: g1.dsd || primary.dd_line, side: 'Dam Side (母系)', weight: 12.5 },
+                { key: 'dds', line: g1.dds || primary.ds_line, side: 'Dam Side (母系)', weight: 12.5 },
+                { key: 'ddd', line: g1.ddd || primary.dd_line, side: 'Dam Side (母系)', weight: 12.5 }
+            ];
 
-            let html = `<div class="blood-grid">`;
-            keys.forEach(k => {
-                let valStr = String(bloodData[k]).trim();
-                let pct = parseFloat(valStr.replace('%', ''));
-                if (isNaN(pct)) pct = 100;
+            const lineSummary = {};
+            ancestors.forEach(a => {
+                const l = (a.line && a.line !== '-') ? a.line : 'FOUNDATION';
+                lineSummary[l] = (lineSummary[l] || 0) + a.weight;
+            });
+
+            const sortedLines = Object.entries(lineSummary).sort((a, b) => b[1] - a[1]);
+
+            let html = `
+                <div class="strain-overview-bar">
+                    <div class="strain-parent-card" style="border-left: 5px solid #0284c7;">
+                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">♂ 父系家族血統 (Sire Strain) - 貢獻率 50%</div>
+                        <div style="font-size: 18px; font-weight: 900; color: #0284c7; margin: 4px 0;">${sLine}</div>
+                        <div style="font-size: 11px; color: #475569;">父本個體: <b>${primary.g3_sire_full || '-'}</b></div>
+                    </div>
+                    <div class="strain-parent-card" style="border-left: 5px solid #e11d48;">
+                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">♀ 母系家族血統 (Dam Strain) - 貢獻率 50%</div>
+                        <div style="font-size: 18px; font-weight: 900; color: #e11d48; margin: 4px 0;">${dLine}</div>
+                        <div style="font-size: 11px; color: #475569;">母本個體: <b>${primary.g3_dam_full || '-'}</b></div>
+                    </div>
+                </div>
+
+                <div style="font-size: 12.5px; font-weight: 800; color: #1e293b; margin: 10px 0 6px 2px;">
+                    🧬 祖先家族品系累計純度分佈 (Ancestral Strain Proportion):
+                </div>
+                <div class="strain-grid">
+            `;
+
+            sortedLines.forEach(([lName, pct]) => {
                 html += `
-                    <div class="blood-card">
-                        <div class="blood-name">
-                            <span>${k}</span>
-                            <span style="color:#0284c7;">${valStr.includes('%') ? valStr : valStr + '%'}</span>
+                    <div class="strain-card">
+                        <div class="strain-name">
+                            <span>Line: <b>${lName}</b></span>
+                            <span style="color: #0284c7; font-size: 13px;">${pct.toFixed(1)}%</span>
                         </div>
-                        <div class="blood-bar-bg">
-                            <div class="blood-bar-fill" style="width: ${Math.min(pct, 100)}%;"></div>
+                        <div class="strain-bar-bg">
+                            <div class="strain-bar-fill" style="width: ${pct}%;"></div>
                         </div>
                     </div>
                 `;
             });
+
             html += `</div>`;
             container.innerHTML = html;
         }
 
-        /* 🌳 3. 近親比對全系譜拓撲家族樹 (左側父系 vs 正中央本體 vs 右側母系) */
+        /* 🌳 3. 近親比對全系譜拓撲家族樹 */
         function drawBilateralTopology(target) {
             const container = document.getElementById('macroBoxesContainer');
             const svgLayer = document.getElementById('macroSvg');
@@ -555,13 +582,11 @@
             const midY = totalHeight / 2 - cardH / 2;
             const tNodes = {};
 
-            // 1. 本體 (正中央)
             tNodes['TARGET'] = {
                 x: cCenter, y: midY, ear: target.ear, breed: target.breed,
                 line: target.g3_sire_line || '-', role: `🎯 TARGET (${target.sex==='MALE'?'♂':'♀'})`
             };
 
-            // 2. 左側：父系支派 (Sire Side)
             tNodes['SIRE'] = {
                 x: c2, y: midY, ear: target.g3_sire_full, breed: target.breed,
                 line: target.g3_sire_line, role: "♂ 生父 (Sire)"
@@ -575,7 +600,6 @@
                 line: target.sd_line, role: "♀ 祖母 (SD)"
             };
 
-            // 3. 右側：母系支派 (Dam Side)
             tNodes['DAM'] = {
                 x: c3, y: midY, ear: target.g3_dam_full, breed: target.breed,
                 line: target.g3_dam_line, role: "♀ 生母 (Dam)"
@@ -628,7 +652,7 @@
                     <span class="c-sub-label">
                         <span>${n.role}</span>
                     </span>
-                    <div style="font-size:12px; font-weight:900; color:#1e3a8a; margin: 2px 0;">
+                    <div style="font-size:12.5px; font-weight:900; color:#1e3a8a; margin: 2px 0;">
                         Line: ${n.line || '-'}
                     </div>
                     <div style="font-size:10px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
@@ -652,6 +676,7 @@
 
             pedigreeList.forEach(item => {
                 if (item.ear === targetEar) return;
+                
                 let isChild = false;
                 if (item.g3_sire_full && item.g3_sire_full.includes(targetEar)) isChild = true;
                 if (item.g3_dam_full && item.g3_dam_full.includes(targetEar)) isChild = true;
@@ -718,7 +743,6 @@
             });
         }
 
-        /* 📸 高解析圖表匯出 */
         function exportHighRes(elemId, prefix) {
             const el = document.getElementById(elemId);
             if (!el) return;
