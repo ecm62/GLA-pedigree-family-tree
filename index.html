@@ -16,19 +16,15 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 0; padding: 12px; background-color: #f1f5f9; color: #0f172a; line-height: 1.4; }
         
-        /* 系統頂部橫幅 */
-        .system-header-banner { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0369a1 100%); color: #ffffff; padding: 12px 20px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
+        /* 頂部橫幅 (表面無任何權限與分級標籤) */
+        .system-header-banner { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0369a1 100%); color: #ffffff; padding: 12px 20px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); margin-bottom: 10px; position: relative; }
+        .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; }
         .system-header-banner p { margin: 3px 0 0 0; font-size: 11.5px; opacity: 0.9; }
 
-        /* 權限徽章與切換按鈕 */
-        .auth-status-box { display: flex; align-items: center; gap: 10px; }
-        .role-badge { padding: 4px 10px; border-radius: 4px; font-weight: 800; font-size: 11px; letter-spacing: 0.5px; }
-        .role-admin { background-color: #f59e0b; color: #000; box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
-        .role-user { background-color: #3b82f6; color: #fff; }
-        .role-guest { background-color: #64748b; color: #fff; }
+        /* 🌟 隱形後門小點：完全同色、無邊框、肉眼不可見，點擊啟動 Admin 驗證 */
+        .stealth-admin-trigger { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: transparent; cursor: pointer; vertical-align: middle; margin-left: 3px; }
 
-        /* 控制列 */
+        /* 緊湊搜尋工具列 */
         .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 10px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
         input[type="text"] { padding: 6px 12px; font-size: 13.5px; border: 1.5px solid #cbd5e1; border-radius: 5px; width: 260px; outline: none; font-weight: 700; color: #0f172a; }
         input[type="text"]:focus { border-color: #0284c7; box-shadow: 0 0 0 2.5px rgba(2,132,199,0.15); }
@@ -36,8 +32,6 @@
         .btn:hover { background-color: #0369a1; }
         .btn-export { background-color: #059669; }
         .btn-export:hover { background-color: #047857; }
-        .btn-auth { background-color: #475569; }
-        .btn-auth:hover { background-color: #334155; }
 
         .btn-breed { background-color: #f8fafc; color: #475569; padding: 5px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 700; }
         .btn-breed.active { box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-color: #0f172a; }
@@ -60,7 +54,6 @@
         .badge-dead { background-color: #dc2626; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; margin-left: 3px; }
         .badge-active { background-color: #10b981; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 2px; }
 
-        /* 卡片容器 */
         .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 5px; border: 1px solid #e2e8f0; }
@@ -79,7 +72,7 @@
 
         svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
-        /* 高密度商業表格 */
+        /* 商業表格樣式 */
         .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 5px; max-height: 480px; }
         .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: #fff; white-space: nowrap; text-align: center; }
         .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 6px 8px; border: 1px solid #334155; font-size: 11px; position: sticky; top: 0; z-index: 5; }
@@ -91,7 +84,7 @@
         .butterfly-node { position: absolute; border-radius: 5px; padding: 6px 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
         .butterfly-node:hover { transform: scale(1.03); z-index: 10; }
 
-        /* 圖四後代留種雙欄分流 */
+        /* 圖四後代留種雙欄 */
         .descendant-dual-cols { display: flex; gap: 14px; width: 100%; }
         .descendant-col-box { flex: 1; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; }
         .desc-col-title { font-size: 13px; font-weight: 800; padding-bottom: 6px; border-bottom: 2px solid; margin-bottom: 8px; display: flex; justify-content: space-between; }
@@ -115,9 +108,13 @@
         .defect-badge { background-color: #fee2e2; color: #dc2626; border: 1px solid #f87171; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; display: inline-block; margin: 1px; }
         .defect-none { color: #10b981; font-weight: 700; font-size: 10px; }
 
-        /* 鎖定區塊警示遮罩 */
-        .admin-locked-panel { background: #f8fafc; border: 1.5px dashed #94a3b8; border-radius: 6px; padding: 35px 20px; text-align: center; color: #64748b; margin-bottom: 12px; }
-        .admin-locked-panel b { color: #1e293b; font-size: 14px; }
+        /* 中英文雙語私人資料聲明彈窗 (門禁) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 999999; }
+        .modal-box { background: #ffffff; border-radius: 8px; width: 90%; max-width: 440px; padding: 22px 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); text-align: center; }
+        .modal-title-cn { font-size: 17px; font-weight: 900; color: #dc2626; margin-bottom: 2px; }
+        .modal-title-en { font-size: 11px; font-weight: 800; color: #64748b; letter-spacing: 0.5px; margin-bottom: 12px; }
+        .modal-desc-cn { font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 4px; }
+        .modal-desc-en { font-size: 11px; color: #64748b; line-height: 1.4; margin-bottom: 16px; font-style: italic; }
 
         #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.92); color: #fff; padding: 7px 16px; border-radius: 20px; font-size: 11.5px; font-weight: 700; display: none; z-index: 99999; }
         .placeholder-text { text-align: center; color: #94a3b8; padding: 40px 10px; font-size: 12.5px; font-weight: 600; }
@@ -126,14 +123,37 @@
 <body>
     <div id="toastNotify">🐖 運算中...</div>
 
+    <!-- 門禁驗證彈窗 (未授權時強行阻擋並顯示中英文聲明) -->
+    <div id="authGateModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-title-cn">⚠️ 公司內部機密資料 - 存取受限</div>
+            <div class="modal-title-en">CONFIDENTIAL INTERNAL RECORDS - RESTRICTED ACCESS</div>
+            <div class="modal-desc-cn">本系統包含本場育種與生產核心機密數據，非經授權嚴禁存取。請輸入作業通行密碼才可繼續查閱。</div>
+            <div class="modal-desc-en">This system contains proprietary swine breeding and production records. Unauthorized access is strictly prohibited. Please enter authorization password to proceed.</div>
+            <input type="password" id="userGatePassword" placeholder="輸入作業通行密碼..." style="width:85%; padding:8px 12px; margin-bottom:12px; font-size:14px; border:1.5px solid #cbd5e1; border-radius:5px; text-align:center;" onkeydown="if(event.key==='Enter') verifyGatePass()">
+            <br>
+            <button class="btn" onclick="verifyGatePass()" style="width:90%; padding:8px 0;">確認登入 / Verify Access</button>
+        </div>
+    </div>
+
+    <!-- 🌟 Admin 隱藏授權視窗 (只有點到小點才會彈出) -->
+    <div id="adminSecretModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box" style="background:#0f172a; color:#fff; border:1px solid #334155;">
+            <div style="font-size:15px; font-weight:900; color:#f59e0b; margin-bottom:2px;">🛡️ 管理者進階授權</div>
+            <div style="font-size:11px; color:#94a3b8; margin-bottom:14px;">Master Security Authentication</div>
+            <input type="text" id="adminSecretUser" placeholder="管理員帳號 (小寫)" style="width:85%; padding:7px 10px; margin-bottom:8px; font-size:13px; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#fff; text-align:center;"><br>
+            <input type="password" id="adminSecretPass" placeholder="管理密碼" style="width:85%; padding:7px 10px; margin-bottom:14px; font-size:13px; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#fff; text-align:center;" onkeydown="if(event.key==='Enter') verifyAdminMaster()"><br>
+            <button class="btn" onclick="verifyAdminMaster()" style="background:#f59e0b; color:#000; width:90%; font-weight:900; padding:8px 0;">解鎖進階全系譜模組</button>
+            <button class="btn btn-auth" onclick="closeAdminModal()" style="margin-top:6px; width:90%; font-size:11px; background:#334155;">取消</button>
+        </div>
+    </div>
+
     <div class="system-header-banner">
         <div>
             <h1>GLA Official Pedigree Book & Lineage System</h1>
+            <!-- 🌟 隱藏小門：位於 System 後方，顏色與背景完全融為一體，點擊觸發 -->
+            <span class="stealth-admin-trigger" onclick="openAdminModal()" title=""></span>
             <p>官方造冊血統書與全系譜拓撲追蹤 (Official Pedigree Certificate & Recursive Lineage System)</p>
-        </div>
-        <div class="auth-status-box">
-            <span id="roleBadge" class="role-badge role-guest">訪客模式</span>
-            <button class="btn btn-auth" onclick="promptLogin()">🔐 權限驗證</button>
         </div>
     </div>
 
@@ -166,7 +186,7 @@
     <div class="tree-card-wrapper" id="certExportCard" style="border: 1.5px solid #0284c7;">
         <div class="card-header-bar">
             <div>
-                <h2 style="margin:0; font-size:15px; color:#0284c7; font-weight:900;">📜 Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
+                <h2 style="margin:0; font-size:15px; color:#0284c7; font-weight:900;">Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
                 <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (圖框內純淨血統名冊，圖框下方文字展示 MLI/SPI/役期指標)</p>
             </div>
             <div><button class="btn btn-export" onclick="exportFullPage('certScrollArea', 'GLA_Official_Certificate')">📸 整頁存檔 PNG</button></div>
@@ -180,7 +200,7 @@
     <!-- 📌 育種成績與評估資料表 (User/Admin 開放) -->
     <div class="tree-card-wrapper" id="tableExportCard">
         <div class="card-header-bar">
-            <div style="font-size:14.5px; color:#0f172a; font-weight:800;" id="cardTitle">📌 Breeding Performance & Index Data (育種成績與評估總表)</div>
+            <div style="font-size:14.5px; color:#0f172a; font-weight:800;" id="cardTitle">Breeding Performance & Index Data (育種成績與評估總表)</div>
             <div><button class="btn btn-export" onclick="exportFullPage('tableWrapper', 'GLA_Breeding_Table')">📸 整頁存檔 PNG</button></div>
         </div>
         <div class="data-table-wrapper" id="tableWrapper">
@@ -214,7 +234,7 @@
     <div class="tree-card-wrapper" id="macroTreePanel" style="border: 1.5px solid #0d6efd;">
         <div class="card-header-bar">
             <div>
-                <h3 style="margin:0; font-size:14.5px; color:#0d6efd; font-weight:800;">🌳 Bilateral Butterfly Lineage Topology Tree (蝴蝶對稱全系譜家族拓撲樹)</h3>
+                <h3 style="margin:0; font-size:14.5px; color:#0d6efd; font-weight:800;">Bilateral Butterfly Lineage Topology Tree (蝴蝶對稱全系譜家族拓撲樹)</h3>
                 <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">左翼：父系家族品系完整展開 (Sire Lines) ⟵ 🎯 本體 ⟶ 右翼：母系家族品系完整展開 (Dam Lines)</p>
             </div>
             <div><button class="btn btn-export" onclick="exportFullPage('macroScrollArea', 'GLA_Butterfly_Topology')">📸 整頁存檔 PNG</button></div>
@@ -225,13 +245,13 @@
         </div>
     </div>
 
-    <!-- ==================== 🔐 以下為最高管理權限 (Admin Only) 專屬模組 ==================== -->
+    <!-- ==================== 隱密區塊：完全無提示，只有 Admin 輸入正確密碼才無縫顯示 ==================== -->
     <div id="adminProtectedSection" style="display:none;">
         <!-- 🌱 全血統後代留種追蹤樹 -->
         <div class="tree-card-wrapper" id="descendantTreeArea" style="border: 1.5px solid #0284c7;">
             <div class="card-header-bar">
                 <div>
-                    <h3 style="margin:0; font-size:14.5px; color:#0284c7; font-weight:800;">🌱 Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</h3>
+                    <h3 style="margin:0; font-size:14.5px; color:#0284c7; font-weight:800;">Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</h3>
                     <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">追蹤已進入系統並開始配種工作之直系子代 (F1)，公母分欄顯示，評估兩年使用年限與推遲留種決策</p>
                 </div>
                 <div><button class="btn btn-export" onclick="exportFullPage('descendantContainer', 'GLA_Descendant_Tree')">📸 整頁存檔 PNG</button></div>
@@ -243,7 +263,7 @@
         <div class="tree-card-wrapper" id="bloodExportCard" style="border: 1.5px solid #10b981;">
             <div class="card-header-bar">
                 <div>
-                    <h3 style="margin:0; font-size:14.5px; color:#059669; font-weight:800;">🧬 Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
+                    <h3 style="margin:0; font-size:14.5px; color:#059669; font-weight:800;">Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
                     <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">依據父系家族與母系家族溯源解構，呈現各品系之純度佔比，倒推性能遺傳歸屬</p>
                 </div>
                 <div><button class="btn btn-export" onclick="exportFullPage('bloodContainer', 'GLA_Family_Line_Proportion')">📸 整頁存檔 PNG</button></div>
@@ -255,7 +275,7 @@
         <div class="tree-card-wrapper" id="carcassExportCard" style="border: 1.5px solid #d97706;">
             <div class="card-header-bar">
                 <div>
-                    <h3 style="margin:0; font-size:14.5px; color:#d97706; font-weight:800;">🥩 Offspring Carcass & Slaughter Performance with Genetic Defect Audit (直系後裔屠體銷售與遺傳缺陷檢定表)</h3>
+                    <h3 style="margin:0; font-size:14.5px; color:#d97706; font-weight:800;">Offspring Carcass & Slaughter Performance with Genetic Defect Audit (直系後裔屠體銷售與遺傳缺陷檢定表)</h3>
                     <p style="margin:1px 0 0 0; font-size:10.5px; color:#64748b;">直系出欄肉豬性能檢定：平均體重、日增重、出肉率，以及疝氣/隱睪/脫肛/肢蹄等遺傳缺陷監測</p>
                 </div>
                 <div><button class="btn btn-export" onclick="exportFullPage('carcassContainer', 'GLA_Carcass_Audit')">📸 整頁存檔 PNG</button></div>
@@ -263,10 +283,10 @@
             <div id="carcassContainer"><div class="placeholder-text">請檢索種公豬或種母豬，系統將自動匯總其直系出欄肉豬屠體表現與遺傳缺陷統計...</div></div>
         </div>
 
-        <!-- 🛡️ 管理者專屬稽核日誌 (Audit Trail) -->
+        <!-- 🛡️ 管理者專屬稽核日誌 -->
         <div class="tree-card-wrapper" id="auditCard" style="border: 1.5px solid #64748b; background-color: #f8fafc;">
             <div class="card-header-bar">
-                <div style="font-size:13px; font-weight:800; color:#334155;">🛡️ System Access & Search Audit Trail (系統存取與搜尋稽核日誌)</div>
+                <div style="font-size:13px; font-weight:800; color:#334155;">System Access & Search Audit Trail (系統存取與搜尋稽核日誌)</div>
                 <button class="btn btn-export" onclick="exportFullPage('auditTableWrapper', 'GLA_Audit_Log')">📸 匯出日誌</button>
             </div>
             <div class="data-table-wrapper" id="auditTableWrapper" style="max-height: 200px;">
@@ -274,10 +294,10 @@
                     <thead>
                         <tr>
                             <th>時間 (Timestamp)</th>
-                            <th>權限角色 (Role)</th>
+                            <th>存取身份 (Auth Role)</th>
                             <th>訪客 IP (Client IP)</th>
                             <th>檢索目標 (Query Ear)</th>
-                            <th>檢索狀態 (Result)</th>
+                            <th>狀態 (Status)</th>
                         </tr>
                     </thead>
                     <tbody id="auditTableBody">
@@ -288,15 +308,9 @@
         </div>
     </div>
 
-    <!-- 非 Admin 提示面板 -->
-    <div id="userNoticePanel" class="admin-locked-panel">
-        🔒 <b>進階商業分析模組已安全保護</b><br>
-        <span style="font-size:12px;">（全血統後代留種樹、家族品系純度分析、屠體表現與遺傳缺陷檢定表僅限最高權限 Admin 查閱）</span><br>
-        <button class="btn btn-auth" style="margin-top:10px;" onclick="promptLogin()">輸入 Admin 密碼解鎖</button>
-    </div>
-
     <script>
-        let currentRole = 'GUEST'; // GUEST, USER, ADMIN
+        let isUserUnlocked = false;
+        let isAdminUnlocked = false;
         let clientIP = 'Fetching...';
         let auditLogs = [];
 
@@ -318,7 +332,7 @@
             return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // 🌟 獲取使用者 IP 進行稽核日誌紀錄
+        // 🌟 獲取訪客 IP 進行存取稽核
         async function fetchClientIP() {
             try {
                 const res = await fetch('https://api.ipify.org?format=json');
@@ -329,15 +343,16 @@
             }
         }
 
-        function logAudit(query, resultStatus) {
+        function logAudit(query, statusMsg) {
             const now = new Date();
             const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            const roleStr = isAdminUnlocked ? 'ADMIN' : (isUserUnlocked ? 'USER' : 'UNAUTHORIZED');
             auditLogs.unshift({
                 time: timeStr,
-                role: currentRole,
+                role: roleStr,
                 ip: clientIP,
                 query: query || '-',
-                result: resultStatus
+                result: statusMsg
             });
             renderAuditTable();
         }
@@ -350,9 +365,9 @@
                 html += `
                     <tr>
                         <td>${log.time}</td>
-                        <td><b style="color:${log.role==='ADMIN'?'#d97706':(log.role==='USER'?'#0284c7':'#64748b')}">${log.role}</b></td>
+                        <td><b style="color:${log.role==='ADMIN'?'#d97706':(log.role==='USER'?'#0284c7':'#dc2626')}">${log.role}</b></td>
                         <td>${log.ip}</td>
-                        <td><b style="color:#dc2626;">${log.query}</b></td>
+                        <td><b style="color:#0f172a;">${log.query}</b></td>
                         <td>${log.result}</td>
                     </tr>
                 `;
@@ -360,50 +375,68 @@
             tbody.innerHTML = html;
         }
 
-        // 🌟 密碼登入驗證管理
-        function promptLogin() {
-            const pwd = prompt("請輸入系統授權密碼 (Admin 或 User):");
-            if (pwd === null) return;
-            if (pwd === "yang") {
-                setRole('ADMIN');
-                showToast("🔓 已登入最高權限 (Admin)！全部模組已解鎖。");
-            } else if (pwd === "gla@8888") {
-                setRole('USER');
-                showToast("🔓 已登入一般使用者 (User)！開放基礎系統圖表。");
+        // 🌟 第一道門禁：一般 User 通行密碼
+        function verifyGatePass() {
+            const p = document.getElementById('userGatePassword').value.trim();
+            if (p === 'gla@8888') {
+                isUserUnlocked = true;
+                sessionStorage.setItem('GLA_USER_AUTH', '1');
+                document.getElementById('authGateModal').style.display = 'none';
+                showToast("✅ 通行密碼驗證成功！");
+                logAudit('GATE_AUTH', '通行成功 (User)');
             } else {
-                alert("❌ 密碼錯誤，拒絕存取！");
+                alert("❌ 密碼錯誤！本系統為公司內部機密資料，未經許可嚴禁查閱。\nIncorrect password. Access denied.");
+                logAudit('GATE_AUTH', '密碼錯誤拒絕');
             }
         }
 
-        function setRole(role) {
-            currentRole = role;
-            const badge = document.getElementById('roleBadge');
-            const adminSection = document.getElementById('adminProtectedSection');
-            const userNotice = document.getElementById('userNoticePanel');
+        // 🌟 第二道隱形小門：點擊小點啟動 Admin 驗證
+        function openAdminModal() {
+            document.getElementById('adminSecretModal').style.display = 'flex';
+            document.getElementById('adminSecretUser').focus();
+        }
 
-            if (role === 'ADMIN') {
-                badge.innerText = "👑 ADMIN (最高權限)";
-                badge.className = "role-badge role-admin";
-                adminSection.style.display = "block";
-                userNotice.style.display = "none";
-            } else if (role === 'USER') {
-                badge.innerText = "👤 USER (一般權限)";
-                badge.className = "role-badge role-user";
-                adminSection.style.display = "none";
-                userNotice.style.display = "block";
+        function closeAdminModal() {
+            document.getElementById('adminSecretModal').style.display = 'none';
+        }
+
+        function verifyAdminMaster() {
+            const u = document.getElementById('adminSecretUser').value.trim().toLowerCase();
+            const p = document.getElementById('adminSecretPass').value.trim();
+
+            if (u === 'admin' && p === '510067') {
+                isAdminUnlocked = true;
+                isUserUnlocked = true;
+                sessionStorage.setItem('GLA_ADMIN_AUTH', '1');
+                document.getElementById('adminSecretModal').style.display = 'none';
+                document.getElementById('adminProtectedSection').style.display = 'block';
+                showToast("👑 管理權限驗證通過！進階全模組已解鎖。");
+                logAudit('ADMIN_MASTER_AUTH', 'Master 解鎖成功');
+
+                // 若檢索欄已有耳號，立即重刷顯示進階表
+                const currentQuery = document.getElementById('earInput').value.trim();
+                if (currentQuery) searchPedigree();
             } else {
-                badge.innerText = "訪客模式";
-                badge.className = "role-badge role-guest";
-                adminSection.style.display = "none";
-                userNotice.style.display = "block";
+                alert("驗證失敗。");
+                closeAdminModal();
+                logAudit('ADMIN_MASTER_AUTH', 'Admin 密碼錯誤');
             }
-            logAudit('AUTH_CHANGE', `切換為 ${role}`);
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             fetchClientIP();
-            // 預設進入 USER 模式（或訪客）
-            setRole('USER');
+
+            // 檢查 Session 是否已有紀錄
+            if (sessionStorage.getItem('GLA_ADMIN_AUTH') === '1') {
+                isAdminUnlocked = true;
+                isUserUnlocked = true;
+                document.getElementById('adminProtectedSection').style.display = 'block';
+            } else if (sessionStorage.getItem('GLA_USER_AUTH') === '1') {
+                isUserUnlocked = true;
+            } else {
+                // 第一次進入未驗證，強制彈出中英文門禁視窗
+                document.getElementById('authGateModal').style.display = 'flex';
+            }
 
             fetch('data.json?v=' + Date.now())
                 .then(r => r.json())
@@ -415,8 +448,7 @@
                     if (data.death_map) {
                         for (let k in data.death_map) deathInfoMap.set(k.toUpperCase(), data.death_map[k]);
                     }
-                    showToast(`✅ 資料庫載入成功！共收錄 ${pedigreeList.length} 筆種豬，${carcassSales.length} 筆出欄屠體資料`);
-                    logAudit('INIT_LOAD', `載入成功 (${pedigreeList.length}筆)`);
+                    logAudit('INIT_LOAD', `載入數據成功 (${pedigreeList.length}筆)`);
                 })
                 .catch(err => {
                     console.error("載入 data.json 失敗:", err);
@@ -447,6 +479,12 @@
         }
 
         function searchPedigree() {
+            // 未輸入通行密碼，強行阻擋
+            if (!isUserUnlocked) {
+                document.getElementById('authGateModal').style.display = 'flex';
+                return;
+            }
+
             const raw = document.getElementById('earInput').value.trim();
             if (!raw) return;
             const query = raw.toUpperCase();
@@ -480,34 +518,38 @@
                         if (matedSows.length > 0) tableItems = [...matched, ...matedSows];
                     }
 
-                    // 1, 2, 3 (所有身分皆可視)
+                    // 基礎模組 (User 可視)
                     drawOfficialPedigree(primary);
                     renderTable(tableItems, query, primary);
                     drawButterflyTopologyTree(primary);
 
-                    // 4, 5, 6 (僅 Admin 可視運算)
-                    renderDescendantSplitView(primary);
-                    renderFamilyLineProportion(primary);
-                    renderCarcassPerformanceAudit(primary);
+                    // 進階模組 (Admin 登入才算)
+                    if (isAdminUnlocked) {
+                        renderDescendantSplitView(primary);
+                        renderFamilyLineProportion(primary);
+                        renderCarcassPerformanceAudit(primary);
+                    }
 
-                    logAudit(query, `成功 (找到${tableItems.length}筆)`);
+                    logAudit(query, `檢索成功 (匹配${tableItems.length}筆)`);
                 } else {
                     document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="14" class="placeholder-text">查無 "${query}" 之造冊資料</td></tr>`;
                     document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之官方四代家譜</div>`;
                     document.getElementById('macroBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之蝴蝶拓撲資料</div>`;
-                    document.getElementById('descendantContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
-                    document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
-                    document.getElementById('carcassContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之屠體檢定資料</div>`;
+                    if (isAdminUnlocked) {
+                        document.getElementById('descendantContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
+                        document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
+                        document.getElementById('carcassContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之屠體檢定資料</div>`;
+                    }
                     logAudit(query, '查無此豬');
                 }
             }, 30);
         }
 
-        /* 📌 育種成績總表 */
+        /* 育種成績總表 */
         function renderTable(items, query, primary) {
             const tbody = document.getElementById('excelTableBody');
             const isMale = primary && primary.sex === 'MALE';
-            document.getElementById('cardTitle').innerHTML = `📌 Breeding Performance & Index Data: <span style="color:#0284c7;">"${query}"</span> ${isMale ? `(公豬本體及在場配種母豬共 ${items.length} 筆)` : `(共 ${items.length} 筆生產紀錄)`}`;
+            document.getElementById('cardTitle').innerHTML = `Breeding Performance & Index Data: <span style="color:#0284c7;">"${query}"</span> ${isMale ? `(公豬本體及在場配種母豬共 ${items.length} 筆)` : `(共 ${items.length} 筆生產紀錄)`}`;
             let html = '';
             items.forEach(it => {
                 const isDead = deathInfoMap.has(it.ear);
@@ -534,7 +576,7 @@
             tbody.innerHTML = html;
         }
 
-        /* 📜 官方四代家族系統圖 */
+        /* 官方四代家族系統圖 */
         function drawOfficialPedigree(target) {
             const container = document.getElementById('certBoxesContainer');
             const svgLayer = document.getElementById('certSvg');
@@ -558,7 +600,7 @@
                 x: colX[0], y: totalHeight / 2 - cardTotalH / 2,
                 ear: target.ear, breed: target.breed,
                 line: target.g3_sire_line || '-',
-                role: `🎯 TARGET (${target.sex==='MALE'?'♂ 公豬':'♀ 母豬'})`,
+                role: `TARGET (${target.sex==='MALE'?'♂ 公豬':'♀ 母豬'})`,
                 mli: target.mli, spi: target.spi, tsi: target.tsi,
                 age: target.current_age, used: target.used_years, dob: target.dob,
                 isDead: isDead, deadTag: deathInfoMap.get(target.ear)
@@ -567,23 +609,23 @@
             nodes['S'] = {
                 x: colX[1], y: totalHeight * 0.20 - cardTotalH / 2,
                 ear: target.g3_sire_full, breed: target.breed,
-                line: target.g3_sire_line, role: "♂ 生父 (Sire)",
+                line: target.g3_sire_line, role: "生父 (Sire)",
                 mli: target.g3_sire_mli, spi: target.g3_sire_spi, tsi: "-",
                 age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_sire_full)
             };
             nodes['D'] = {
                 x: colX[1], y: totalHeight * 0.80 - cardTotalH / 2,
                 ear: target.g3_dam_full, breed: target.breed,
-                line: target.g3_dam_line, role: "♀ 生母 (Dam)",
+                line: target.g3_dam_line, role: "生母 (Dam)",
                 mli: target.g3_dam_mli, spi: target.g3_dam_spi, tsi: "-",
                 age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_dam_full)
             };
 
             const g2List = [
-                { k: 'SS', full: target.ss_full, line: target.ss_line, role: "♂ 祖父 (SS)", yR: 0.10 },
-                { k: 'SD', full: target.sd_full, line: target.sd_line, role: "♀ 祖母 (SD)", yR: 0.32 },
-                { k: 'DS', full: target.ds_full, line: target.ds_line, role: "♂ 外祖父 (DS)", yR: 0.68 },
-                { k: 'DD', full: target.dd_full, line: target.dd_line, role: "♀ 外祖母 (DD)", yR: 0.90 }
+                { k: 'SS', full: target.ss_full, line: target.ss_line, role: "祖父 (SS)", yR: 0.10 },
+                { k: 'SD', full: target.sd_full, line: target.sd_line, role: "祖母 (SD)", yR: 0.32 },
+                { k: 'DS', full: target.ds_full, line: target.ds_line, role: "外祖父 (DS)", yR: 0.68 },
+                { k: 'DD', full: target.dd_full, line: target.dd_line, role: "外祖母 (DD)", yR: 0.90 }
             ];
             g2List.forEach(g => {
                 nodes[g.k] = {
@@ -595,10 +637,10 @@
 
             const g1 = target.g1_nodes || {};
             const g3Defs = [
-                { k: 'SSS', line: g1.sss, role: "♂ 曾祖父" }, { k: 'SSD', line: g1.ssd, role: "♀ 曾祖母" },
-                { k: 'SDS', line: g1.sds, role: "♂ 曾祖父" }, { k: 'SDD', line: g1.sdd, role: "♀ 曾祖母" },
-                { k: 'DSS', line: g1.dss, role: "♂ 曾外祖父" }, { k: 'DSD', line: g1.dsd, role: "♀ 曾外祖母" },
-                { k: 'DDS', line: g1.dds, role: "♂ 曾外祖父" }, { k: 'DDD', line: g1.ddd, role: "♀ 曾外祖母" }
+                { k: 'SSS', line: g1.sss, role: "曾祖父" }, { k: 'SSD', line: g1.ssd, role: "曾祖母" },
+                { k: 'SDS', line: g1.sds, role: "曾祖父" }, { k: 'SDD', line: g1.sdd, role: "曾祖母" },
+                { k: 'DSS', line: g1.dss, role: "曾外祖父" }, { k: 'DSD', line: g1.dsd, role: "曾外祖母" },
+                { k: 'DDS', line: g1.dds, role: "曾外祖父" }, { k: 'DDD', line: g1.ddd, role: "曾外祖母" }
             ];
             for (let i = 0; i < 8; i++) {
                 const step = totalHeight / 8;
@@ -701,24 +743,24 @@
 
             tNodes['TARGET'] = {
                 x: cCenter, y: midY, ear: target.ear, breed: target.breed,
-                line: target.g3_sire_line || '-', role: `🎯 TARGET (${target.sex==='MALE'?'♂':'♀'})`
+                line: target.g3_sire_line || '-', role: `TARGET (${target.sex==='MALE'?'♂':'♀'})`
             };
 
             // 左翼：父系
             if (target.g3_sire_full && target.g3_sire_full !== '-') {
-                tNodes['SIRE'] = { x: cL1, y: midY, ear: target.g3_sire_full, breed: target.breed, line: target.g3_sire_line, role: "♂ 生父 (Sire)" };
+                tNodes['SIRE'] = { x: cL1, y: midY, ear: target.g3_sire_full, breed: target.breed, line: target.g3_sire_line, role: "生父 (Sire)" };
             }
             if (target.ss_full && target.ss_full !== '-') {
-                tNodes['SS'] = { x: cL2, y: totalHeight * 0.25 - cardH / 2, ear: target.ss_full, breed: target.breed, line: target.ss_line, role: "♂ 祖父 (SS)" };
+                tNodes['SS'] = { x: cL2, y: totalHeight * 0.25 - cardH / 2, ear: target.ss_full, breed: target.breed, line: target.ss_line, role: "祖父 (SS)" };
             }
             if (target.sd_full && target.sd_full !== '-') {
-                tNodes['SD'] = { x: cL2, y: totalHeight * 0.75 - cardH / 2, ear: target.sd_full, breed: target.breed, line: target.sd_line, role: "♀ 祖母 (SD)" };
+                tNodes['SD'] = { x: cL2, y: totalHeight * 0.75 - cardH / 2, ear: target.sd_full, breed: target.breed, line: target.sd_line, role: "祖母 (SD)" };
             }
             const g1Left = [
-                { k: 'SSS', line: g1.sss, role: "♂ 曾祖父", yR: 0.125 },
-                { k: 'SSD', line: g1.ssd, role: "♀ 曾祖母", yR: 0.375 },
-                { k: 'SDS', line: g1.sds, role: "♂ 曾祖父", yR: 0.625 },
-                { k: 'SDD', line: g1.sdd, role: "♀ 曾祖母", yR: 0.875 }
+                { k: 'SSS', line: g1.sss, role: "曾祖父", yR: 0.125 },
+                { k: 'SSD', line: g1.ssd, role: "曾祖母", yR: 0.375 },
+                { k: 'SDS', line: g1.sds, role: "曾祖父", yR: 0.625 },
+                { k: 'SDD', line: g1.sdd, role: "曾祖母", yR: 0.875 }
             ];
             g1Left.forEach(g => {
                 if (g.line && g.line !== '-') {
@@ -728,19 +770,19 @@
 
             // 右翼：母系
             if (target.g3_dam_full && target.g3_dam_full !== '-') {
-                tNodes['DAM'] = { x: cR1, y: midY, ear: target.g3_dam_full, breed: target.breed, line: target.g3_dam_line, role: "♀ 生母 (Dam)" };
+                tNodes['DAM'] = { x: cR1, y: midY, ear: target.g3_dam_full, breed: target.breed, line: target.g3_dam_line, role: "生母 (Dam)" };
             }
             if (target.ds_full && target.ds_full !== '-') {
-                tNodes['DS'] = { x: cR2, y: totalHeight * 0.25 - cardH / 2, ear: target.ds_full, breed: target.breed, line: target.ds_line, role: "♂ 外祖父 (DS)" };
+                tNodes['DS'] = { x: cR2, y: totalHeight * 0.25 - cardH / 2, ear: target.ds_full, breed: target.breed, line: target.ds_line, role: "外祖父 (DS)" };
             }
             if (target.dd_full && target.dd_full !== '-') {
-                tNodes['DD'] = { x: cR2, y: totalHeight * 0.75 - cardH / 2, ear: target.dd_full, breed: target.breed, line: target.dd_line, role: "♀ 外祖母 (DD)" };
+                tNodes['DD'] = { x: cR2, y: totalHeight * 0.75 - cardH / 2, ear: target.dd_full, breed: target.breed, line: target.dd_line, role: "外祖母 (DD)" };
             }
             const g1Right = [
-                { k: 'DSS', line: g1.dss, role: "♂ 曾外祖父", yR: 0.125 },
-                { k: 'DSD', line: g1.dsd, role: "♀ 曾外祖母", yR: 0.375 },
-                { k: 'DDS', line: g1.dds, role: "♂ 曾外祖父", yR: 0.625 },
-                { k: 'DDD', line: g1.ddd, role: "♀ 曾外祖母", yR: 0.875 }
+                { k: 'DSS', line: g1.dss, role: "曾外祖父", yR: 0.125 },
+                { k: 'DSD', line: g1.dsd, role: "曾外祖母", yR: 0.375 },
+                { k: 'DDS', line: g1.dds, role: "曾外祖父", yR: 0.625 },
+                { k: 'DDD', line: g1.ddd, role: "曾外祖母", yR: 0.875 }
             ];
             g1Right.forEach(g => {
                 if (g.line && g.line !== '-') {
@@ -806,7 +848,7 @@
             });
         }
 
-        /* 🌱 全血統後代留種追蹤樹 */
+        /* 🌱 全血統後代留種追蹤樹 (Admin 專屬) */
         function renderDescendantSplitView(primary) {
             const container = document.getElementById('descendantContainer');
             const targetEar = primary.ear.toUpperCase();
@@ -839,7 +881,7 @@
 
             let html = `
                 <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:8px;">
-                    🎯 留種源頭: <b style="color:#0f172a;">${targetEar}</b> | 累計在役留種子代: <b>${maleDescendants.length + femaleDescendants.length} 頭</b> (公豬: ${maleDescendants.length} 頭 / 母豬: ${femaleDescendants.length} 頭)
+                    留種源頭: <b style="color:#0f172a;">${targetEar}</b> | 累計在役留種子代: <b>${maleDescendants.length + femaleDescendants.length} 頭</b> (公豬: ${maleDescendants.length} 頭 / 母豬: ${femaleDescendants.length} 頭)
                 </div>
                 <div class="descendant-dual-cols">
                     <div class="descendant-col-box" style="border-top: 3px solid #0284c7;">
@@ -913,7 +955,7 @@
             container.innerHTML = html;
         }
 
-        /* 🧬 家族品系血統比例分析表 */
+        /* 🧬 家族品系血統比例分析表 (Admin 專屬) */
         function renderFamilyLineProportion(primary) {
             const container = document.getElementById('bloodContainer');
             
@@ -943,19 +985,19 @@
             let html = `
                 <div class="strain-overview-bar">
                     <div class="strain-parent-card" style="border-left: 4px solid #0284c7;">
-                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">♂ 父系家族品系 (Sire Strain) - 貢獻率 50%</div>
+                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">父系家族品系 (Sire Strain) - 貢獻率 50%</div>
                         <div style="font-size: 17px; font-weight: 900; color: #0284c7; margin: 3px 0;">Line: ${sLine}</div>
                         <div style="font-size: 11px; color: #475569;">父本全名: <b>${primary.g3_sire_full || '-'}</b></div>
                     </div>
                     <div class="strain-parent-card" style="border-left: 4px solid #e11d48;">
-                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">♀ 母系家族品系 (Dam Strain) - 貢獻率 50%</div>
+                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">母系家族品系 (Dam Strain) - 貢獻率 50%</div>
                         <div style="font-size: 17px; font-weight: 900; color: #e11d48; margin: 3px 0;">Line: ${dLine}</div>
                         <div style="font-size: 11px; color: #475569;">母本全名: <b>${primary.g3_dam_full || '-'}</b></div>
                     </div>
                 </div>
 
                 <div style="font-size: 12px; font-weight: 800; color: #1e293b; margin: 8px 0 6px 2px;">
-                    🧬 祖先家族品系累計純度分佈 (Ancestral Lineage Proportion):
+                    祖先家族品系累計純度分佈 (Ancestral Lineage Proportion):
                 </div>
                 <div class="strain-grid">
             `;
@@ -978,7 +1020,7 @@
             container.innerHTML = html;
         }
 
-        /* 🥩 直系後裔屠體銷售與遺傳缺陷檢定表 */
+        /* 🥩 直系後裔屠體銷售與遺傳缺陷檢定表 (Admin 專屬) */
         function renderCarcassPerformanceAudit(primary) {
             const container = document.getElementById('carcassContainer');
             const targetEar = primary.ear.toUpperCase();
@@ -1048,7 +1090,7 @@
                                 <th>ADG2 (g/d)</th>
                                 <th>出肉率 (%)</th>
                                 <th>屠體重 (kg)</th>
-                                <th>🚨 遺傳缺陷檢定 (Defect Audit)</th>
+                                <th>遺傳缺陷檢定 (Defect Audit)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1085,14 +1127,13 @@
             container.innerHTML = html;
         }
 
-        /* 📸 🌟 整頁完整展開無截斷匯出 (Full-Content High-Res PNG) */
+        /* 📸 🌟 整頁完整展開無截斷匯出 (全高度長圖下載) */
         function exportFullPage(elemId, prefix) {
             const originalElem = document.getElementById(elemId);
             if (!originalElem) return;
 
-            showToast("📷 正在生成整頁無截斷高解析圖片...");
+            showToast("📷 正在生成整頁無截斷高解析長圖...");
 
-            // 1. 複製節點到隱藏區，解除所有高度與捲軸限制
             const clone = originalElem.cloneNode(true);
             clone.style.maxHeight = 'none';
             clone.style.height = 'auto';
@@ -1103,7 +1144,6 @@
             clone.style.width = originalElem.scrollWidth + 'px';
             clone.style.backgroundColor = '#ffffff';
 
-            // 若內部有表格或滾動層，同樣完全解除限制
             clone.querySelectorAll('.data-table-wrapper, .dynamic-scroll-area, table').forEach(el => {
                 el.style.maxHeight = 'none';
                 el.style.height = 'auto';
@@ -1112,7 +1152,6 @@
 
             document.body.appendChild(clone);
 
-            // 2. 完整截圖
             html2canvas(clone, {
                 scale: 2.0,
                 backgroundColor: '#ffffff',
