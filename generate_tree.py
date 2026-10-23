@@ -6,9 +6,9 @@ import requests
 
 SPREADSHEET_ID = "1uWXfIMrRidpoZTq_BYYTy9ho_0a194pMMSS_EQpJoeA"
 
-# 🌟 分頁 GID 定位
+# 🌟 鎖定指定分頁 GID
 GID_US_ORIGIN = "1866228473"  # 美國原始種源數據
-GID_MAIN = "0"  # 全期整合總表
+GID_MAIN = "1807731938"  # 📊 主生產表 (含 目前年齡、已使用年限)
 GID_BLOOD = "60312190"  # 📊 育種_血統比例(轉)
 
 
@@ -41,7 +41,7 @@ def clean_num(val):
 
 
 def main():
-  print("🚀 [1/4] 抓取《美國原始種源數據》...")
+  print("🚀 [1/3] 抓取《美國原始種源數據》...")
   raw_us = fetch_sheet_csv(GID_US_ORIGIN)
   df_us = (
       pd.read_csv(io.StringIO(raw_us), low_memory=False)
@@ -170,38 +170,7 @@ def main():
         },
     }
 
-  print("🚀 [2/4] 抓取《📊 育種_血統比例(轉)》...")
-  raw_blood = fetch_sheet_csv(GID_BLOOD)
-  df_blood = (
-      pd.read_csv(io.StringIO(raw_blood), low_memory=False)
-      if raw_blood
-      else pd.DataFrame()
-  )
-  df_blood.columns = [
-      str(c).replace("\n", " ").replace("\r", "").strip()
-      for c in df_blood.columns
-  ]
-
-  blood_map = {}
-  if not df_blood.empty:
-    c_b_ear = next(
-        (c for c in df_blood.columns if "耳號" in c or "Ear" in c),
-        df_blood.columns[0],
-    )
-    for _, br in df_blood.iterrows():
-      b_ear = clean_val(br.get(c_b_ear)).upper()
-      if b_ear == "-" or b_ear == "耳號":
-        continue
-      # 收集該豬隻的所有血統比例欄位
-      details = {}
-      for col in df_blood.columns:
-        val = clean_val(br.get(col))
-        if val != "-" and col != c_b_ear:
-          details[col] = val
-      blood_map[b_ear] = details
-  print(f"   ✓ 成功收錄 {len(blood_map)} 頭豬隻之血統比例明細。")
-
-  print("🚀 [3/4] 抓取主生產清單...")
+  print("🚀 [2/3] 抓取《主生產清單 (GID: 1807731938)》...")
   raw_main = fetch_sheet_csv(GID_MAIN)
   df_main = (
       pd.read_csv(io.StringIO(raw_main), low_memory=False)
@@ -229,8 +198,16 @@ def main():
   c_dob = find_c(["DOB出生日期", "DOB", "出生日期"]) or "DOB"
   c_dod = find_c(["DOD/淘汰日期", "淘汰日期", "DOD"]) or "DOD/淘汰日期"
   c_breed = find_c(["Breed", "品種"]) or "Breed"
-  c_age = find_c(["目前年齡(歲)", "年齡(歲)", "年齡"]) or "目前年齡(歲)"
-  c_used = find_c(["已使用年限(年)", "使用年限"]) or "已使用年限(年)"
+
+  # 🌟 年齡與已使用年限欄位
+  c_age = (
+      find_c(["目前年齡(歲)", "目前年齡", "年齡(歲)", "年齡"])
+      or "目前年齡(歲)"
+  )
+  c_used = (
+      find_c(["已使用年限(年)", "已使用年限", "使用年限(年)", "使用年限"])
+      or "已使用年限(年)"
+  )
 
   pedigree_list = []
   death_map = {}
@@ -428,7 +405,6 @@ def main():
                 )
             ),
         },
-        "blood": blood_map.get(ear_upper, {}),
     }
     pedigree_list.append(entry)
 
@@ -474,14 +450,12 @@ def main():
           "dd_full": bdata["dd_full"],
           "dd_line": bdata["dd_line"],
           "g1_nodes": bdata["g1_nodes"],
-          "blood": blood_map.get(boar_ear, {}),
       })
 
   final_payload = {
       "pedigree": pedigree_list,
       "death_map": death_map,
       "us_index": us_dict,
-      "blood_map": blood_map,
   }
 
   with open("data.json", "w", encoding="utf-8") as f:
