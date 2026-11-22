@@ -197,7 +197,7 @@
     </div>
 
     <script>
-        const GAS_AUDIT_WEBHOOK_URL = ""; /https://script.google.com/macros/s/AKfycbz-NlTsbMAOvDmWWx334q9Mi_qiw3LV6OpqWqnVumJcNgxQTYIYJ-Pzbys6W69cVT6r7A/exec/ 👈 請貼入 Step 1 第 5 點複製的 GAS 網頁應用程式網址
+        const GAS_AUDIT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz-NlTsbMAOvDmWWx334q9Mi_qiw3LV6OpqWqnVumJcNgxQTYIYJ-Pzbys6W69cVT6r7A/exec";
         const SITE_NAME = "GLA_Pedigree_Tree";
 
         let currentTier = 0, tierLabel = "", dbPayload = null, currentRecord = null, currentMatchedList = [], activeTileId = null;
@@ -229,7 +229,6 @@
                 const m = ua.match(/Android\s[\d.]+;\s([^;)]+)/);
                 deviceModel = m ? `Android (${m[1].trim()})` : "Android Phone";
             } else if (/Windows/i.test(ua)) deviceModel = "Windows PC";
-            else if (/Mac/i.test(ua)) deviceModel = "Mac";
             else deviceModel = "Other Device";
 
             const rawSig = `${ua}|${screen.width}x${screen.height}|${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
