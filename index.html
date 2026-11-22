@@ -3,1381 +3,614 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GLA Official Pedigree Book & Lineage System</title>
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>GLA現場作業平臺</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            --breed-y-bg: #fffbeb; --breed-y-border: #d97706; --breed-y-text: #92400e;
-            --breed-l-bg: #f0f9ff; --breed-l-border: #0284c7; --breed-l-text: #075985;
-            --breed-d-bg: #fff1f2; --breed-d-border: #e11d48; --breed-d-text: #9f1239;
-            --breed-ly-bg: #f0fdf4; --breed-ly-border: #059669; --breed-ly-text: #065f46;
+            --breed-y-bg: #fffbeb; --breed-y-border: #d97706;
+            --breed-l-bg: #f0f9ff; --breed-l-border: #0284c7;
+            --breed-d-bg: #fff1f2; --breed-d-border: #e11d48;
+            --breed-ly-bg: #f0fdf4; --breed-ly-border: #059669;
             --dead-border: #dc2626; --dead-bg: #fef2f2;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 0; padding: 12px; background-color: #f1f5f9; color: #0f172a; line-height: 1.4; }
-        
-        .system-header-banner { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0369a1 100%); color: #ffffff; padding: 12px 20px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); margin-bottom: 10px; position: relative; }
-        .system-header-banner h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; }
-        .system-header-banner p { margin: 3px 0 0 0; font-size: 11.5px; opacity: 0.9; }
-        .meta-status-pill { position: absolute; right: 16px; top: 14px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; }
-
-        .stealth-admin-trigger { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: transparent; cursor: pointer; vertical-align: middle; margin-left: 3px; }
-
-        .control-bar { background: #ffffff; padding: 10px 16px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 10px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-        input[type="text"] { padding: 6px 12px; font-size: 13.5px; border: 1.5px solid #cbd5e1; border-radius: 5px; width: 280px; outline: none; font-weight: 700; color: #0f172a; }
-        input[type="text"]:focus { border-color: #0284c7; box-shadow: 0 0 0 2.5px rgba(2,132,199,0.15); }
-        .btn { padding: 6px 16px; font-size: 13px; background-color: #0284c7; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; transition: background 0.15s; }
-        .btn:hover { background-color: #0369a1; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
+            margin: 0; padding: 0 0 74px 0; background-color: #f1f5f9; color: #0f172a; line-height: 1.4;
+        }
+        .android-status-bar {
+            background: #090d16; color: #e2e8f0; padding: 6px 14px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11.5px; font-weight: 700; border-bottom: 1px solid #1e293b;
+        }
+        .status-left { display: flex; align-items: center; gap: 10px; }
+        .status-clock { color: #38bdf8; font-family: monospace; font-size: 13px; font-weight: 900; }
+        .status-right { display: flex; align-items: center; gap: 8px; }
+        .weather-pill { background: rgba(56, 189, 248, 0.14); border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 8px; border-radius: 12px; color: #bae6fd; font-size: 11px; }
+        .app-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #0369a1 100%);
+            color: #ffffff; padding: 14px 16px; box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        }
+        .app-header h1 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: 0.5px; }
+        .app-header p { margin: 2px 0 0 0; font-size: 11px; opacity: 0.88; }
+        .tier-badge-pill { background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.3); padding: 4px 10px; border-radius: 14px; font-size: 11px; font-weight: 800; }
+        .main-container { max-width: 1440px; margin: 0 auto; padding: 12px; }
+        .search-card {
+            background: #ffffff; padding: 12px 14px; border-radius: 10px;
+            border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        }
+        .search-input-group { display: flex; flex: 1; min-width: 240px; gap: 8px; }
+        input[type="text"], input[type="password"] {
+            padding: 9px 12px; font-size: 14px; border: 1.5px solid #cbd5e1;
+            border-radius: 8px; outline: none; font-weight: 800; color: #0f172a; width: 100%;
+        }
+        input[type="text"]:focus, input[type="password"]:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.15); }
+        .btn {
+            padding: 9px 16px; font-size: 13px; background-color: #0284c7; color: white;
+            border: none; border-radius: 8px; cursor: pointer; font-weight: 800; white-space: nowrap;
+        }
         .btn-export { background-color: #059669; }
-        .btn-export:hover { background-color: #047857; }
-        .btn-auth { background-color: #475569; }
-        .btn-auth:hover { background-color: #334155; }
-        .btn-danger { background-color: #dc2626; }
-        .btn-danger:hover { background-color: #b91c1c; }
-
-        .btn-breed { background-color: #f8fafc; color: #475569; padding: 5px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: 700; }
-        .btn-breed.active { box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-color: #0f172a; }
-        .btn-breed-all.active { background-color: #334155 !important; color: white !important; }
-        .btn-breed-y.active   { background-color: #d97706 !important; color: white !important; }
-        .btn-breed-l.active   { background-color: #0284c7 !important; color: white !important; }
-        .btn-breed-d.active   { background-color: #e11d48 !important; color: white !important; }
-        .btn-breed-ly.active  { background-color: #059669 !important; color: white !important; }
-
-        .legend-bar { display: flex; gap: 8px; font-size: 11.5px; background: #fff; padding: 6px 14px; border-radius: 5px; border: 1px solid #e2e8f0; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
-        .color-badge { padding: 2px 8px; border-radius: 3px; font-weight: 800; font-size: 11px; }
-
-        .breed-Y  { background-color: var(--breed-y-bg) !important; border: 1.5px solid var(--breed-y-border) !important; }
-        .breed-L  { background-color: var(--breed-l-bg) !important; border: 1.5px solid var(--breed-l-border) !important; }
-        .breed-D  { background-color: var(--breed-d-bg) !important; border: 1.5px solid var(--breed-d-border) !important; }
-        .breed-LY { background-color: var(--breed-ly-bg) !important; border: 1.5px solid var(--breed-ly-border) !important; }
-        .breed-DEFAULT { background-color: #ffffff !important; border: 1.5px solid #94a3b8 !important; }
-
-        .node-dead { border: 1.8px dashed var(--dead-border) !important; background-color: var(--dead-bg) !important; }
-        .badge-dead { background-color: #dc2626; color: #fff; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 2px; margin-left: 2px; }
-        .badge-active { background-color: #10b981; color: #fff; font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 2px; }
-        .badge-grade { background-color: #1e3a8a; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 2px; margin-left: 3px; }
-
-        .tree-card-wrapper { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
-        .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 5px; border: 1px solid #e2e8f0; }
-
-        .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.1s; cursor: pointer; }
-        .node-group-container:hover { transform: scale(1.02); z-index: 10; }
-        .node-box-main { border-radius: 4px; padding: 4px 6px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.04); width: 100%; text-align: center; }
-        .node-target-highlight { border: 2.2px solid #f59e0b !important; box-shadow: 0 0 8px rgba(245, 158, 11, 0.35) !important; }
-        .c-sub-label { font-size: 8px; font-weight: 800; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
-        .c-main-title { color: #dc2626; font-size: 11.5px; font-weight: 900; line-height: 1.15; word-break: break-word; margin: 1px 0; }
-        .family-line-clean { color: #1e3a8a; font-weight: 800; font-size: 8.5px; }
-        .node-text-sub-block { width: 100%; padding-top: 2px; box-sizing: border-box; text-align: center; }
-        .sub-metric-row-1 { display: flex; justify-content: space-around; font-size: 8px; color: #0f172a; font-weight: 800; white-space: nowrap; line-height: 1.2; }
-        .sub-metric-row-2 { display: flex; justify-content: space-around; font-size: 7.5px; color: #64748b; font-weight: 600; margin-top: 1px; white-space: nowrap; line-height: 1.2; }
-
-        svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
-
-        .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 5px; max-height: 480px; }
-        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11px; background-color: #fff; white-space: nowrap; text-align: center; color: #000000; }
-        .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 5px 6px; border: 1px solid #334155; font-size: 10.5px; position: sticky; top: 0; z-index: 5; vertical-align: bottom; }
-        .excel-data-table td { padding: 4px 6px; border: 1px solid #e2e8f0; color: #000000; font-weight: 600; text-align: center; }
+        .tiles-section-title { font-size: 11.5px; font-weight: 800; color: #475569; margin: 4px 0 8px 2px; display: flex; justify-content: space-between; align-items: center; }
+        .live-tiles-grid { display: grid; gap: 10px; margin-bottom: 14px; }
+        .grid-tier-1 { grid-template-columns: repeat(2, 1fr); }
+        .grid-tier-1 .live-tile:first-child { grid-column: span 2; }
+        .grid-tier-2 { grid-template-columns: repeat(3, 1fr); }
+        .grid-tier-2 .live-tile:first-child { grid-column: span 2; }
+        .grid-tier-3 { grid-template-columns: repeat(4, 1fr); }
+        .grid-tier-4 { grid-template-columns: repeat(5, 1fr); }
+        @media (max-width: 768px) {
+            .grid-tier-1, .grid-tier-2, .grid-tier-3, .grid-tier-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @keyframes tilePulse { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-2px); } }
+        .live-tile {
+            border-radius: 10px; padding: 12px 12px 10px 12px; cursor: pointer;
+            position: relative; overflow: hidden; border: 1.5px solid rgba(15,23,42,0.12);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.18s ease;
+            display: flex; flex-direction: column; justify-content: space-between;
+            animation: tilePulse 4.5s ease-in-out infinite;
+        }
+        .live-tile:nth-child(even) { animation-delay: 1.5s; }
+        .live-tile:nth-child(3n) { animation-delay: 2.8s; }
+        .live-tile.active-tile { border: 2.5px solid #0f172a; box-shadow: 0 0 0 3px rgba(15,23,42,0.15); }
+        .tile-c1  { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #0c4a6e; }
+        .tile-c2  { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #064e3b; }
+        .tile-c3  { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #78350f; }
+        .tile-c4  { background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); color: #4c1d95; }
+        .tile-c5  { background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%); color: #7c2d12; }
+        .tile-c6  { background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%); color: #134e4a; }
+        .tile-c7  { background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); color: #831843; }
+        .tile-c8  { background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color: #312e81; }
+        .tile-c9  { background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%); color: #713f12; }
+        .tile-c10 { background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); color: #0f172a; }
+        .tile-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .tile-icon { font-size: 20px; }
+        .tile-badge { font-size: 10px; font-weight: 900; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.85); color: #0f172a; border: 1px solid rgba(0,0,0,0.1); }
+        .tile-trilingual { display: flex; flex-direction: column; gap: 2px; }
+        .tile-bm { font-weight: 900; line-height: 1.2; }
+        .tile-en { font-weight: 700; opacity: 0.85; line-height: 1.2; }
+        .tile-zh { font-weight: 800; line-height: 1.2; }
+        .grid-tier-1 .tile-bm { font-size: 13.5px; } .grid-tier-1 .tile-en { font-size: 11.5px; } .grid-tier-1 .tile-zh { font-size: 13px; }
+        .grid-tier-2 .tile-bm, .grid-tier-3 .tile-bm { font-size: 12px; } .grid-tier-2 .tile-en, .grid-tier-3 .tile-en { font-size: 10px; } .grid-tier-2 .tile-zh, .grid-tier-3 .tile-zh { font-size: 11.5px; }
+        .grid-tier-4 .tile-bm { font-size: 11px; } .grid-tier-4 .tile-en { font-size: 9.5px; } .grid-tier-4 .tile-zh { font-size: 10.5px; }
+        .content-panel { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 14px; display: none; }
+        .content-panel.visible { display: block; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
+        .panel-title-box h3 { margin: 0; font-size: 15px; font-weight: 900; color: #0f172a; }
+        .panel-title-box p { margin: 2px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600; }
+        .breed-Y { background-color: var(--breed-y-bg) !important; border: 1.8px solid var(--breed-y-border) !important; }
+        .breed-L { background-color: var(--breed-l-bg) !important; border: 1.8px solid var(--breed-l-border) !important; }
+        .breed-D { background-color: var(--breed-d-bg) !important; border: 1.8px solid var(--breed-d-border) !important; }
+        .breed-LY { background-color: var(--breed-ly-bg) !important; border: 1.8px solid var(--breed-ly-border) !important; }
+        .breed-DEFAULT { background-color: #ffffff !important; border: 1.8px solid #94a3b8 !important; }
+        .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: #fff; white-space: nowrap; text-align: center; color: #000000; }
+        .excel-data-table th { background: #1e293b; color: #ffffff; font-weight: 700; padding: 6px 8px; border: 1px solid #334155; font-size: 11px; }
+        .excel-data-table td { padding: 5px 8px; border: 1px solid #e2e8f0; color: #000000; font-weight: 600; text-align: center; }
         .excel-data-table tr:nth-child(even) { background-color: #f8fafc; }
-        .excel-data-table tr:hover { background-color: #f1f5f9; }
-
-        .butterfly-compact-node { position: absolute; border-radius: 4px; padding: 4px 6px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
-        .butterfly-compact-node:hover { transform: scale(1.04); z-index: 10; }
-
-        .strain-benchmark-bar { margin-top: 10px; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; }
-        .benchmark-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 6px; }
-        .benchmark-pill { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 10px; display: flex; flex-direction: column; justify-content: space-between; }
-        .benchmark-pill-title { font-size: 11px; font-weight: 800; color: #1e3a8a; display: flex; justify-content: space-between; }
-        .benchmark-pill-stats { font-size: 9.5px; color: #475569; margin-top: 2px; display: flex; justify-content: space-between; font-weight: 600; }
-
-        .strain-overview-bar { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
-        .strain-parent-card { flex: 1; min-width: 240px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
-        .strain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
-        .strain-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-        .strain-name { font-weight: 800; font-size: 11.5px; color: #1e3a8a; margin-bottom: 3px; display: flex; justify-content: space-between; }
-        .strain-bar-bg { background-color: #e2e8f0; border-radius: 3px; height: 7px; width: 100%; overflow: hidden; }
-        .strain-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
-
-        .kpi-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
-        .kpi-card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border-top: 3.5px solid #0284c7; text-align: center; }
-        .kpi-label { font-size: 10.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
-        .kpi-val { font-size: 16px; font-weight: 900; color: #000000; }
-        .defect-badge { background-color: #fee2e2; color: #dc2626; border: 1px solid #f87171; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; display: inline-block; margin: 1px; }
-        .defect-none { color: #10b981; font-weight: 700; font-size: 10px; }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 999999; }
-        .modal-box { background: #ffffff; border-radius: 8px; width: 90%; max-width: 440px; padding: 22px 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); text-align: center; }
-        .modal-title-cn { font-size: 17px; font-weight: 900; color: #dc2626; margin-bottom: 2px; }
-        .modal-title-en { font-size: 11px; font-weight: 800; color: #64748b; letter-spacing: 0.5px; margin-bottom: 12px; }
-        .modal-desc-cn { font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 4px; }
-        .modal-desc-en { font-size: 11px; color: #64748b; line-height: 1.4; margin-bottom: 16px; font-style: italic; }
-
-        #toastNotify { position: fixed; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.92); color: #fff; padding: 7px 16px; border-radius: 20px; font-size: 11.5px; font-weight: 700; display: none; z-index: 99999; }
-        .placeholder-text { text-align: center; color: #94a3b8; padding: 30px 10px; font-size: 12px; font-weight: 600; }
+        .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+        .tree-node-box { position: absolute; border-radius: 6px; padding: 5px 7px; display: flex; flex-direction: column; justify-content: center; text-align: center; z-index: 2; }
+        .guard-banner { padding: 12px 14px; border-radius: 8px; margin-bottom: 10px; font-weight: 800; font-size: 13px; border-left: 6px solid; }
+        .guard-ok { background: #f0fdf4; border-color: #059669; color: #065f46; }
+        .guard-warn { background: #fffbeb; border-color: #d97706; color: #92400e; }
+        .guard-danger { background: #fef2f2; border-color: #dc2626; color: #991b1b; }
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 62px;
+            background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(8px);
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 9990; border-top: 1px solid #334155;
+        }
+        .nav-item { color: #94a3b8; text-align: center; font-size: 10.5px; font-weight: 800; cursor: pointer; padding: 4px 10px; border-radius: 8px; }
+        .nav-item.active, .nav-item:hover { color: #38bdf8; background: rgba(56,189,248,0.12); }
+        .nav-item span { display: block; font-size: 18px; margin-bottom: 1px; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(9, 13, 22, 0.92); backdrop-filter: blur(6px);
+            display: flex; justify-content: center; align-items: center; z-index: 999999;
+        }
+        .modal-box { background: #ffffff; border-radius: 14px; width: 92%; max-width: 420px; padding: 24px 22px; text-align: center; }
+        .modal-logo { font-size: 38px; margin-bottom: 6px; }
+        .modal-title { font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 4px; }
+        .modal-sub { font-size: 11.5px; color: #64748b; margin-bottom: 16px; }
+        #toastNotify { position: fixed; top: 44px; right: 14px; background: rgba(15, 23, 42, 0.92); color: #fff; padding: 7px 14px; border-radius: 20px; font-size: 11.5px; font-weight: 700; display: none; z-index: 99999; }
     </style>
 </head>
 <body>
-    <div id="toastNotify">🐖 運算中...</div>
+    <div id="toastNotify">🐖 系統處理中...</div>
 
-    <!-- 門禁驗證彈窗 -->
-    <div id="authGateModal" class="modal-overlay" style="display:none;">
+    <div id="authGateModal" class="modal-overlay">
         <div class="modal-box">
-            <div class="modal-title-cn">⚠️ 公司內部機密資料 - 存取受限</div>
-            <div class="modal-title-en">CONFIDENTIAL INTERNAL RECORDS - RESTRICTED ACCESS</div>
-            <div class="modal-desc-cn">本系統包含本場育種與生產核心機密數據，非經授權嚴禁存取。請輸入作業通行密碼才可繼續查閱。</div>
-            <div class="modal-desc-en">This system contains proprietary swine breeding and production records. Unauthorized access is strictly prohibited. Please enter authorization password to proceed.</div>
-            <input type="password" id="userGatePassword" placeholder="輸入作業通行密碼..." style="width:85%; padding:8px 12px; margin-bottom:12px; font-size:14px; border:1.5px solid #cbd5e1; border-radius:5px; text-align:center;" onkeydown="if(event.key==='Enter') verifyGatePass()">
-            <br>
-            <button class="btn" onclick="verifyGatePass()" style="width:90%; padding:8px 0;">確認登入 / Verify Access</button>
+            <div class="modal-logo">🐖</div>
+            <div class="modal-title">GLA現場作業平臺</div>
+            <div class="modal-sub">Sila Masukkan Kata Laluan Akses / Enter Access Password<br>請輸入作業通行密碼以進入對應權限模組</div>
+            <input type="password" id="gatePasswordInput" placeholder="輸入密碼 (小寫)..." style="text-align:center; font-size:16px; letter-spacing:2px; margin-bottom:14px;" onkeydown="if(event.key==='Enter') handleGateLogin()">
+            <button class="btn" onclick="handleGateLogin()" style="width:100%; padding:11px 0; font-size:14.5px;">確認登入 / Log Masuk / Login</button>
         </div>
     </div>
 
-    <!-- Admin 隱藏授權視窗 -->
-    <div id="adminSecretModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="background:#0f172a; color:#fff; border:1px solid #334155;">
-            <div style="font-size:15px; font-weight:900; color:#f59e0b; margin-bottom:2px;">🛡️ 管理者進階授權</div>
-            <div style="font-size:11px; color:#94a3b8; margin-bottom:14px;">Master Security Authentication</div>
-            <input type="text" id="adminSecretUser" placeholder="管理員帳號 (小寫)" style="width:85%; padding:7px 10px; margin-bottom:8px; font-size:13px; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#fff; text-align:center;"><br>
-            <input type="password" id="adminSecretPass" placeholder="管理密碼" style="width:85%; padding:7px 10px; margin-bottom:14px; font-size:13px; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#fff; text-align:center;" onkeydown="if(event.key==='Enter') verifyAdminMaster()"><br>
-            <button class="btn" onclick="verifyAdminMaster()" style="background:#f59e0b; color:#000; width:90%; font-weight:900; padding:8px 0;">解鎖進階全系譜模組</button>
-            <button class="btn btn-auth" onclick="closeAdminModal()" style="margin-top:6px; width:90%; font-size:11px; background:#334155;">取消</button>
+    <div class="android-status-bar">
+        <div class="status-left">
+            <span class="status-clock" id="liveClock">00:00:00</span>
+            <span id="liveDate">2026-11-22</span>
+        </div>
+        <div class="status-right">
+            <span class="weather-pill" id="liveWeather">🌤️ Serian 28°C</span>
         </div>
     </div>
 
-    <div class="system-header-banner">
+    <div class="app-header">
         <div>
-            <h1>GLA Official Pedigree Book & Lineage System</h1>
-            <span class="stealth-admin-trigger" onclick="openAdminModal()" title=""></span>
-            <p>官方造冊血統書與全系譜拓撲追蹤 (Official Pedigree Certificate & Recursive Lineage System v2.0)</p>
+            <h1>GLA現場作業平臺</h1>
+            <p>GLA Farm Field Operations & Pedigree Lineage Platform</p>
         </div>
-        <div class="meta-status-pill" id="dbStatusPill">載入資料庫中...</div>
+        <div class="tier-badge-pill" id="tierStatusPill">未驗證 / Locked</div>
     </div>
 
-    <div class="control-bar">
-        <div>
-            <label for="earInput"><strong>耳號檢索 (Ear Tag):</strong></label>
-            <input type="text" id="earInput" placeholder="例如: D1400, L1426, Y1266, DD26019, LY10019" onkeydown="if(event.key==='Enter') searchPedigree()">
-            <button class="btn" onclick="searchPedigree()">🔍 造冊檢索</button>
+    <div class="main-container">
+        <div class="search-card">
+            <div class="search-input-group">
+                <input type="text" id="earInput" placeholder="輸入耳號 / No. Telinga (如: D1400, Y1266, LY10019)" onkeydown="if(event.key==='Enter') executeSearch()">
+                <button class="btn" onclick="executeSearch()">🔍 查詢 / Cari</button>
+            </div>
+            <div style="font-size:11px; color:#64748b; font-weight:700;" id="dbMetaInfo">等待密碼登入載入資料庫...</div>
         </div>
-        <div>
-            <span style="font-size: 11.5px; font-weight: bold; color: #475569; margin-right: 4px;">品種快速篩選:</span>
-            <button class="btn-breed btn-breed-all active" id="btnBreedALL" onclick="toggleBreedFilter('ALL')">All</button>
-            <button class="btn-breed btn-breed-y active" id="btnBreedY" onclick="toggleBreedFilter('Y')">Y</button>
-            <button class="btn-breed btn-breed-l active" id="btnBreedL" onclick="toggleBreedFilter('L')">L</button>
-            <button class="btn-breed btn-breed-d active" id="btnBreedD" onclick="toggleBreedFilter('D')">D</button>
-            <button class="btn-breed btn-breed-ly active" id="btnBreedLY" onclick="toggleBreedFilter('LY')">LY</button>
+
+        <div class="tiles-section-title" id="tilesSectionHeader" style="display:none;">
+            <span>📱 作業功能磚 (Tap Tile to Open / Klik Jubin)</span>
+            <span id="activeAnimalBadge" style="color:#0284c7;"></span>
         </div>
+        <div class="live-tiles-grid" id="liveTilesContainer"></div>
+        <div id="panelsMountPoint"></div>
     </div>
 
-    <div class="legend-bar">
-        <strong>品種識別:</strong>
-        <span class="color-badge breed-Y">Yorkshire (大白/粉黃)</span>
-        <span class="color-badge breed-L">Landrace (藍瑞斯/粉藍)</span>
-        <span class="color-badge breed-D">Duroc (杜洛克/粉紅)</span>
-        <span class="color-badge breed-LY">LY (二元母豬/粉綠)</span>
-        <span class="color-badge" style="background:#fff1f2; border:1px dashed #dc2626; color:#dc2626;">DIE / CULLED (已淘汰/死亡)</span>
-    </div>
-
-    <!-- 📜 官方四代家族系統圖 -->
-    <div class="tree-card-wrapper" id="certExportCard" style="border: 1.5px solid #0284c7;">
-        <div class="card-header-bar">
-            <div>
-                <h2 style="margin:0; font-size:14.5px; color:#0284c7; font-weight:900;">Official 4-Generation Pedigree Certificate (官方四代家族系統圖)</h2>
-                <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">NSR Standard: 15-Node Symmetrical Tree (圖框內純淨血統名冊，圖框下方文字展示 MLI/SPI/TSI/近交F 指標)</p>
-            </div>
-            <div><button class="btn btn-export" onclick="exportFullPage('certScrollArea', 'GLA_Official_Certificate')">📸 整頁存檔 PNG</button></div>
-        </div>
-        <div class="dynamic-scroll-area" id="certScrollArea" style="min-height: 760px;">
-            <svg class="orthogonal-svg" id="certSvg"></svg>
-            <div id="certBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請在上方輸入耳號啟動四代造冊檢索...</div></div>
-        </div>
-    </div>
-
-    <!-- 📌 育種成績與評估資料表 -->
-    <div class="tree-card-wrapper" id="tableExportCard">
-        <div class="card-header-bar">
-            <div style="font-size:14px; color:#0f172a; font-weight:800;" id="cardTitle">Breeding Performance & Index Data (育種成績與評估總表)</div>
-            <div><button class="btn btn-export" onclick="exportFullPage('tableWrapper', 'GLA_Breeding_Table')">📸 整頁存檔 PNG</button></div>
-        </div>
-        <div class="data-table-wrapper" id="tableWrapper">
-            <table class="excel-data-table">
-                <thead>
-                    <tr>
-                        <th>耳號 (Ear Tag)</th>
-                        <th>品種 (Breed)</th>
-                        <th>性別 (Sex)</th>
-                        <th>出生日 (DOB)</th>
-                        <th>配種日 (Mating)</th>
-                        <th>分娩日 (Farrow)</th>
-                        <th>胎次 (Parity)</th>
-                        <th>當胎配種公 (Sire/Mate)</th>
-                        <th>總產 (TNB)</th>
-                        <th>活胎 (NBA)</th>
-                        <th>離乳 (Wean)</th>
-                        <th>SPI</th>
-                        <th>MLI</th>
-                        <th>TSI</th>
-                        <th>近交F</th>
-                        <th>等級 (Grade)</th>
-                    </tr>
-                </thead>
-                <tbody id="excelTableBody">
-                    <tr><td colspan="16" class="placeholder-text">尚未載入資料...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- 🌳 蝴蝶對稱全系譜家族拓撲樹 -->
-    <div class="tree-card-wrapper" id="macroTreePanel" style="border: 1.5px solid #0d6efd;">
-        <div class="card-header-bar">
-            <div>
-                <h3 style="margin:0; font-size:14px; color:#0d6efd; font-weight:800;">Bilateral Butterfly Lineage Topology Tree (蝴蝶對稱全系譜家族拓撲樹)</h3>
-                <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">左翼：父系家族品系完整展開 (Sire Lines) ⟵ 🎯 本體 (父系×母系) ⟶ 右翼：母系家族品系完整展開 (Dam Lines)</p>
-            </div>
-            <div><button class="btn btn-export" onclick="exportFullPage('macroExportSection', 'GLA_Butterfly_Topology')">📸 整頁存檔 PNG</button></div>
-        </div>
-        <div id="macroExportSection">
-            <div class="dynamic-scroll-area" id="macroScrollArea" style="min-height: 520px;">
-                <svg class="orthogonal-svg" id="macroSvg"></svg>
-                <div id="macroBoxesContainer" style="position:relative; width:100%; height:100%;"><div class="placeholder-text">請檢索個體以展開蝴蝶型雙向全系譜家族樹...</div></div>
-            </div>
-            <div class="strain-benchmark-bar" id="strainBenchmarkSection" style="display:none;">
-                <div style="font-size:11px; font-weight:800; color:#1e293b; display:flex; justify-content:space-between;">
-                    <span>📊 雙翼家族品系在場平均遺傳性能檢定列 (Ancestral Strain Herd Performance Benchmarks)</span>
-                    <span style="font-size:10px; color:#64748b;">依本場全期分娩產仔紀錄即時匯總</span>
-                </div>
-                <div class="benchmark-grid" id="benchmarkGridContainer"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== Admin 隱密區塊 ==================== -->
-    <div id="adminProtectedSection" style="display:none;">
-        <!-- 🌱 全血統後代留種追蹤 -->
-        <div class="tree-card-wrapper" id="descendantTreeArea" style="border: 1.5px solid #0284c7;">
-            <div class="card-header-bar">
-                <div>
-                    <h3 style="margin:0; font-size:14px; color:#0284c7; font-weight:800;">Universal Descendant & Generation Working Status Tree (全血統後代留種追蹤樹)</h3>
-                    <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">配對親本與在役留種子代 (F1) 生產效能階層總表：依交配組合精準對應 F1 女兒在役胎次、活仔數與 SPI</p>
-                </div>
-                <div><button class="btn btn-export" onclick="exportFullPage('descendantTableWrapper', 'GLA_Descendant_Working_Status')">📸 整頁存檔 PNG</button></div>
-            </div>
-            <div id="descendantContainer"><div class="placeholder-text">檢索個體後自動追蹤在場第一代 (F1) 留種子代之生產與工作狀態...</div></div>
-        </div>
-
-        <!-- 🧬 家族品系血統比例分析表 -->
-        <div class="tree-card-wrapper" id="bloodExportCard" style="border: 1.5px solid #10b981;">
-            <div class="card-header-bar">
-                <div>
-                    <h3 style="margin:0; font-size:14px; color:#059669; font-weight:800;">Family Line Proportion & Purity Analysis (家族品系血統比例分析表)</h3>
-                    <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">優先採用《育種_血統比例》精算結果；若無則依據父系與母系 8 曾祖輩溯源解構純度佔比</p>
-                </div>
-                <div><button class="btn btn-export" onclick="exportFullPage('bloodContainer', 'GLA_Family_Line_Proportion')">📸 整頁存檔 PNG</button></div>
-            </div>
-            <div id="bloodContainer"><div class="placeholder-text">請檢索個體以解析該個體之家族品系血緣比例...</div></div>
-        </div>
-
-        <!-- 🥩 直系後裔屠體銷售與遺傳缺陷檢定表 -->
-        <div class="tree-card-wrapper" id="carcassExportCard" style="border: 1.5px solid #d97706;">
-            <div class="card-header-bar">
-                <div>
-                    <h3 style="margin:0; font-size:14px; color:#d97706; font-weight:800;">Offspring Carcass & Slaughter Performance with Genetic Defect Audit (直系後裔屠體銷售與遺傳缺陷檢定表)</h3>
-                    <p style="margin:1px 0 0 0; font-size:10px; color:#64748b;">直系出欄肉豬性能檢定：平均體重、ADG1/ADG2、TW-ADG、得肉率，以及疝氣/隱睪/脫肛/肢蹄/紅點遺傳缺陷監測</p>
-                </div>
-                <div><button class="btn btn-export" onclick="exportFullPage('carcassTableWrapper', 'GLA_Carcass_Audit')">📸 整頁存檔 PNG</button></div>
-            </div>
-            <div id="carcassContainer"><div class="placeholder-text">請檢索種公豬或種母豬，系統將自動匯總其直系出欄肉豬屠體表現與遺傳缺陷統計...</div></div>
-        </div>
-
-        <!-- 🛡️ 管理者專屬：本機審計日誌 -->
-        <div class="tree-card-wrapper" id="auditCard" style="border: 1.5px solid #64748b; background-color: #f8fafc;">
-            <div class="card-header-bar">
-                <div style="font-size:12.5px; font-weight:800; color:#334155;">
-                    System Access & Search Audit Trail (系統存取與搜尋稽核日誌 - 本機永續留存)
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn btn-auth" id="btnToggleAudit" onclick="toggleAuditLogView()">👁️ 展開稽核日誌</button>
-                    <button class="btn btn-export" onclick="exportFullPage('auditTableWrapper', 'GLA_Audit_Log')">📸 匯出長圖</button>
-                    <button class="btn btn-danger" onclick="clearPermanentAuditLogs()">🗑️ 清空歷史</button>
-                </div>
-            </div>
-            <div id="auditLogCollapsibleBody" style="display:none;">
-                <div style="font-size:11px; color:#64748b; margin-bottom:6px;">
-                    本表已啟用 <code>localStorage</code> 本地永續留存技術，重新整理、重開電腦均不會遺失。
-                </div>
-                <div class="data-table-wrapper" id="auditTableWrapper" style="max-height: 250px;">
-                    <table class="excel-data-table">
-                        <thead>
-                            <tr>
-                                <th>時間 (Timestamp)</th>
-                                <th>存取身份 (Auth Role)</th>
-                                <th>訪客 IP (Client IP)</th>
-                                <th>檢索目標 (Query Ear)</th>
-                                <th>狀態 (Status)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="auditTableBody">
-                            <tr><td colspan="5" style="color:#94a3b8;">尚無存取稽核紀錄</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="scrollToTiles()"><span>⊞</span>主磚牆<br>Tiles</div>
+        <div class="nav-item" onclick="focusSearch()"><span>🔍</span>搜耳號<br>Search</div>
+        <div class="nav-item" onclick="exportCurrentVisiblePanel()"><span>📸</span>整頁匯出<br>Export</div>
+        <div class="nav-item" onclick="location.reload()"><span>🔒</span>重載鎖定<br>Reload</div>
     </div>
 
     <script>
-        let isUserUnlocked = false;
-        let isAdminUnlocked = false;
-        let clientIP = 'Fetching...';
+        const GAS_AUDIT_WEBHOOK_URL = ""; /https://script.google.com/macros/s/AKfycbz-NlTsbMAOvDmWWx334q9Mi_qiw3LV6OpqWqnVumJcNgxQTYIYJ-Pzbys6W69cVT6r7A/exec/ 👈 請貼入 Step 1 第 5 點複製的 GAS 網頁應用程式網址
+        const SITE_NAME = "GLA_Pedigree_Tree";
 
-        let pedigreeList = [];
-        let deathInfoMap = new Map();
-        let usIndex = {};
-        let carcassSales = [];
-        let bloodlineMap = {};
-        let linePerformanceStats = {};
-        let selectedBreeds = new Set(['LY', 'Y', 'L', 'D']);
+        let currentTier = 0, tierLabel = "", dbPayload = null, currentRecord = null, currentMatchedList = [], activeTileId = null;
+        let clientIP = "Unknown", deviceId = "", deviceModel = "", lastQueryTime = Date.now(), lastQueryEar = "-", queryCountInSession = 0;
 
-        function showToast(msg) {
-            const t = document.getElementById('toastNotify');
-            t.innerText = msg;
-            t.style.display = 'block';
-            setTimeout(() => { t.style.display = 'none'; }, 1000);
-        }
-
-        function getTodayDateStr() {
-            const d = new Date();
-            return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-        }
-
-        async function fetchClientIP() {
-            try {
-                const res = await fetch('https://api.ipify.org?format=json');
-                const data = await res.json();
-                clientIP = data.ip || 'Unknown';
-            } catch(e) {
-                clientIP = 'Internal / Local';
+        function startClockAndWeather() {
+            function tick() {
+                const now = new Date();
+                document.getElementById('liveClock').innerText = now.toTimeString().slice(0, 8);
+                const days = ['週日 Sun', '週一 Mon', '週二 Tue', '週三 Wed', '週四 Thu', '週五 Fri', '週六 Sat'];
+                document.getElementById('liveDate').innerText = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} (${days[now.getDay()]})`;
             }
+            tick(); setInterval(tick, 1000);
+            fetch('https://api.open-meteo.com/v1/forecast?latitude=1.1667&longitude=110.5667&current_weather=true')
+                .then(r => r.json()).then(d => {
+                    if (d && d.current_weather) {
+                        const temp = Math.round(d.current_weather.temperature);
+                        const icon = d.current_weather.weathercode >= 61 ? '🌧️' : (d.current_weather.weathercode >= 2 ? '⛅' : '☀️');
+                        document.getElementById('liveWeather').innerText = `${icon} Serian ${temp}°C`;
+                    }
+                }).catch(() => {});
         }
 
-        const STORAGE_KEY_AUDIT = "GLA_HERD_PERMANENT_AUDIT_LOGS_V1";
+        function initDeviceFingerprint() {
+            const ua = navigator.userAgent;
+            if (/iPhone/i.test(ua)) deviceModel = "iPhone (iOS)";
+            else if (/iPad/i.test(ua)) deviceModel = "iPad (iPadOS)";
+            else if (/Android/i.test(ua)) {
+                const m = ua.match(/Android\s[\d.]+;\s([^;)]+)/);
+                deviceModel = m ? `Android (${m[1].trim()})` : "Android Phone";
+            } else if (/Windows/i.test(ua)) deviceModel = "Windows PC";
+            else if (/Mac/i.test(ua)) deviceModel = "Mac";
+            else deviceModel = "Other Device";
 
-        function loadPermanentAuditLogs() {
+            const rawSig = `${ua}|${screen.width}x${screen.height}|${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+            let hash = 0;
+            for (let i = 0; i < rawSig.length; i++) { hash = ((hash << 5) - hash) + rawSig.charCodeAt(i); hash |= 0; }
+            deviceId = "DEV-" + Math.abs(hash).toString(16).toUpperCase().padStart(6, '0');
+            fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => { clientIP = d.ip || "Unknown"; }).catch(() => {});
+        }
+
+        function sendSilentAudit(action, queryEar, dwellSec, isCorePurebred, detail) {
+            if (!GAS_AUDIT_WEBHOOK_URL) return;
+            const payload = JSON.stringify({
+                site_name: SITE_NAME, tier: tierLabel || "UNAUTH", device_id: deviceId, device_model: deviceModel,
+                ip: clientIP, action: action, query_ear: queryEar || "-", dwell_sec: Math.round(dwellSec),
+                is_core_purebred: !!isCorePurebred, detail: detail || "-"
+            });
             try {
-                const raw = localStorage.getItem(STORAGE_KEY_AUDIT);
-                return raw ? JSON.parse(raw) : [];
-            } catch(e) { return []; }
+                if (navigator.sendBeacon) navigator.sendBeacon(GAS_AUDIT_WEBHOOK_URL, payload);
+                else fetch(GAS_AUDIT_WEBHOOK_URL, { method: "POST", body: payload, keepalive: true });
+            } catch (e) {}
         }
 
-        function savePermanentAuditLogs(logs) {
-            try {
-                localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(logs.slice(0, 500)));
-            } catch(e) {}
-        }
+        window.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && currentTier > 0 && lastQueryEar !== "-") {
+                const dwell = (Date.now() - lastQueryTime) / 1000;
+                if (dwell >= 2) {
+                    sendSilentAudit("LEAVE_DWELL", lastQueryEar, dwell, isPurebredCore_(lastQueryEar), `離開結算停留 (共查${queryCountInSession}次)`);
+                    lastQueryTime = Date.now();
+                }
+            }
+        });
 
-        function logAudit(query, statusMsg) {
-            const now = new Date();
-            const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-            const roleStr = isAdminUnlocked ? 'ADMIN' : (isUserUnlocked ? 'USER' : 'UNAUTHORIZED');
-            const logs = loadPermanentAuditLogs();
-            logs.unshift({ time: timeStr, role: roleStr, ip: clientIP, query: query || '-', result: statusMsg });
-            savePermanentAuditLogs(logs);
-            renderAuditTable();
+        function isPurebredCore_(ear) {
+            if (!ear || ear === "-") return false;
+            const u = ear.toUpperCase();
+            return !u.startsWith("LY") && (u.startsWith("Y") || u.startsWith("L") || u.startsWith("D"));
         }
+        function vibratePhone(pattern) { if (navigator.vibrate) navigator.vibrate(pattern); }
+        function showToast(msg) { const t = document.getElementById('toastNotify'); t.innerText = msg; t.style.display = 'block'; setTimeout(() => { t.style.display = 'none'; }, 1200); }
 
-        function renderAuditTable() {
-            const tbody = document.getElementById('auditTableBody');
-            if (!tbody) return;
-            const logs = loadPermanentAuditLogs();
-            if (logs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="color:#94a3b8;">尚無存取稽核紀錄</td></tr>`;
+        function handleGateLogin() {
+            const pw = document.getElementById('gatePasswordInput').value.trim().toLowerCase();
+            let targetFile = "";
+            if (pw === "gla8888") { currentTier = 1; tierLabel = "L1_WORKER (gla8888)"; targetFile = "data_w.json"; }
+            else if (pw === "gla9999") { currentTier = 2; tierLabel = "L2_MANAGER (gla9999)"; targetFile = "data_m.json"; }
+            else if (pw === "510067") { currentTier = 3; tierLabel = "L3_CORE (510067)"; targetFile = "data_c.json"; }
+            else if (pw === "qwert") { currentTier = 4; tierLabel = "L4_MASTER (qwert)"; targetFile = "data_master.json"; }
+            else {
+                vibratePhone([80, 60, 80]);
+                alert("❌ 密碼錯誤 / Kata Laluan Salah / Incorrect Password");
+                sendSilentAudit("LOGIN_FAIL", "-", 0, false, `嘗試錯誤密碼: ${pw}`);
                 return;
             }
-            tbody.innerHTML = logs.map(log => `
-                <tr>
-                    <td>${log.time}</td>
-                    <td><b style="color:${log.role==='ADMIN'?'#d97706':(log.role==='USER'?'#0284c7':'#dc2626')}">${log.role}</b></td>
-                    <td>${log.ip}</td>
-                    <td><b style="color:#000000;">${log.query}</b></td>
-                    <td>${log.result}</td>
-                </tr>
+            vibratePhone(35);
+            document.getElementById('authGateModal').style.display = 'none';
+            document.getElementById('tierStatusPill').innerText = `🟢 ${tierLabel.split(' ')[0]}`;
+            lastQueryTime = Date.now();
+            sendSilentAudit("LOGIN_SUCCESS", "-", 0, false, `成功登入 ${tierLabel}`);
+            showToast("⏳ 載入專屬層級資料庫...");
+            fetch(`${targetFile}?v=${Date.now()}`).then(r => r.json()).then(data => {
+                dbPayload = data;
+                document.getElementById('dbMetaInfo').innerText = `✅ 已連線 (${(data.pedigree || []).length} 筆履歷 | 更新: ${data.updated_at || '-'})`;
+                renderLiveTilesWall();
+            }).catch(() => { document.getElementById('dbMetaInfo').innerText = `❌ 尚未找到 ${targetFile}，請先在 GAS 執行推送`; });
+        }
+
+        const ALL_TILES = [
+            { id: "t1", minTier: 1, color: "tile-c1", icon: "🌳", bm: "Profil & Salasilah 3-Gen", en: "Basic Profile & 3-Gen Tree", zh: "基礎履歷與三代家族樹" },
+            { id: "t2", minTier: 1, color: "tile-c2", icon: "🛡️", bm: "Semak Kahwin & Penyakit", en: "Mating & Defect Guard", zh: "配種防呆與遺傳缺陷檢查" },
+            { id: "t3", minTier: 1, color: "tile-c3", icon: "🏷️", bm: "Status Pemilihan & Baka", en: "Selection & Conservation", zh: "選留權限與保種血脈提示" },
+            { id: "t4", minTier: 1, color: "tile-c4", icon: "🧪", bm: "Rekod Mani & Gred", en: "Boar Semen Log & Grade", zh: "公豬採精紀錄與等級卡" },
+            { id: "t5", minTier: 1, color: "tile-c5", icon: "📅", bm: "Tarikh Beranak & Klinik", en: "Farrow Est. & Clinic Slot", zh: "預產期推算與醫藥預留框" },
+            { id: "t6", minTier: 2, color: "tile-c6", icon: "🧬", bm: "Komposisi Darah 2-Gen", en: "2-Gen Bloodline Share", zh: "兩代血統百分比組成表" },
+            { id: "t7", minTier: 2, color: "tile-c7", icon: "🩺", bm: "Rekod Klinikal & Kematian", en: "Vet Health & Mortality Log", zh: "獸醫臨床與死淘病因追蹤" },
+            { id: "t8", minTier: 3, color: "tile-c8", icon: "📋", bm: "Cadangan Pembiakan", en: "Breeding Grade & Advice", zh: "育種等級與文字選汰建議" },
+            { id: "t9", minTier: 4, color: "tile-c9", icon: "🦋", bm: "Salasilah Penuh & F1-F3", en: "Full Lineage & Offspring", zh: "全世代蝴蝶樹與後代留種" },
+            { id: "t10", minTier: 4, color: "tile-c10", icon: "📊", bm: "Karkas, BLUP & Audit", en: "Carcass, EBV & Security Log", zh: "始祖純度・屠體缺陷・監控" }
+        ];
+
+        function renderLiveTilesWall() {
+            const container = document.getElementById('liveTilesContainer');
+            document.getElementById('tilesSectionHeader').style.display = 'flex';
+            container.className = `live-tiles-grid grid-tier-${currentTier}`;
+            const visibleTiles = ALL_TILES.filter(t => t.minTier <= currentTier);
+            container.innerHTML = visibleTiles.map(t => `
+                <div class="live-tile ${t.color} ${activeTileId === t.id ? 'active-tile' : ''}" id="tile_${t.id}" onclick="openTilePanel('${t.id}')">
+                    <div class="tile-top-row"><span class="tile-icon">${t.icon}</span><span class="tile-badge" id="badge_${t.id}">待查詢</span></div>
+                    <div class="tile-trilingual"><div class="tile-bm">${t.bm}</div><div class="tile-en">${t.en}</div><div class="tile-zh">${t.zh}</div></div>
+                </div>
             `).join('');
         }
 
-        function toggleAuditLogView() {
-            const body = document.getElementById('auditLogCollapsibleBody');
-            const btn = document.getElementById('btnToggleAudit');
-            if (body.style.display === 'none') {
-                body.style.display = 'block';
-                btn.innerText = '🙈 收合日誌';
-                renderAuditTable();
-            } else {
-                body.style.display = 'none';
-                btn.innerText = '👁️ 展開稽核日誌';
+        function openTilePanel(tileId) {
+            vibratePhone(25);
+            activeTileId = tileId;
+            document.querySelectorAll('.live-tile').forEach(el => el.classList.remove('active-tile'));
+            const activeEl = document.getElementById('tile_' + tileId);
+            if (activeEl) activeEl.classList.add('active-tile');
+            if (lastQueryEar !== "-") {
+                const dwell = (Date.now() - lastQueryTime) / 1000;
+                sendSilentAudit("OPEN_TILE", lastQueryEar, dwell, isPurebredCore_(lastQueryEar), `開啟方塊 ${tileId}`);
+                lastQueryTime = Date.now();
             }
+            renderSelectedPanelContent(tileId);
         }
 
-        function clearPermanentAuditLogs() {
-            if (confirm("⚠️ 確定要清空所有存留在本機的歷史稽核日誌嗎？此操作不可逆。")) {
-                localStorage.removeItem(STORAGE_KEY_AUDIT);
-                renderAuditTable();
-                showToast("🗑️ 本機稽核歷史已清空。");
-            }
-        }
-
-        function verifyGatePass() {
-            const p = document.getElementById('userGatePassword').value.trim();
-            if (p === 'gla@8888') {
-                isUserUnlocked = true;
-                sessionStorage.setItem('GLA_USER_AUTH', '1');
-                document.getElementById('authGateModal').style.display = 'none';
-                showToast("✅ 通行密碼驗證成功！");
-                logAudit('GATE_AUTH', '通行成功 (User)');
-            } else {
-                alert("❌ 密碼錯誤！本系統為公司內部機密資料，未經許可嚴禁查閱。\nIncorrect password. Access denied.");
-                logAudit('GATE_AUTH', '密碼錯誤拒絕');
-            }
-        }
-
-        function openAdminModal() {
-            document.getElementById('adminSecretModal').style.display = 'flex';
-            document.getElementById('adminSecretUser').focus();
-        }
-
-        function closeAdminModal() {
-            document.getElementById('adminSecretModal').style.display = 'none';
-        }
-
-        function verifyAdminMaster() {
-            const u = document.getElementById('adminSecretUser').value.trim().toLowerCase();
-            const p = document.getElementById('adminSecretPass').value.trim();
-            if (u === 'admin' && p === '510067') {
-                isAdminUnlocked = true;
-                isUserUnlocked = true;
-                sessionStorage.setItem('GLA_ADMIN_AUTH', '1');
-                document.getElementById('adminSecretModal').style.display = 'none';
-                document.getElementById('adminProtectedSection').style.display = 'block';
-                document.getElementById('auditLogCollapsibleBody').style.display = 'none';
-                document.getElementById('btnToggleAudit').innerText = '👁️ 展開稽核日誌';
-                showToast("👑 管理權限驗證通過！進階全模組已解鎖。");
-                logAudit('ADMIN_MASTER_AUTH', 'Master 解鎖成功');
-                const currentQuery = document.getElementById('earInput').value.trim();
-                if (currentQuery) searchPedigree();
-            } else {
-                alert("驗證失敗。");
-                closeAdminModal();
-                logAudit('ADMIN_MASTER_AUTH', 'Admin 密碼錯誤');
-            }
-        }
-
-        function computeLinePerformanceStats() {
-            linePerformanceStats = {};
-            pedigreeList.forEach(item => {
-                const lines = new Set();
-                if (item.g3_sire_line && item.g3_sire_line !== '-') lines.add(item.g3_sire_line);
-                if (item.g3_dam_line && item.g3_dam_line !== '-') lines.add(item.g3_dam_line);
-
-                const nba = parseFloat(item.born_alive);
-                const tnb = parseFloat(item.total_born);
-                const wean = parseFloat(item.weaning);
-                const spi = parseFloat(item.spi);
-                const mli = parseFloat(item.mli);
-
-                lines.forEach(l => {
-                    if (!linePerformanceStats[l]) linePerformanceStats[l] = { nba: [], tnb: [], wean: [], spi: [], mli: [], count: 0 };
-                    linePerformanceStats[l].count++;
-                    if (!isNaN(nba)) linePerformanceStats[l].nba.push(nba);
-                    if (!isNaN(tnb)) linePerformanceStats[l].tnb.push(tnb);
-                    if (!isNaN(wean)) linePerformanceStats[l].wean.push(wean);
-                    if (!isNaN(spi)) linePerformanceStats[l].spi.push(spi);
-                    if (!isNaN(mli)) linePerformanceStats[l].mli.push(mli);
-                });
-            });
-        }
-
-        function getAvg(arr) {
-            if (!arr || arr.length === 0) return '-';
-            const sum = arr.reduce((a, b) => a + b, 0);
-            return (sum / arr.length).toFixed(1);
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            fetchClientIP();
-            if (sessionStorage.getItem('GLA_ADMIN_AUTH') === '1') {
-                isAdminUnlocked = true;
-                isUserUnlocked = true;
-                document.getElementById('adminProtectedSection').style.display = 'block';
-                document.getElementById('auditLogCollapsibleBody').style.display = 'none';
-            } else if (sessionStorage.getItem('GLA_USER_AUTH') === '1') {
-                isUserUnlocked = true;
-            } else {
-                document.getElementById('authGateModal').style.display = 'flex';
-            }
-
-            fetch('data.json?v=' + Date.now())
-                .then(r => r.json())
-                .then(data => {
-                    pedigreeList = data.pedigree || [];
-                    usIndex = data.us_index || {};
-                    carcassSales = data.carcass_sales || [];
-                    bloodlineMap = data.bloodline_map || {};
-                    deathInfoMap.clear();
-                    if (data.death_map) {
-                        for (let k in data.death_map) deathInfoMap.set(k.toUpperCase(), data.death_map[k]);
-                    }
-                    computeLinePerformanceStats();
-                    const pill = document.getElementById('dbStatusPill');
-                    if (pill) {
-                        const upd = data.updated_at ? ` | 更新: ${data.updated_at}` : '';
-                        pill.innerText = `🟢 整合2庫連線 (${pedigreeList.length} 筆履歷 / ${carcassSales.length} 筆屠體${upd})`;
-                    }
-                    logAudit('INIT_LOAD', `系統就緒 (履歷:${pedigreeList.length}筆)`);
-                })
-                .catch(err => {
-                    console.error("載入 data.json 失敗:", err);
-                    const pill = document.getElementById('dbStatusPill');
-                    if (pill) pill.innerText = `🔴 data.json 尚未更新`;
-                    showToast("❌ data.json 讀取失敗，請確認 GitHub Actions 已執行。");
-                    logAudit('INIT_LOAD', '載入失敗');
-                });
-        });
-
-        function cleanVal(v) {
-            return (v === undefined || v === null || v === 'undefined' || v === 'NaN' || v === 'nan' || v === '') ? '-' : String(v).trim();
-        }
-
-        function formatNumDisplay(v) {
-            const s = cleanVal(v);
-            if (s === '-' || s === '0' || s === '0.0') return '-';
-            return s;
-        }
-
-        function getBreedClass(earOrBreed) {
-            if (!earOrBreed || earOrBreed === '-') return 'breed-DEFAULT';
-            const s = String(earOrBreed).trim().toUpperCase();
-            if (s.startsWith('LY') || s.includes('CROSS')) return 'breed-LY';
-            if (s.startsWith('Y') || s.includes('YORK')) return 'breed-Y';
-            if (s.startsWith('L') || s.includes('LAND')) return 'breed-L';
-            if (s.startsWith('D') || s.includes('DUROC')) return 'breed-D';
-            return 'breed-DEFAULT';
-        }
-
-        function toggleBreedFilter(bKey) {
-            if (bKey === 'ALL') selectedBreeds = selectedBreeds.size === 4 ? new Set() : new Set(['LY', 'Y', 'L', 'D']);
-            else selectedBreeds.has(bKey) ? selectedBreeds.delete(bKey) : selectedBreeds.add(bKey);
-            ['Y', 'L', 'D', 'LY'].forEach(k => document.getElementById('btnBreed' + k).classList.toggle('active', selectedBreeds.has(k)));
-            document.getElementById('btnBreedALL').classList.toggle('active', selectedBreeds.size === 4);
-        }
-
-        function normalizeQueryEar(raw) {
+        function normalizeEarInput(raw) {
             let q = raw.trim().toUpperCase();
             if (q.endsWith('.0')) q = q.slice(0, -2);
-            if (/^\d+$/.test(q)) {
-                for (const prefix of ['D', 'L', 'Y']) {
-                    if (usIndex[prefix + q] || pedigreeList.some(it => it.ear === prefix + q)) {
-                        return prefix + q;
-                    }
-                }
+            if (/^\d+$/.test(q) && dbPayload && dbPayload.pedigree) {
+                for (const p of ['D', 'L', 'Y']) { if (dbPayload.pedigree.some(it => it.ear === p + q)) return p + q; }
             }
             return q;
         }
 
-        function searchPedigree() {
-            if (!isUserUnlocked) {
-                document.getElementById('authGateModal').style.display = 'flex';
-                return;
-            }
-
+        function executeSearch() {
+            if (!dbPayload) return;
             const raw = document.getElementById('earInput').value.trim();
             if (!raw) return;
-            const query = normalizeQueryEar(raw);
+            if (lastQueryEar !== "-") {
+                sendSilentAudit("SWITCH_EAR", lastQueryEar, (Date.now() - lastQueryTime) / 1000, isPurebredCore_(lastQueryEar), `切換查詢前停留結算`);
+            }
+            const query = normalizeEarInput(raw);
             document.getElementById('earInput').value = query;
+            lastQueryEar = query; lastQueryTime = Date.now(); queryCountInSession++;
 
-            showToast("🔍 檢索整合2育種庫中...");
-            setTimeout(() => {
-                let matched = pedigreeList.filter(it => it.ear === query);
-                let primary = matched.length > 0 ? matched[0] : null;
+            const matched = (dbPayload.pedigree || []).filter(it => it.ear === query);
+            currentMatchedList = matched;
+            currentRecord = matched.length > 0 ? matched[0] : null;
+            sendSilentAudit("SEARCH_EAR", query, 0, isPurebredCore_(query), `${currentRecord ? '命中(' + matched.length + '筆)' : '查無資料'} | 累計第${queryCountInSession}次`);
 
-                if (!primary && usIndex[query]) {
-                    const u = usIndex[query];
-                    primary = {
-                        ear: query, breed: u.breed[0] || u.breed, sex: u.sex, parity: "-",
-                        mate: "-", mating_date: "-", farrow_date: "-", dob: "-", dod: deathInfoMap.get(query) || "-",
-                        current_age: "-", used_years: "-", g5_sire: "-", g5_dam: "-",
-                        total_born: "-", born_alive: "-", weaning: "-",
-                        spi: u.spi, mli: u.mli, tsi: u.tsi, inbreeding_f: "-", grade: "-",
-                        g3_sire_full: u.sire_full, g3_sire_line: u.sire_line, g3_sire_spi: u.sire_spi, g3_sire_mli: u.sire_mli,
-                        g3_dam_full: u.dam_full, g3_dam_line: u.dam_line, g3_dam_spi: u.dam_spi, g3_dam_mli: u.dam_mli,
-                        ss_full: u.ss_full, ss_line: u.ss_line, sd_full: u.sd_full, sd_line: u.sd_line,
-                        ds_full: u.ds_full, ds_line: u.ds_line, dd_full: u.dd_full, dd_line: u.dd_line,
-                        g1_nodes: u.g1_nodes
-                    };
-                    matched = [primary];
-                }
-
-                if (primary) {
-                    let tableItems = [...matched];
-                    if (primary.sex === 'MALE' || (!query.startsWith('LY') && (query.startsWith('L') || query.startsWith('Y') || query.startsWith('D')))) {
-                        const matedSows = pedigreeList.filter(it => it.mate && it.mate === query);
-                        if (matedSows.length > 0) tableItems = [...matched, ...matedSows];
-                    }
-
-                    drawOfficialPedigree(primary);
-                    renderTable(tableItems, query, primary);
-                    drawButterflyTopologyTree(primary);
-
-                    if (isAdminUnlocked) {
-                        renderDescendantSplitView(primary);
-                        renderFamilyLineProportion(primary);
-                        renderCarcassPerformanceAudit(primary);
-                    }
-
-                    logAudit(query, `檢索成功 (匹配${tableItems.length}筆)`);
-                } else {
-                    document.getElementById('excelTableBody').innerHTML = `<tr><td colspan="16" class="placeholder-text">查無 "${query}" 之造冊資料</td></tr>`;
-                    document.getElementById('certBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之官方四代家譜</div>`;
-                    document.getElementById('macroBoxesContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之蝴蝶拓撲資料</div>`;
-                    document.getElementById('strainBenchmarkSection').style.display = 'none';
-                    if (isAdminUnlocked) {
-                        document.getElementById('descendantContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之子代資料</div>`;
-                        document.getElementById('bloodContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之家族品系比例</div>`;
-                        document.getElementById('carcassContainer').innerHTML = `<div class="placeholder-text">查無 "${query}" 之屠體檢定資料</div>`;
-                    }
-                    logAudit(query, '查無此豬');
-                }
-            }, 30);
-        }
-
-        function renderTable(items, query, primary) {
-            const tbody = document.getElementById('excelTableBody');
-            const isMale = primary && primary.sex === 'MALE';
-            document.getElementById('cardTitle').innerHTML = `Breeding Performance & Index Data: <span style="color:#0284c7;">"${query}"</span> ${isMale ? `(公豬本體及在場配種母豬共 ${items.length} 筆)` : `(共 ${items.length} 筆生產紀錄)`}`;
-            let html = '';
-            items.forEach(it => {
-                const isDead = deathInfoMap.has(it.ear);
-                const badge = isDead ? `<span class="badge-dead">${deathInfoMap.get(it.ear)}</span>` : `<span class="badge-active">ACTIVE</span>`;
-                const gradeBadge = (it.grade && it.grade !== '-') ? `<span class="badge-grade">${it.grade}</span>` : '-';
-                html += `
-                    <tr>
-                        <td><b style="color:#000000;">${it.ear}</b> ${badge}</td>
-                        <td>${cleanVal(it.breed)}</td>
-                        <td style="font-weight:800;">${cleanVal(it.sex)}</td>
-                        <td>${cleanVal(it.dob)}</td>
-                        <td>${cleanVal(it.mating_date)}</td>
-                        <td>${cleanVal(it.farrow_date)}</td>
-                        <td><b>${formatNumDisplay(it.parity)}</b></td>
-                        <td style="font-weight:700;">${cleanVal(it.mate)}</td>
-                        <td><b>${formatNumDisplay(it.total_born)}</b></td>
-                        <td><b>${formatNumDisplay(it.born_alive)}</b></td>
-                        <td><b>${formatNumDisplay(it.weaning)}</b></td>
-                        <td><b>${cleanVal(it.spi)}</b></td>
-                        <td><b>${cleanVal(it.mli)}</b></td>
-                        <td><b>${cleanVal(it.tsi)}</b></td>
-                        <td><b>${cleanVal(it.inbreeding_f)}</b></td>
-                        <td>${gradeBadge}</td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = html;
-        }
-
-        function drawOfficialPedigree(target) {
-            const container = document.getElementById('certBoxesContainer');
-            const svgLayer = document.getElementById('certSvg');
-            const scrollArea = document.getElementById('certScrollArea');
-            container.innerHTML = ''; svgLayer.innerHTML = '';
-
-            const cardW = 205, boxMainH = 52, textSubH = 34;
-            const cardTotalH = boxMainH + textSubH;
-            const colGap = 45, totalHeight = 760;
-            const totalWidth = (cardW * 4) + (colGap * 3) + 40;
-
-            scrollArea.style.height = totalHeight + 'px';
-            container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
-            svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
-
-            const colX = [15, 15 + cardW + colGap, 15 + (cardW + colGap) * 2, 15 + (cardW + colGap) * 3];
-            const nodes = {};
-
-            const isDead = deathInfoMap.has(target.ear);
-            const targetDualLine = [target.g3_sire_line, target.g3_dam_line].filter(x => x && x !== '-').join(' × ') || '-';
-
-            nodes['T'] = {
-                x: colX[0], y: totalHeight / 2 - cardTotalH / 2,
-                ear: target.ear, breed: target.breed,
-                line: targetDualLine,
-                role: `TARGET (${target.sex==='MALE'?'♂ 公豬':'♀ 母豬'})`,
-                mli: target.mli, spi: target.spi, tsi: target.tsi,
-                fVal: target.inbreeding_f,
-                age: target.current_age, used: target.used_years, dob: target.dob,
-                isDead: isDead, deadTag: deathInfoMap.get(target.ear)
-            };
-
-            nodes['S'] = {
-                x: colX[1], y: totalHeight * 0.20 - cardTotalH / 2,
-                ear: target.g3_sire_full, breed: target.breed,
-                line: target.g3_sire_line, role: "生父 (Sire)",
-                mli: target.g3_sire_mli, spi: target.g3_sire_spi, tsi: "-",
-                age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_sire_full)
-            };
-            nodes['D'] = {
-                x: colX[1], y: totalHeight * 0.80 - cardTotalH / 2,
-                ear: target.g3_dam_full, breed: target.breed,
-                line: target.g3_dam_line, role: "生母 (Dam)",
-                mli: target.g3_dam_mli, spi: target.g3_dam_spi, tsi: "-",
-                age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(target.g3_dam_full)
-            };
-
-            const g2List = [
-                { k: 'SS', full: target.ss_full, line: target.ss_line, role: "祖父 (SS)", yR: 0.10 },
-                { k: 'SD', full: target.sd_full, line: target.sd_line, role: "祖母 (SD)", yR: 0.32 },
-                { k: 'DS', full: target.ds_full, line: target.ds_line, role: "外祖父 (DS)", yR: 0.68 },
-                { k: 'DD', full: target.dd_full, line: target.dd_line, role: "外祖母 (DD)", yR: 0.90 }
-            ];
-            g2List.forEach(g => {
-                nodes[g.k] = {
-                    x: colX[2], y: totalHeight * g.yR - cardTotalH / 2,
-                    ear: g.full, breed: target.breed, line: g.line, role: g.role,
-                    mli: "-", spi: "-", tsi: "-", age: "-", used: "-", dob: "-", isDead: deathInfoMap.has(g.full)
-                };
-            });
-
-            const g1 = target.g1_nodes || {};
-            const g3Defs = [
-                { k: 'SSS', line: g1.sss, role: "曾祖父" }, { k: 'SSD', line: g1.ssd, role: "曾祖母" },
-                { k: 'SDS', line: g1.sds, role: "曾祖父" }, { k: 'SDD', line: g1.sdd, role: "曾祖母" },
-                { k: 'DSS', line: g1.dss, role: "曾外祖父" }, { k: 'DSD', line: g1.dsd, role: "曾外祖母" },
-                { k: 'DDS', line: g1.dds, role: "曾外祖父" }, { k: 'DDD', line: g1.ddd, role: "曾外祖母" }
-            ];
-            for (let i = 0; i < 8; i++) {
-                const step = totalHeight / 8;
-                nodes[`G3_${i}`] = {
-                    x: colX[3], y: i * step + (step - cardTotalH) / 2,
-                    ear: g3Defs[i].line !== "-" ? g3Defs[i].line : 'US FOUNDATION',
-                    breed: target.breed, line: g3Defs[i].line, role: g3Defs[i].role,
-                    mli: "-", spi: "-", tsi: "-", age: "-", used: "-", dob: "-", isDead: false
-                };
-            }
-
-            [
-                ['T', 'S'], ['T', 'D'],
-                ['S', 'SS'], ['S', 'SD'],
-                ['D', 'DS'], ['D', 'DD'],
-                ['SS', 'G3_0'], ['SS', 'G3_1'],
-                ['SD', 'G3_2'], ['SD', 'G3_3'],
-                ['DS', 'G3_4'], ['DS', 'G3_5'],
-                ['DD', 'G3_6'], ['DD', 'G3_7']
-            ].forEach(([from, to]) => {
-                const f = nodes[from], t = nodes[to];
-                const x1 = f.x + cardW, y1 = f.y + boxMainH / 2;
-                const x2 = t.x, y2 = t.y + boxMainH / 2;
-                const midX = x1 + (x2 - x1) / 2;
-                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                p.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
-                p.setAttribute('fill', 'none');
-                p.setAttribute('stroke', '#64748b');
-                p.setAttribute('stroke-width', '1.4');
-                svgLayer.appendChild(p);
-            });
-
-            Object.keys(nodes).forEach(k => {
-                const n = nodes[k];
-                const group = document.createElement('div');
-                group.className = 'node-group-container';
-                group.style.left = n.x + 'px'; group.style.top = n.y + 'px';
-                group.style.width = cardW + 'px';
-
-                const lineHtml = (n.line && n.line !== '-') ? `<span class="family-line-clean">${n.line}</span>` : '';
-                
-                let usageText = '';
-                if (n.age && n.age !== '-' && n.age !== '0') {
-                    usageText = `年齡:${n.age}歲 | 役期:${n.used || '-'}年`;
-                } else if (n.dob && n.dob !== '-') {
-                    usageText = `DOB:${n.dob}`;
-                }
-                if (k === 'T' && n.fVal && n.fVal !== '-') {
-                    usageText += (usageText ? ' | ' : '') + `近交F:${n.fVal}`;
-                }
-
-                group.innerHTML = `
-                    <div class="node-box-main ${getBreedClass(n.breed)} ${n.isDead ? 'node-dead' : ''} ${k === 'T' ? 'node-target-highlight' : ''}" style="height:${boxMainH}px;">
-                        <div class="c-sub-label">
-                            <span>${n.role}</span>
-                            ${lineHtml}
-                        </div>
-                        <div class="c-main-title" title="${n.ear}">
-                            ${n.ear} ${n.deadTag ? `<span class="badge-dead">${n.deadTag}</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="node-text-sub-block">
-                        <div class="sub-metric-row-1">
-                            <span>MLI: ${cleanVal(n.mli)}</span>
-                            <span>SPI: ${cleanVal(n.spi)}</span>
-                            <span>TSI: ${cleanVal(n.tsi)}</span>
-                        </div>
-                        <div class="sub-metric-row-2">
-                            <span>${usageText || '核心原種'}</span>
-                            <span style="font-weight:700;">${n.breed}</span>
-                        </div>
-                    </div>
-                `;
-                if (n.ear && n.ear !== '-' && !n.ear.includes('FOUNDATION')) {
-                    group.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
-                }
-                container.appendChild(group);
-            });
-        }
-
-        function drawButterflyTopologyTree(target) {
-            const container = document.getElementById('macroBoxesContainer');
-            const svgLayer = document.getElementById('macroSvg');
-            const cardArea = document.getElementById('macroScrollArea');
-            container.innerHTML = ''; svgLayer.innerHTML = '';
-
-            const cardW = 154, cardH = 56;
-            const totalWidth = 1480, totalHeight = 620;
-            cardArea.style.height = totalHeight + 'px';
-            container.style.width = totalWidth + 'px'; container.style.height = totalHeight + 'px';
-            svgLayer.setAttribute('width', totalWidth); svgLayer.setAttribute('height', totalHeight);
-
-            const Y_G3_0 = 35, Y_G3_1 = 165, Y_G3_2 = 380, Y_G3_3 = 510;
-            const Y_G2_UPPER = (Y_G3_0 + Y_G3_1) / 2;
-            const Y_G2_LOWER = (Y_G3_2 + Y_G3_3) / 2;
-            const Y_CENTER   = (Y_G2_UPPER + Y_G2_LOWER) / 2;
-
-            const cCenter = 663;
-            const cL1 = 465, cL2 = 242, cL3 = 20;
-            const cR1 = 861, cR2 = 1084, cR3 = 1306;
-
-            const tNodes = {};
-            const g1 = target.g1_nodes || {};
-            const dualLine = [target.g3_sire_line, target.g3_dam_line].filter(x => x && x !== '-').join(' × ') || '-';
-
-            tNodes['TARGET'] = {
-                x: cCenter, y: Y_CENTER, ear: target.ear, breed: target.breed,
-                line: dualLine, role: `TARGET (${target.sex==='MALE'?'♂':'♀'})`
-            };
-
-            if (target.g3_sire_full && target.g3_sire_full !== '-') {
-                tNodes['SIRE'] = { x: cL1, y: Y_CENTER, ear: target.g3_sire_full, breed: target.breed, line: target.g3_sire_line, role: "生父 (Sire)" };
-            }
-            if (target.ss_full && target.ss_full !== '-') {
-                tNodes['SS'] = { x: cL2, y: Y_G2_UPPER, ear: target.ss_full, breed: target.breed, line: target.ss_line, role: "祖父 (SS)" };
-            }
-            if (target.sd_full && target.sd_full !== '-') {
-                tNodes['SD'] = { x: cL2, y: Y_G2_LOWER, ear: target.sd_full, breed: target.breed, line: target.sd_line, role: "祖母 (SD)" };
-            }
-            [
-                { k: 'SSS', line: g1.sss, role: "曾祖父", y: Y_G3_0 },
-                { k: 'SSD', line: g1.ssd, role: "曾祖母", y: Y_G3_1 },
-                { k: 'SDS', line: g1.sds, role: "曾祖父", y: Y_G3_2 },
-                { k: 'SDD', line: g1.sdd, role: "曾祖母", y: Y_G3_3 }
-            ].forEach(g => {
-                if (g.line && g.line !== '-') {
-                    tNodes[g.k] = { x: cL3, y: g.y, ear: g.line, breed: target.breed, line: g.line, role: g.role };
-                }
-            });
-
-            if (target.g3_dam_full && target.g3_dam_full !== '-') {
-                tNodes['DAM'] = { x: cR1, y: Y_CENTER, ear: target.g3_dam_full, breed: target.breed, line: target.g3_dam_line, role: "生母 (Dam)" };
-            }
-            if (target.ds_full && target.ds_full !== '-') {
-                tNodes['DS'] = { x: cR2, y: Y_G2_UPPER, ear: target.ds_full, breed: target.breed, line: target.ds_line, role: "外祖父 (DS)" };
-            }
-            if (target.dd_full && target.dd_full !== '-') {
-                tNodes['DD'] = { x: cR2, y: Y_G2_LOWER, ear: target.dd_full, breed: target.breed, line: target.dd_line, role: "外祖母 (DD)" };
-            }
-            [
-                { k: 'DSS', line: g1.dss, role: "曾外祖父", y: Y_G3_0 },
-                { k: 'DSD', line: g1.dsd, role: "曾外祖母", y: Y_G3_1 },
-                { k: 'DDS', line: g1.dds, role: "曾外祖父", y: Y_G3_2 },
-                { k: 'DDD', line: g1.ddd, role: "曾外祖母", y: Y_G3_3 }
-            ].forEach(g => {
-                if (g.line && g.line !== '-') {
-                    tNodes[g.k] = { x: cR3, y: g.y, ear: g.line, breed: target.breed, line: g.line, role: g.role };
-                }
-            });
-
-            [
-                ['TARGET', 'SIRE', 'left'], ['SIRE', 'SS', 'left'], ['SIRE', 'SD', 'left'],
-                ['SS', 'SSS', 'left'], ['SS', 'SSD', 'left'], ['SD', 'SDS', 'left'], ['SD', 'SDD', 'left'],
-                ['TARGET', 'DAM', 'right'], ['DAM', 'DS', 'right'], ['DAM', 'DD', 'right'],
-                ['DS', 'DSS', 'right'], ['DS', 'DSD', 'right'], ['DD', 'DDS', 'right'], ['DD', 'DDD', 'right']
-            ].forEach(([from, to, dir]) => {
-                const f = tNodes[from], t = tNodes[to];
-                if (!f || !t) return;
-                let x1 = (dir === 'left') ? f.x : f.x + cardW;
-                let x2 = (dir === 'left') ? t.x + cardW : t.x;
-                const y1 = f.y + cardH / 2;
-                const y2 = t.y + cardH / 2;
-                const midX = x1 + (x2 - x1) / 2;
-                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                p.setAttribute('d', Math.abs(y1 - y2) < 2 ? `M ${x1} ${y1} H ${x2}` : `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
-                p.setAttribute('fill', 'none');
-                p.setAttribute('stroke', dir === 'left' ? '#0284c7' : '#e11d48');
-                p.setAttribute('stroke-width', '1.4');
-                svgLayer.appendChild(p);
-            });
-
-            const uniqueActiveLines = new Set();
-            if (target.g3_sire_line && target.g3_sire_line !== '-') uniqueActiveLines.add(target.g3_sire_line);
-            if (target.g3_dam_line && target.g3_dam_line !== '-') uniqueActiveLines.add(target.g3_dam_line);
-
-            Object.keys(tNodes).forEach(k => {
-                const n = tNodes[k];
-                if (k !== 'TARGET' && n.line && n.line !== '-') uniqueActiveLines.add(n.line);
-
-                const card = document.createElement('div');
-                card.className = `butterfly-compact-node ${getBreedClass(n.breed)} ${k === 'TARGET' ? 'node-target-highlight' : ''}`;
-                card.style.left = n.x + 'px'; card.style.top = n.y + 'px';
-                card.style.width = cardW + 'px'; card.style.height = cardH + 'px';
-
-                card.innerHTML = `
-                    <div style="font-size:8px; font-weight:800; color:#64748b; line-height:1.1;">${n.role}</div>
-                    <div style="font-size:10.5px; font-weight:900; color:#1e3a8a; margin: 1px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.line}">
-                        ${k === 'TARGET' ? n.line : 'Line: ' + (n.line || '-')}
-                    </div>
-                    <div style="font-size:9.5px; font-weight:700; color:#dc2626; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${n.ear}">
-                        ${n.ear}
-                    </div>
-                `;
-                if (n.ear && n.ear !== '-' && !n.ear.includes('FOUNDATION')) {
-                    card.onclick = () => { document.getElementById('earInput').value = n.ear; searchPedigree(); };
-                }
-                container.appendChild(card);
-            });
-
-            renderStrainBenchmark(Array.from(uniqueActiveLines));
-        }
-
-        function renderStrainBenchmark(activeLines) {
-            const benchSection = document.getElementById('strainBenchmarkSection');
-            const benchContainer = document.getElementById('benchmarkGridContainer');
-            if (activeLines.length === 0) {
-                benchSection.style.display = 'none';
+            if (!currentRecord) {
+                vibratePhone([60, 50, 60]);
+                document.getElementById('activeAnimalBadge').innerText = `❌ 查無 ${query}`;
+                document.getElementById('panelsMountPoint').innerHTML = `<div class="content-panel visible" style="text-align:center; color:#dc2626; font-weight:800;">查無耳號 "${query}" 之造冊紀錄 / Tiada Rekod</div>`;
                 return;
             }
-            let html = '';
-            activeLines.forEach(lineName => {
-                const st = linePerformanceStats[lineName];
-                if (st && st.count > 0) {
-                    html += `
-                        <div class="benchmark-pill">
-                            <div class="benchmark-pill-title">
-                                <span>品系: <b>${lineName}</b></span>
-                                <span style="color:#0284c7;">在場: ${st.count} 胎次</span>
-                            </div>
-                            <div class="benchmark-pill-stats">
-                                <span>均活: <b style="color:#059669;">${getAvg(st.nba)}</b></span>
-                                <span>總產: <b>${getAvg(st.tnb)}</b></span>
-                                <span>離乳: <b>${getAvg(st.wean)}</b></span>
-                                <span>SPI: <b style="color:#d97706;">${getAvg(st.spi)}</b></span>
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-            if (html) {
-                benchContainer.innerHTML = html;
-                benchSection.style.display = 'block';
-            } else {
-                benchSection.style.display = 'none';
-            }
+            vibratePhone(30);
+            const isDead = dbPayload.death_map && dbPayload.death_map[query];
+            document.getElementById('activeAnimalBadge').innerText = `🎯 ${query} (${currentRecord.breed} | ${currentRecord.sex === 'MALE' ? '♂公' : '♀母'}) ${isDead ? '⚠️已淘汰/死亡' : '🟢在場'}`;
+            updateAllTileBadges();
+            openTilePanel(activeTileId || "t1");
         }
 
-        function renderDescendantSplitView(primary) {
-            const container = document.getElementById('descendantContainer');
-            const targetEar = primary.ear.toUpperCase();
-            const isMale = primary.sex === 'MALE';
-
-            let f1Sows = [];
-            if (isMale) {
-                f1Sows = pedigreeList.filter(it => it.g5_sire === targetEar || (it.g3_sire_full && it.g3_sire_full.includes(targetEar)));
-            } else {
-                f1Sows = pedigreeList.filter(it => it.g5_dam === targetEar || (it.g3_dam_full && it.g3_dam_full.includes(targetEar)));
-            }
-
-            const pairGroups = {};
-
-            if (isMale) {
-                const matedPairs = pedigreeList.filter(it => it.mate && it.mate === targetEar);
-                matedPairs.forEach(m => {
-                    const key = m.ear.toUpperCase();
-                    if (!pairGroups[key]) {
-                        pairGroups[key] = {
-                            partnerEar: key,
-                            partnerRole: '♀ 配種母豬',
-                            sireEar: targetEar,
-                            breed: m.breed,
-                            parity: m.parity,
-                            matingDate: m.mating_date,
-                            farrowDate: m.farrow_date,
-                            tnb: m.total_born,
-                            nba: m.born_alive,
-                            wean: m.weaning,
-                            spi: m.spi,
-                            daughters: []
-                        };
-                    }
-                });
-                f1Sows.forEach(d => {
-                    const damEar = (d.g5_dam || '').toUpperCase();
-                    const gKey = pairGroups[damEar] ? damEar : 'OTHER_PARTNERS';
-                    if (!pairGroups[gKey]) {
-                        pairGroups[gKey] = { partnerEar: '其他配對母本', partnerRole: '♀ 配種母豬', sireEar: targetEar, breed: '-', parity: '-', matingDate: '-', farrowDate: '-', tnb: '-', nba: '-', wean: '-', spi: '-', daughters: [] };
-                    }
-                    if (!pairGroups[gKey].daughters.some(x => x.ear === d.ear && x.parity === d.parity)) {
-                        pairGroups[gKey].daughters.push(d);
-                    }
-                });
-            } else {
-                const myLitters = pedigreeList.filter(it => it.ear === targetEar && it.mate && it.mate !== '-');
-                myLitters.forEach(m => {
-                    const sKey = m.mate.toUpperCase();
-                    if (!pairGroups[sKey]) {
-                        pairGroups[sKey] = {
-                            partnerEar: sKey,
-                            partnerRole: '♂ 與配公豬',
-                            sireEar: sKey,
-                            breed: m.breed,
-                            parity: m.parity,
-                            matingDate: m.mating_date,
-                            farrowDate: m.farrow_date,
-                            tnb: m.total_born,
-                            nba: m.born_alive,
-                            wean: m.weaning,
-                            spi: m.spi,
-                            daughters: []
-                        };
-                    }
-                });
-                f1Sows.forEach(d => {
-                    const sireEar = (d.g5_sire || '').toUpperCase();
-                    const gKey = pairGroups[sireEar] ? sireEar : (sireEar && sireEar !== '-' ? sireEar : 'OTHER_PARTNERS');
-                    if (!pairGroups[gKey]) {
-                        pairGroups[gKey] = {
-                            partnerEar: gKey === 'OTHER_PARTNERS' ? '未登錄配種公豬' : gKey,
-                            partnerRole: '♂ 與配公豬',
-                            sireEar: gKey,
-                            breed: primary.breed,
-                            parity: '-', matingDate: '-', farrowDate: '-', tnb: '-', nba: '-', wean: '-', spi: '-',
-                            daughters: []
-                        };
-                    }
-                    if (!pairGroups[gKey].daughters.some(x => x.ear === d.ear && x.parity === d.parity)) {
-                        pairGroups[gKey].daughters.push(d);
-                    }
-                });
-            }
-
-            if (Object.keys(pairGroups).length === 0 && f1Sows.length === 0) {
-                container.innerHTML = `<div class="placeholder-text">個體 "${targetEar}" 暫無配種紀錄或在場留種子代生產紀錄。</div>`;
-                return;
-            }
-
-            const totalPartners = Object.keys(pairGroups).filter(k => k !== 'OTHER_PARTNERS').length;
-            const totalReplacements = f1Sows.map(x => x.ear).filter((v, i, a) => a.indexOf(v) === i).length;
-
-            let html = `
-                <div style="font-size:12px; font-weight:700; color:#000000; margin-bottom:8px; display:flex; justify-content:space-between; background:#f8fafc; padding:8px 12px; border-radius:5px; border:1px solid #e2e8f0;">
-                    <span>🎯 檢索源頭: <b style="color:#0284c7; font-size:13.5px;">${targetEar} (${isMale?'公豬':'母豬'})</b></span>
-                    <span>${isMale?'曾配母豬總數':'曾配公豬數'}: <b>${totalPartners} 頭</b> | 在場在役直系留種子代數: <b style="color:#059669; font-size:13px;">${totalReplacements} 頭</b></span>
-                </div>
-
-                <div class="data-table-wrapper" id="descendantTableWrapper">
-                    <table class="excel-data-table">
-                        <thead>
-                            <tr>
-                                <th style="width:170px;">層級關係 (Hierarchy)</th>
-                                <th>耳號 (Ear Tag)</th>
-                                <th>品種 (Breed)</th>
-                                <th>配種公豬 (Sire Mated)</th>
-                                <th>配種日期 (Mating)</th>
-                                <th>分娩日期 (Farrow)</th>
-                                <th>胎次 (Parity)</th>
-                                <th>總產 (TNB)</th>
-                                <th>活胎 (NBA)</th>
-                                <th>離乳 (Wean)</th>
-                                <th>SPI 指數</th>
-                                <th>目前狀態 (Status)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            Object.values(pairGroups).forEach(group => {
-                const hasDaughters = group.daughters.length > 0;
-                const uniqueDaughterHeads = group.daughters.map(x => x.ear).filter((v, i, a) => a.indexOf(v) === i).length;
-                html += `
-                    <tr style="background-color: #f1f5f9; border-top: 1.5px solid #cbd5e1;">
-                        <td style="font-weight:800; color:#000000;">
-                            ${group.partnerRole} ${hasDaughters ? `<span style="background:#10b981; color:#fff; font-size:9px; padding:1px 5px; border-radius:3px; margin-left:4px;">留種 ${uniqueDaughterHeads} 頭</span>` : ''}
-                        </td>
-                        <td><b style="color:#0284c7; cursor:pointer;" onclick="document.getElementById('earInput').value='${group.partnerEar}'; searchPedigree();">${group.partnerEar}</b></td>
-                        <td><b>${cleanVal(group.breed)}</b></td>
-                        <td>${cleanVal(group.sireEar)}</td>
-                        <td>${cleanVal(group.matingDate)}</td>
-                        <td>${cleanVal(group.farrowDate)}</td>
-                        <td><b>${formatNumDisplay(group.parity)}</b></td>
-                        <td><b>${formatNumDisplay(group.tnb)}</b></td>
-                        <td><b>${formatNumDisplay(group.nba)}</b></td>
-                        <td><b>${formatNumDisplay(group.wean)}</b></td>
-                        <td><b>${cleanVal(group.spi)}</b></td>
-                        <td><span class="badge-active">親本配對</span></td>
-                    </tr>
-                `;
-
-                if (hasDaughters) {
-                    group.daughters.forEach(d => {
-                        const isDead = deathInfoMap.has(d.ear);
-                        html += `
-                            <tr style="background-color: #ffffff;">
-                                <td style="color:#e11d48; font-weight:700;">↳ 🌸 直系留種後代 (F1)</td>
-                                <td><b style="color:#dc2626; cursor:pointer;" onclick="document.getElementById('earInput').value='${d.ear}'; searchPedigree();">${d.ear}</b></td>
-                                <td>${cleanVal(d.breed)}</td>
-                                <td style="font-weight:700;">${cleanVal(d.mate)}</td>
-                                <td>${cleanVal(d.mating_date)}</td>
-                                <td>${cleanVal(d.farrow_date)}</td>
-                                <td><b>${formatNumDisplay(d.parity)}</b></td>
-                                <td><b>${formatNumDisplay(d.total_born)}</b></td>
-                                <td><b>${formatNumDisplay(d.born_alive)}</b></td>
-                                <td><b>${formatNumDisplay(d.weaning)}</b></td>
-                                <td><b>${cleanVal(d.spi)}</b></td>
-                                <td>${isDead ? `<span class="badge-dead">已淘汰</span>` : `<span class="badge-active">在場生產</span>`}</td>
-                            </tr>
-                        `;
-                    });
-                }
-            });
-
-            html += `</tbody></table></div>`;
-            container.innerHTML = html;
+        function updateAllTileBadges() {
+            if (!currentRecord) return;
+            const r = currentRecord;
+            const isDead = dbPayload.death_map && dbPayload.death_map[r.ear];
+            const setB = (id, txt) => { const el = document.getElementById('badge_' + id); if (el) el.innerText = txt; };
+            setB("t1", isDead ? "🔴 已死淘" : `🟢 ${currentMatchedList.length}筆`);
+            const bInfo = (dbPayload.boar_info && dbPayload.boar_info[r.ear]) ? dbPayload.boar_info[r.ear] : null;
+            setB("t2", (bInfo && (bInfo.hernia >= 8 || bInfo.prolapse >= 3 || bInfo.leg >= 5)) ? "🔴 缺陷警示" : "🛡️ 防呆就緒");
+            setB("t3", r.is_conserve ? "🚨 血脈需保留" : (isPurebredCore_(r.ear) ? "純種管理層" : "商用群"));
+            setB("t4", r.sex === "MALE" ? (bInfo ? bInfo.boar_grade : "公豬採精") : "EMPTY");
+            setB("t5", r.mating_date && r.mating_date !== "-" ? "已算預產期" : "醫藥預留");
+            setB("t6", "兩代比例"); setB("t7", isDead ? "有死淘病因" : "臨床健康");
+            setB("t8", r.grade && r.grade !== "-" ? `等級 ${r.grade}` : "選汰建議");
+            setB("t9", "全世代譜系"); setB("t10", "屠體與稽核");
         }
 
-        function renderFamilyLineProportion(primary) {
-            const container = document.getElementById('bloodContainer');
-            const targetEar = primary.ear.toUpperCase();
-            const sLine = primary.g3_sire_line || '未知父系';
-            const dLine = primary.g3_dam_line || '未知母系';
+        function cleanV(v) { return (v === undefined || v === null || v === "" || v === "NaN" || v === "undefined") ? "-" : String(v); }
+        function getBreedCss(b) {
+            const s = cleanV(b).toUpperCase();
+            if (s.startsWith("LY")) return "breed-LY";
+            if (s.startsWith("Y")) return "breed-Y";
+            if (s.startsWith("L")) return "breed-L";
+            if (s.startsWith("D")) return "breed-D";
+            return "breed-DEFAULT";
+        }
 
-            let sortedLines = [];
-            let sourceNote = "依據 8 曾祖輩溯源解構";
+        function renderSelectedPanelContent(tileId) {
+            const mount = document.getElementById('panelsMountPoint');
+            if (!currentRecord) { mount.innerHTML = `<div class="content-panel visible" style="text-align:center; color:#64748b; font-weight:700;">請先在上方輸入耳號並點擊查詢</div>`; return; }
+            const r = currentRecord;
+            const tileMeta = ALL_TILES.find(t => t.id === tileId);
+            const titleText = `${tileMeta.icon} ${tileMeta.zh} (${tileMeta.en})`;
+            let bodyHtml = "";
 
-            if (bloodlineMap[targetEar] && Object.keys(bloodlineMap[targetEar]).length > 0) {
-                sortedLines = Object.entries(bloodlineMap[targetEar]).sort((a, b) => b[1] - a[1]);
-                sourceNote = "直接採用《📊 育種_血統比例(轉)》精算結果";
-            } else {
-                const g1 = primary.g1_nodes || {};
-                const ancestors = [
-                    { line: g1.sss || primary.ss_line, weight: 12.5 },
-                    { line: g1.ssd || primary.sd_line, weight: 12.5 },
-                    { line: g1.sds || primary.ss_line, weight: 12.5 },
-                    { line: g1.sdd || primary.sd_line, weight: 12.5 },
-                    { line: g1.dss || primary.ds_line, weight: 12.5 },
-                    { line: g1.dsd || primary.dd_line, weight: 12.5 },
-                    { line: g1.dds || primary.ds_line, weight: 12.5 },
-                    { line: g1.ddd || primary.dd_line, weight: 12.5 }
+            if (tileId === "t1") {
+                const deadObj = dbPayload.death_map ? dbPayload.death_map[r.ear] : null;
+                bodyHtml += deadObj ? `<div class="guard-banner guard-danger">⚠️ 已死亡 / 已淘汰：${typeof deadObj === 'object' ? deadObj.date : deadObj}</div>` : `<div class="guard-banner guard-ok">🟢 目前狀態：在場正常 (ACTIVE) | 批次: ${cleanV(r.batch)}</div>`;
+                bodyHtml += `<div class="data-table-wrapper" style="margin-bottom:14px;"><table class="excel-data-table"><thead><tr><th>耳號</th><th>品種</th><th>性別</th><th>出生日</th><th>配種日</th><th>配種公豬</th><th>分娩日</th><th>胎次</th><th>總產</th><th>活仔</th><th>離乳</th><th>出生均重</th><th>離乳均重</th></tr></thead><tbody>${currentMatchedList.map(it => `<tr><td><b>${it.ear}</b></td><td>${cleanV(it.breed)}</td><td>${it.sex === 'MALE' ? '♂ 公' : '♀ 母'}</td><td>${cleanV(it.dob)}</td><td>${cleanV(it.mating_date)}</td><td>${cleanV(it.mate)}</td><td>${cleanV(it.farrow_date)}</td><td>${cleanV(it.parity)}</td><td>${cleanV(it.total_born)}</td><td><b>${cleanV(it.born_alive)}</b></td><td>${cleanV(it.weaning)}</td><td>${cleanV(it.birth_wt)}</td><td>${cleanV(it.wean_wt)}</td></tr>`).join('')}</tbody></table></div><div style="font-size:12px; font-weight:800; margin-bottom:6px;">🌳 三代基礎家族樹:</div><div class="dynamic-scroll-area" id="tree3GenBox" style="height:360px;"></div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 基礎履歷與三代家族樹`, bodyHtml);
+                draw3GenTree_("tree3GenBox", r); return;
+            }
+            if (tileId === "t2") {
+                const defaultSow = r.sex === "FEMALE" ? r.ear : "", defaultBoar = r.sex === "MALE" ? r.ear : "";
+                bodyHtml = `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"><div style="flex:1; min-width:160px;"><label style="font-size:11px; font-weight:800;">♀ 母豬耳號:</label><input type="text" id="guardSowInput" value="${defaultSow}"></div><div style="flex:1; min-width:160px;"><label style="font-size:11px; font-weight:800;">♂ 擬配公豬耳號:</label><input type="text" id="guardBoarInput" value="${defaultBoar}"></div><div style="display:flex; align-items:flex-end;"><button class="btn" onclick="runMatingGuardCheck()">🛡️ 執行防呆檢查</button></div></div><div id="guardResultArea"></div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, "近親防呆與疝氣/脫肛/腳蹄缺陷攔截", bodyHtml);
+                if (defaultSow || defaultBoar) runMatingGuardCheck(); return;
+            }
+            if (tileId === "t3") {
+                const selNotice = isPurebredCore_(r.ear) ? `<div class="guard-banner guard-warn">🔒 純種選育個體：請由管理層挑選種豬 (Selected by Management)</div>` : `<div class="guard-banner guard-ok">🐖 商用群個體：依現場離乳標準轉商品肉豬</div>`;
+                const conserveNotice = r.is_conserve ? `<div class="guard-banner guard-danger">🚨 保種血統，血脈需保留 / 血統需儲存</div>` : `<div style="font-size:12px; color:#475569; padding:8px;">一般血脈群組</div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 選留權限與保種提示`, selNotice + conserveNotice); return;
+            }
+            if (tileId === "t4") {
+                if (r.sex !== "MALE") { mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 公豬採精紀錄`, `<div style="text-align:center; padding:30px; font-size:15px; font-weight:900; color:#94a3b8;">EMPTY（本個體為母豬，無公豬採精紀錄）</div>`); return; }
+                const bInfo = (dbPayload.boar_info && dbPayload.boar_info[r.ear]) ? dbPayload.boar_info[r.ear] : {};
+                const logs = (dbPayload.semen_logs && dbPayload.semen_logs[r.ear]) ? dbPayload.semen_logs[r.ear] : [];
+                const grade = bInfo.boar_grade || "Grade B";
+                const gradeRule = grade === "Grade A+" ? "GP 核心群專用" : (grade === "Grade C" ? "⚠️ C級：需注意與觀察，必要時淘汰" : "PS 擴群與商品群可用");
+                bodyHtml = `<div class="guard-banner ${grade === 'Grade C' ? 'guard-danger' : 'guard-ok'}">🏆 公豬等級：<b>${grade}</b> — ${gradeRule}<br><small>品種: ${r.breed} | 出生日: ${cleanV(r.dob)} | 父親: ${cleanV(r.g3_sire_full)} | 母親: ${cleanV(r.g3_dam_full)}</small></div><div class="data-table-wrapper"><table class="excel-data-table"><thead><tr><th>採精日期</th><th>距上次天數</th><th>採精量(ml)</th><th>濃度</th><th>原液活力(%)</th><th>雜質</th><th>稀釋後體積</th><th>稀釋瓶數</th></tr></thead><tbody>${logs.length === 0 ? '<tr><td colspan="8">暫無近期採精紀錄</td></tr>' : logs.map(l => `<tr><td><b>${l.date}</b></td><td>${l.rest_days} 天</td><td>${l.vol}</td><td>${l.conc}</td><td>${l.vitality}</td><td>${l.impurities}</td><td>${l.diluted_vol}</td><td>${l.doses}</td></tr>`).join('')}</tbody></table></div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 公豬等級與採精紀錄`, bodyHtml); return;
+            }
+            if (tileId === "t5") {
+                let dueStr = "尚無最近配種日期";
+                if (r.mating_date && r.mating_date !== "-") {
+                    const mDate = new Date(r.mating_date.replace(/\//g, '-'));
+                    if (!isNaN(mDate.getTime())) { mDate.setDate(mDate.getDate() + 114); dueStr = `${mDate.getFullYear()}-${String(mDate.getMonth()+1).padStart(2,'0')}-${String(mDate.getDate()).padStart(2,'0')} (配種日 + 114 天)`; }
+                }
+                bodyHtml = `<div class="guard-banner guard-ok">📅 預估分娩日：<b>${dueStr}</b></div><div style="border:1.5px dashed #94a3b8; border-radius:8px; padding:16px; text-align:center; background:#f8fafc;"><div style="font-size:13px; font-weight:800; color:#475569;">💉 臨床用藥與疫苗免疫紀錄預留區</div><div style="font-size:11px; color:#94a3b8; margin-top:4px;">待串接現場醫藥表單後自動同步顯示</div></div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 預產期與醫藥預留架構`, bodyHtml); return;
+            }
+            if (tileId === "t6") {
+                const lines2Gen = [
+                    { role: "生父 Sire (50%)", name: r.g3_sire_line || r.g3_sire_full || "-", pct: 50 },
+                    { role: "生母 Dam (50%)", name: r.g3_dam_line || r.g3_dam_full || "-", pct: 50 },
+                    { role: "祖父 SS (25%)", name: r.ss_line || r.ss_full || "-", pct: 25 },
+                    { role: "祖母 SD (25%)", name: r.sd_line || r.sd_full || "-", pct: 25 },
+                    { role: "外祖父 DS (25%)", name: r.ds_line || r.ds_full || "-", pct: 25 },
+                    { role: "外祖母 DD (25%)", name: r.dd_line || r.dd_full || "-", pct: 25 }
                 ];
-                const lineSummary = {};
-                ancestors.forEach(a => {
-                    const l = (a.line && a.line !== '-') ? a.line : 'FOUNDATION';
-                    lineSummary[l] = (lineSummary[l] || 0) + a.weight;
-                });
-                sortedLines = Object.entries(lineSummary).sort((a, b) => b[1] - a[1]);
+                bodyHtml = `<div class="data-table-wrapper"><table class="excel-data-table"><thead><tr><th>親代層級</th><th>家族品系 / 親本名稱</th><th>血統貢獻比例 (%)</th></tr></thead><tbody>${lines2Gen.map(x => `<tr><td><b>${x.role}</b></td><td>${cleanV(x.name)}</td><td><b>${x.pct}%</b></td></tr>`).join('')}</tbody></table></div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 兩代血統比例`, bodyHtml); return;
             }
-
-            let html = `
-                <div class="strain-overview-bar">
-                    <div class="strain-parent-card" style="border-left: 4px solid #0284c7;">
-                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">父系家族品系 (Sire Strain) - 貢獻率 50%</div>
-                        <div style="font-size: 17px; font-weight: 900; color: #0284c7; margin: 3px 0;">Line: ${sLine}</div>
-                        <div style="font-size: 11px; color: #000000;">父本全名: <b>${primary.g3_sire_full || '-'}</b></div>
-                    </div>
-                    <div class="strain-parent-card" style="border-left: 4px solid #e11d48;">
-                        <div style="font-size: 11px; font-weight: 800; color: #64748b;">母系家族品系 (Dam Strain) - 貢獻率 50%</div>
-                        <div style="font-size: 17px; font-weight: 900; color: #e11d48; margin: 3px 0;">Line: ${dLine}</div>
-                        <div style="font-size: 11px; color: #000000;">母本全名: <b>${primary.g3_dam_full || '-'}</b></div>
-                    </div>
-                </div>
-
-                <div style="font-size: 12px; font-weight: 800; color: #000000; margin: 8px 0 6px 2px; display:flex; justify-content:space-between;">
-                    <span>祖先家族品系累計純度分佈 (Ancestral Lineage Proportion):</span>
-                    <span style="font-size:10.5px; color:#059669;">${sourceNote}</span>
-                </div>
-                <div class="strain-grid">
-            `;
-
-            sortedLines.forEach(([lName, pct]) => {
-                const displayPct = pct <= 1.0001 ? (pct * 100) : pct;
-                html += `
-                    <div class="strain-card">
-                        <div class="strain-name">
-                            <span><b>${lName}</b></span>
-                            <span style="color: #0284c7; font-size: 12px;">${displayPct.toFixed(1)}%</span>
-                        </div>
-                        <div class="strain-bar-bg">
-                            <div class="strain-bar-fill" style="width: ${Math.min(displayPct, 100)}%;"></div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += `</div>`;
-            container.innerHTML = html;
+            if (tileId === "t7") {
+                const limitRows = r.sex === "FEMALE" ? currentMatchedList.slice(0, 3) : currentMatchedList.slice(0, 10);
+                const sireDead = dbPayload.death_map ? dbPayload.death_map[r.g3_sire_full] : null;
+                const damDead  = dbPayload.death_map ? dbPayload.death_map[r.g3_dam_full] : null;
+                bodyHtml = `<div class="guard-banner guard-warn">🩺 親代死淘病因追溯：生父 [${sireDead ? (sireDead.date + ' ' + sireDead.cause) : '正常'}] ｜ 生母 [${damDead ? (damDead.date + ' ' + damDead.cause) : '正常'}]</div><div class="data-table-wrapper"><table class="excel-data-table"><thead><tr><th>胎次</th><th>分娩日</th><th>總產</th><th>活仔</th><th>白胎</th><th>黑胎</th><th>離乳數</th><th>懷孕天數</th><th>哺乳天數</th><th>助產</th></tr></thead><tbody>${limitRows.map(it => `<tr><td>${cleanV(it.parity)}</td><td>${cleanV(it.farrow_date)}</td><td>${cleanV(it.total_born)}</td><td>${cleanV(it.born_alive)}</td><td>${cleanV(it.stillborn)}</td><td>${cleanV(it.mummies)}</td><td>${cleanV(it.weaning)}</td><td>${cleanV(it.gestation)}</td><td>${cleanV(it.lactation)}</td><td>${cleanV(it.midwifery)}</td></tr>`).join('')}</tbody></table></div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 獸醫臨床繁育明細`, bodyHtml); return;
+            }
+            if (tileId === "t8") {
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 選育等級與建議`, `<div class="guard-banner guard-ok">🏅 綜合選育分級：<b>${cleanV(r.grade)}</b><br>📌 系統選汰建議：<b>${cleanV(r.f_advice)}</b></div>`); return;
+            }
+            if (tileId === "t9") {
+                const g1 = r.g1_nodes || {};
+                bodyHtml = `<div class="data-table-wrapper"><table class="excel-data-table"><thead><tr><th>世代層級</th><th>父系側 (Sire Side)</th><th>母系側 (Dam Side)</th></tr></thead><tbody><tr><td><b>親代 (G3)</b></td><td>${cleanV(r.g3_sire_full)} (${cleanV(r.g3_sire_line)})</td><td>${cleanV(r.g3_dam_full)} (${cleanV(r.g3_dam_line)})</td></tr><tr><td><b>祖代 (G2)</b></td><td>SS: ${cleanV(r.ss_full)} ｜ SD: ${cleanV(r.sd_full)}</td><td>DS: ${cleanV(r.ds_full)} ｜ DD: ${cleanV(r.dd_full)}</td></tr><tr><td><b>曾祖代 (G1)</b></td><td>SSS: ${cleanV(g1.sss)} ｜ SSD: ${cleanV(g1.ssd)} ｜ SDS: ${cleanV(g1.sds)} ｜ SDD: ${cleanV(g1.sdd)}</td><td>DSS: ${cleanV(g1.dss)} ｜ DSD: ${cleanV(g1.dsd)} ｜ DDS: ${cleanV(g1.dds)} ｜ DDD: ${cleanV(g1.ddd)}</td></tr></tbody></table></div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 全世代完整系譜`, bodyHtml); return;
+            }
+            if (tileId === "t10") {
+                const carcass = (dbPayload.carcass_sales || []).filter(c => c.sire === r.ear || c.dam === r.ear);
+                bodyHtml = `<div class="guard-banner guard-ok">📊 精確遺傳評估值：近交係數 F = <b>${cleanV(r.inbreeding_f)}</b> ｜ EBV_NBA = <b>${cleanV(r.ebv_nba)}</b> ｜ EBV_ADG2 = <b>${cleanV(r.ebv_adg2)}</b> ｜ SPI: <b>${cleanV(r.spi)}</b> ｜ MLI: <b>${cleanV(r.mli)}</b> ｜ TSI: <b>${cleanV(r.tsi)}</b></div><div class="data-table-wrapper"><table class="excel-data-table"><thead><tr><th>肉豬耳號</th><th>父本</th><th>母本</th><th>出欄重</th><th>ADG1</th><th>ADG2</th><th>TW-ADG</th><th>得肉率(%)</th><th>遺傳缺陷檢定</th></tr></thead><tbody>${carcass.length === 0 ? '<tr><td colspan="9">暫無直系出欄肉豬屠體紀錄</td></tr>' : carcass.slice(0, 100).map(c => `<tr><td><b>${c.ear}</b></td><td>${c.sire}</td><td>${c.dam}</td><td>${c.wt ?? '-'}</td><td>${c.adg1 ?? '-'}</td><td>${c.adg2 ?? '-'}</td><td>${c.tw_adg ?? '-'}</td><td>${c.dr ?? '-'}</td><td style="color:${c.defects.length ? '#dc2626' : '#059669'}; font-weight:800;">${c.defects.length ? c.defects.join(', ') : '✔ 正常'}</td></tr>`).join('')}</tbody></table></div>`;
+                mount.innerHTML = wrapPanelHtml(titleText, `${r.ear} 最高權限遺傳與屠體稽核`, bodyHtml); return;
+            }
         }
 
-        function renderCarcassPerformanceAudit(primary) {
-            const container = document.getElementById('carcassContainer');
-            const targetEar = primary.ear.toUpperCase();
-
-            const matches = carcassSales.filter(p => p.sire === targetEar || p.dam === targetEar || p.ear === targetEar);
-
-            if (matches.length === 0) {
-                container.innerHTML = `<div class="placeholder-text">個體 "${targetEar}" 暫無直系出欄肉豬之屠體數據或屠宰紀錄。</div>`;
-                return;
-            }
-
-            let totalWt = 0, countWt = 0;
-            let totalADG1 = 0, countADG1 = 0;
-            let totalADG2 = 0, countADG2 = 0;
-            let totalTW = 0, countTW = 0;
-            let totalDR = 0, countDR = 0;
-            let defectPorkers = 0;
-
-            matches.forEach(m => {
-                if (m.wt !== null && !isNaN(m.wt)) { totalWt += m.wt; countWt++; }
-                if (m.adg1 !== null && !isNaN(m.adg1)) { totalADG1 += m.adg1; countADG1++; }
-                if (m.adg2 !== null && !isNaN(m.adg2)) { totalADG2 += m.adg2; countADG2++; }
-                if (m.tw_adg !== null && !isNaN(m.tw_adg)) { totalTW += m.tw_adg; countTW++; }
-                if (m.dr !== null && !isNaN(m.dr)) { totalDR += m.dr; countDR++; }
-                if (m.defects && m.defects.length > 0) defectPorkers++;
-            });
-
-            const avgWt = countWt > 0 ? (totalWt / countWt).toFixed(1) : '-';
-            const avgADG1 = countADG1 > 0 ? (totalADG1 / countADG1).toFixed(0) : '-';
-            const avgADG2 = countADG2 > 0 ? (totalADG2 / countADG2).toFixed(0) : '-';
-            const avgTW = countTW > 0 ? (totalTW / countTW).toFixed(0) : '-';
-            const avgDR = countDR > 0 ? (totalDR / countDR).toFixed(1) : '-';
-            const defectPct = ((defectPorkers / matches.length) * 100).toFixed(1);
-
-            let html = `
-                <div class="kpi-summary-grid">
-                    <div class="kpi-card" style="border-color:#0284c7;">
-                        <div class="kpi-label">出欄肉豬總數</div>
-                        <div class="kpi-val">${matches.length} 頭</div>
-                    </div>
-                    <div class="kpi-card" style="border-color:#059669;">
-                        <div class="kpi-label">平均出欄體重 (kg)</div>
-                        <div class="kpi-val">${avgWt}</div>
-                    </div>
-                    <div class="kpi-card" style="border-color:#d97706;">
-                        <div class="kpi-label">均 ADG1 / ADG2 (g/d)</div>
-                        <div class="kpi-val">${avgADG1} / ${avgADG2}</div>
-                    </div>
-                    <div class="kpi-card" style="border-color:#0d9488;">
-                        <div class="kpi-label">時間加權 TW-ADG (g/d)</div>
-                        <div class="kpi-val">${avgTW}</div>
-                    </div>
-                    <div class="kpi-card" style="border-color:#6366f1;">
-                        <div class="kpi-label">平均屠宰得肉率 (%)</div>
-                        <div class="kpi-val">${avgDR}</div>
-                    </div>
-                    <div class="kpi-card" style="border-color:#dc2626;">
-                        <div class="kpi-label">遺傳缺陷率 (%)</div>
-                        <div class="kpi-val" style="color:#dc2626;">${defectPct} <small style="font-size:11px;">(${defectPorkers}頭)</small></div>
-                    </div>
-                </div>
-
-                <div class="data-table-wrapper" id="carcassTableWrapper">
-                    <table class="excel-data-table">
-                        <thead>
-                            <tr>
-                                <th>肉豬耳號 (Porker Ear)</th>
-                                <th>父本公豬 (Sire)</th>
-                                <th>母本母豬 (Dam)</th>
-                                <th>親代品系 (G3 Strains)</th>
-                                <th>出欄體重 (kg)</th>
-                                <th>ADG1 (g/d)</th>
-                                <th>ADG2 (g/d)</th>
-                                <th>TW-ADG (g/d)</th>
-                                <th>得肉率 (%)</th>
-                                <th>屠體重 (kg)</th>
-                                <th>遺傳缺陷檢定 (Defect Audit)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            matches.forEach(m => {
-                let defectHtml = '<span class="defect-none">✔ 正常 (Normal)</span>';
-                if (m.defects && m.defects.length > 0) {
-                    defectHtml = m.defects.map(d => `<span class="defect-badge">${d}</span>`).join(' ');
-                }
-
-                html += `
-                    <tr>
-                        <td><b>${m.ear}</b></td>
-                        <td style="font-weight:700;">${m.sire}</td>
-                        <td style="font-weight:700;">${m.dam}</td>
-                        <td>${m.g3_m} × ${m.g3_f}</td>
-                        <td><b>${m.wt !== null ? m.wt : '-'}</b></td>
-                        <td>${m.adg1 !== null ? m.adg1 : '-'}</td>
-                        <td>${m.adg2 !== null ? m.adg2 : '-'}</td>
-                        <td>${m.tw_adg !== null ? m.tw_adg : '-'}</td>
-                        <td>${m.dr !== null ? m.dr : '-'}</td>
-                        <td>${m.ckg !== null ? m.ckg : '-'}</td>
-                        <td>${defectHtml}</td>
-                    </tr>
-                `;
-            });
-
-            html += `</tbody></table></div>`;
-            container.innerHTML = html;
+        function wrapPanelHtml(title, sub, innerHtml) {
+            return `<div class="content-panel visible" id="activeExportTarget"><div class="panel-header"><div class="panel-title-box"><h3>${title}</h3><p>${sub}</p></div><button class="btn btn-export" onclick="exportCurrentVisiblePanel()">📸 證書級全幅匯出 PNG</button></div>${innerHtml}</div>`;
         }
 
-        function exportFullPage(elemId, prefix) {
-            const originalElem = document.getElementById(elemId);
-            if (!originalElem) return;
+        function draw3GenTree_(boxId, target) {
+            const box = document.getElementById(boxId);
+            if (!box) return;
+            const W = 720, H = 340, cardW = 180, cardH = 52;
+            box.innerHTML = `<svg class="orthogonal-svg" width="${W}" height="${H}" id="svg3Gen"></svg><div id="nodes3Gen" style="position:relative; width:${W}px; height:${H}px;"></div>`;
+            const svg = document.getElementById("svg3Gen"), nodesDiv = document.getElementById("nodes3Gen");
+            const pts = {
+                T: { x: 15, y: H/2 - cardH/2, role: "TARGET 本體", ear: target.ear, b: target.breed },
+                S: { x: 250, y: H*0.25 - cardH/2, role: "生父 (Sire)", ear: target.g3_sire_full, b: target.breed },
+                D: { x: 250, y: H*0.75 - cardH/2, role: "生母 (Dam)", ear: target.g3_dam_full, b: target.breed },
+                SS: { x: 490, y: H*0.12 - cardH/2, role: "祖父 (SS)", ear: target.ss_full, b: target.breed },
+                SD: { x: 490, y: H*0.37 - cardH/2, role: "祖母 (SD)", ear: target.sd_full, b: target.breed },
+                DS: { x: 490, y: H*0.63 - cardH/2, role: "外祖父 (DS)", ear: target.ds_full, b: target.breed },
+                DD: { x: 490, y: H*0.88 - cardH/2, role: "外祖母 (DD)", ear: target.dd_full, b: target.breed }
+            };
+            [['T','S'],['T','D'],['S','SS'],['S','SD'],['D','DS'],['D','DD']].forEach(([a, b]) => {
+                const p1 = pts[a], p2 = pts[b], x1 = p1.x + cardW, y1 = p1.y + cardH/2, x2 = p2.x, y2 = p2.y + cardH/2, mid = (x1 + x2) / 2;
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", `M ${x1} ${y1} H ${mid} V ${y2} H ${x2}`);
+                path.setAttribute("fill", "none"); path.setAttribute("stroke", "#64748b"); path.setAttribute("stroke-width", "1.6");
+                svg.appendChild(path);
+            });
+            Object.values(pts).forEach(n => {
+                const el = document.createElement("div");
+                el.className = `tree-node-box ${getBreedCss(n.b)}`;
+                el.style.left = n.x + "px"; el.style.top = n.y + "px"; el.style.width = cardW + "px"; el.style.height = cardH + "px";
+                el.innerHTML = `<div style="font-size:9px; color:#475569; font-weight:800;">${n.role}</div><div style="font-size:12px; color:#dc2626; font-weight:900;">${cleanV(n.ear)}</div>`;
+                nodesDiv.appendChild(el);
+            });
+        }
 
-            showToast("📷 正在生成整頁無截斷高解析長圖...");
+        function runMatingGuardCheck() {
+            const sowEar = normalizeEarInput(document.getElementById('guardSowInput').value);
+            const boarEar = normalizeEarInput(document.getElementById('guardBoarInput').value);
+            const out = document.getElementById('guardResultArea');
+            if (!sowEar || !boarEar) { out.innerHTML = `<div class="guard-banner guard-warn">請同時輸入母豬耳號與擬配公豬耳號以進行比對</div>`; return; }
+            const sow = (dbPayload.pedigree || []).find(p => p.ear === sowEar);
+            const boar = (dbPayload.pedigree || []).find(p => p.ear === boarEar);
+            const bInfo = (dbPayload.boar_info && dbPayload.boar_info[boarEar]) ? dbPayload.boar_info[boarEar] : null;
+            let alerts = [];
+            if (sow && boar) {
+                const sAnc = [sow.ear, sow.g3_sire_full, sow.g3_dam_full, sow.ss_full, sow.sd_full, sow.ds_full, sow.dd_full].filter(x => x && x !== "-");
+                const bAnc = [boar.ear, boar.g3_sire_full, boar.g3_dam_full, boar.ss_full, boar.sd_full, boar.ds_full, boar.dd_full].filter(x => x && x !== "-");
+                const overlap = sAnc.filter(x => bAnc.includes(x));
+                if (overlap.length > 0) { vibratePhone([100, 60, 100, 60, 200]); alerts.push(`<div class="guard-banner guard-danger">⛔ 禁止近親（兩代內近親）！重疊親本：${overlap.join(', ')}</div>`); }
+                if (sow.breed === "LY" && !boar.breed.startsWith("D")) alerts.push(`<div class="guard-banner guard-danger">⛔ 品種錯誤：LY 二元母豬應配杜洛克 (D) 公豬，目前公豬為 ${boar.breed}！</div>`);
+            }
+            if (bInfo) {
+                const highList = [], warnList = [];
+                if (bInfo.hernia >= 8) highList.push(`疝氣(${bInfo.hernia}例)`); else if (bInfo.hernia >= 3) warnList.push(`疝氣(${bInfo.hernia}例)`);
+                if (bInfo.prolapse >= 3) highList.push(`脫肛(${bInfo.prolapse}例)`); else if (bInfo.prolapse >= 1) warnList.push(`脫肛(${bInfo.prolapse}例)`);
+                if (bInfo.leg >= 5) highList.push(`腳蹄問題(${bInfo.leg}例)`); else if (bInfo.leg >= 2) warnList.push(`腳蹄問題(${bInfo.leg}例)`);
+                if (highList.length > 0) { vibratePhone([100, 60, 100, 60, 200]); alerts.push(`<div class="guard-banner guard-danger">⛔ 高風險遺傳缺陷警告：【${highList.join('、')}】，此公豬不可配種！</div>`); }
+                else if (warnList.length > 0) alerts.push(`<div class="guard-banner guard-warn">⚠️ 中度遺傳缺陷提示：【${warnList.join('、')}】，建議謹慎使用</div>`);
+            }
+            if (alerts.length === 0) { vibratePhone(30); alerts.push(`<div class="guard-banner guard-ok">✅ 配對安全通過：無兩代內近親且無高風險遺傳缺陷</div>`); }
+            out.innerHTML = alerts.join('');
+            sendSilentAudit("MATING_GUARD", `${sowEar}x${boarEar}`, 0, isPurebredCore_(sowEar) || isPurebredCore_(boarEar), `執行配種防呆檢查`);
+        }
 
-            const clone = originalElem.cloneNode(true);
-            clone.style.maxHeight = 'none';
-            clone.style.height = 'auto';
-            clone.style.overflow = 'visible';
-            clone.style.position = 'absolute';
-            clone.style.top = '-99999px';
-            clone.style.left = '0px';
-            clone.style.width = originalElem.scrollWidth + 'px';
-            clone.style.backgroundColor = '#ffffff';
+        function exportCurrentVisiblePanel() {
+            const target = document.getElementById('activeExportTarget');
+            if (!target) { showToast("⚠️ 請先查詢耳號並開啟任一功能磚"); return; }
+            showToast("📸 正在生成證書級全幅高解析圖檔...");
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const earTitle = currentRecord ? `${currentRecord.ear} (${currentRecord.breed})` : "GLA Record";
+            const tileMeta = ALL_TILES.find(t => t.id === activeTileId) || { zh: "現場作業報告", en: "Field Report" };
 
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'absolute'; wrapper.style.left = '-99999px'; wrapper.style.top = '0px';
+            wrapper.style.background = '#ffffff'; wrapper.style.padding = '24px'; wrapper.style.minWidth = '1020px'; wrapper.style.width = 'max-content';
+
+            const headerBanner = document.createElement('div');
+            headerBanner.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #0284c7 100%)';
+            headerBanner.style.color = '#ffffff'; headerBanner.style.padding = '18px 24px'; headerBanner.style.borderRadius = '8px 8px 0 0';
+            headerBanner.style.display = 'flex'; headerBanner.style.justifyContent = 'space-between'; headerBanner.style.alignItems = 'center';
+            headerBanner.innerHTML = `<div><div style="font-size:22px; font-weight:900;">🐖 GLA現場作業平臺 — 官方造冊育種與系譜報告</div><div style="font-size:13px; opacity:0.9; margin-top:4px;">GLA Official Pedigree & Farm Operations Certificate ｜ ${tileMeta.zh} (${tileMeta.en})</div></div><div style="text-align:right; background:rgba(255,255,255,0.15); padding:8px 14px; border-radius:6px;"><div style="font-size:11px; opacity:0.85;">檢索個體 / TARGET</div><div style="font-size:18px; font-weight:900; color:#fde047;">${earTitle}</div></div>`;
+            wrapper.appendChild(headerBanner);
+
+            const bodyBox = document.createElement('div');
+            bodyBox.style.position = 'relative'; bodyBox.style.border = '1.5px solid #cbd5e1'; bodyBox.style.borderTop = 'none';
+            bodyBox.style.padding = '20px'; bodyBox.style.background = '#ffffff'; bodyBox.style.overflow = 'visible';
+
+            const clone = target.cloneNode(true);
+            clone.style.border = 'none'; clone.style.boxShadow = 'none'; clone.style.margin = '0'; clone.style.padding = '0';
+            clone.style.width = 'max-content'; clone.style.minWidth = '970px';
+            const expBtn = clone.querySelector('.btn-export');
+            if (expBtn) expBtn.remove();
             clone.querySelectorAll('.data-table-wrapper, .dynamic-scroll-area, table').forEach(el => {
-                el.style.maxHeight = 'none';
-                el.style.height = 'auto';
-                el.style.overflow = 'visible';
+                el.style.maxHeight = 'none'; el.style.height = 'auto'; el.style.overflow = 'visible'; el.style.width = 'max-content'; el.style.minWidth = '100%';
             });
+            bodyBox.appendChild(clone);
 
-            document.body.appendChild(clone);
+            const watermark = document.createElement('div');
+            watermark.style.position = 'absolute'; watermark.style.top = '50%'; watermark.style.left = '50%';
+            watermark.style.transform = 'translate(-50%, -50%) rotate(-22deg)'; watermark.style.fontSize = '54px';
+            watermark.style.fontWeight = '900'; watermark.style.color = 'rgba(100, 116, 139, 0.08)';
+            watermark.style.whiteSpace = 'nowrap'; watermark.style.pointerEvents = 'none'; watermark.style.zIndex = '999';
+            watermark.innerText = 'GLA PEDIGREE • GLA 家族樹';
+            bodyBox.appendChild(watermark);
+            wrapper.appendChild(bodyBox);
 
-            html2canvas(clone, {
-                scale: 2.0,
-                backgroundColor: '#ffffff',
-                useCORS: true,
-                width: clone.scrollWidth,
-                height: clone.scrollHeight
-            }).then(canvas => {
-                document.body.removeChild(clone);
+            const footer = document.createElement('div');
+            footer.style.background = '#f8fafc'; footer.style.border = '1.5px solid #cbd5e1'; footer.style.borderTop = 'none';
+            footer.style.borderRadius = '0 0 8px 8px'; footer.style.padding = '6px 16px'; footer.style.display = 'flex';
+            footer.style.justifyContent = 'space-between'; footer.style.fontSize = '10.5px'; footer.style.color = '#cbd5e1'; footer.style.fontWeight = '700';
+            footer.innerHTML = `<span>GLA Official Pedigree System</span><span>Record Date: ${todayStr}</span>`;
+            wrapper.appendChild(footer);
+
+            document.body.appendChild(wrapper);
+            html2canvas(wrapper, { scale: 2.0, backgroundColor: '#ffffff', useCORS: true, width: wrapper.scrollWidth, height: wrapper.scrollHeight }).then(canvas => {
+                document.body.removeChild(wrapper);
                 const a = document.createElement('a');
-                a.download = `${prefix}_${getTodayDateStr()}.png`;
-                a.href = canvas.toDataURL();
-                a.click();
-                showToast("✅ 整頁圖檔已成功下載！");
-            }).catch(err => {
-                console.error("Export error:", err);
-                if (document.body.contains(clone)) document.body.removeChild(clone);
-                showToast("❌ 匯出失敗，請重試。");
-            });
+                a.download = `GLA_${currentRecord ? currentRecord.ear : 'Report'}_${todayStr.replace(/-/g, '')}.png`;
+                a.href = canvas.toDataURL('image/png'); a.click();
+                showToast("✅ 證書級全幅圖檔已下載！");
+                sendSilentAudit("EXPORT_PNG", lastQueryEar, 0, isPurebredCore_(lastQueryEar), `匯出證書圖檔 (${tileMeta.zh})`);
+            }).catch(() => { if (document.body.contains(wrapper)) document.body.removeChild(wrapper); showToast("❌ 匯出失敗"); });
         }
+
+        function scrollToTiles() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function focusSearch() { const el = document.getElementById('earInput'); el.focus(); el.select(); }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            startClockAndWeather();
+            initDeviceFingerprint();
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+            document.getElementById('gatePasswordInput').focus();
+        });
     </script>
 </body>
 </html>
