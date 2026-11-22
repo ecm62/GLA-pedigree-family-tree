@@ -60,7 +60,6 @@
         .card-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .dynamic-scroll-area { position: relative; width: 100%; overflow: auto; background: #fafbfc; border-radius: 5px; border: 1px solid #e2e8f0; }
 
-        /* 四代家族系統圖排版 */
         .node-group-container { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 2; transition: transform 0.1s; cursor: pointer; }
         .node-group-container:hover { transform: scale(1.02); z-index: 10; }
         .node-box-main { border-radius: 4px; padding: 4px 6px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.04); width: 100%; text-align: center; }
@@ -74,7 +73,6 @@
 
         svg.orthogonal-svg { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
-        /* 商業表格樣式：黑字、置中 */
         .data-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 5px; max-height: 480px; }
         .excel-data-table { width: 100%; border-collapse: collapse; font-size: 11px; background-color: #fff; white-space: nowrap; text-align: center; color: #000000; }
         .excel-data-table th { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff; font-weight: 700; padding: 5px 6px; border: 1px solid #334155; font-size: 10.5px; position: sticky; top: 0; z-index: 5; vertical-align: bottom; }
@@ -82,18 +80,15 @@
         .excel-data-table tr:nth-child(even) { background-color: #f8fafc; }
         .excel-data-table tr:hover { background-color: #f1f5f9; }
 
-        /* 蝴蝶拓撲樹節點 */
         .butterfly-compact-node { position: absolute; border-radius: 4px; padding: 4px 6px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center; z-index: 2; cursor: pointer; transition: transform 0.1s; }
         .butterfly-compact-node:hover { transform: scale(1.04); z-index: 10; }
 
-        /* 蝴蝶樹下方品系平均成績 */
         .strain-benchmark-bar { margin-top: 10px; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; }
         .benchmark-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 6px; }
         .benchmark-pill { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 10px; display: flex; flex-direction: column; justify-content: space-between; }
         .benchmark-pill-title { font-size: 11px; font-weight: 800; color: #1e3a8a; display: flex; justify-content: space-between; }
         .benchmark-pill-stats { font-size: 9.5px; color: #475569; margin-top: 2px; display: flex; justify-content: space-between; font-weight: 600; }
 
-        /* 血統比例 */
         .strain-overview-bar { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
         .strain-parent-card { flex: 1; min-width: 240px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .strain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
@@ -102,7 +97,6 @@
         .strain-bar-bg { background-color: #e2e8f0; border-radius: 3px; height: 7px; width: 100%; overflow: hidden; }
         .strain-bar-fill { height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 100%); }
 
-        /* KPI 卡片 */
         .kpi-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
         .kpi-card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border-top: 3.5px solid #0284c7; text-align: center; }
         .kpi-label { font-size: 10.5px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
@@ -110,7 +104,6 @@
         .defect-badge { background-color: #fee2e2; color: #dc2626; border: 1px solid #f87171; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 3px; display: inline-block; margin: 1px; }
         .defect-none { color: #10b981; font-weight: 700; font-size: 10px; }
 
-        /* 門禁視窗 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 999999; }
         .modal-box { background: #ffffff; border-radius: 8px; width: 90%; max-width: 440px; padding: 22px 26px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); text-align: center; }
         .modal-title-cn { font-size: 17px; font-weight: 900; color: #dc2626; margin-bottom: 2px; }
@@ -579,7 +572,6 @@
         function normalizeQueryEar(raw) {
             let q = raw.trim().toUpperCase();
             if (q.endsWith('.0')) q = q.slice(0, -2);
-            // 若輸入純數字（如 1400），自動在 US 原種索引中尋找對應前綴（D1400 / L1400 / Y1400）
             if (/^\d+$/.test(q)) {
                 for (const prefix of ['D', 'L', 'Y']) {
                     if (usIndex[prefix + q] || pedigreeList.some(it => it.ear === prefix + q)) {
@@ -656,7 +648,6 @@
             }, 30);
         }
 
-        /* 育種成績總表（遵循黑字、置中、抑制零值規範） */
         function renderTable(items, query, primary) {
             const tbody = document.getElementById('excelTableBody');
             const isMale = primary && primary.sex === 'MALE';
@@ -690,7 +681,6 @@
             tbody.innerHTML = html;
         }
 
-        /* 官方四代家族系統圖 */
         function drawOfficialPedigree(target) {
             const container = document.getElementById('certBoxesContainer');
             const svgLayer = document.getElementById('certSvg');
@@ -769,7 +759,7 @@
                 };
             }
 
-            const links = [
+            [
                 ['T', 'S'], ['T', 'D'],
                 ['S', 'SS'], ['S', 'SD'],
                 ['D', 'DS'], ['D', 'DD'],
@@ -777,9 +767,7 @@
                 ['SD', 'G3_2'], ['SD', 'G3_3'],
                 ['DS', 'G3_4'], ['DS', 'G3_5'],
                 ['DD', 'G3_6'], ['DD', 'G3_7']
-            ];
-
-            links.forEach(([from, to]) => {
+            ].forEach(([from, to]) => {
                 const f = nodes[from], t = nodes[to];
                 const x1 = f.x + cardW, y1 = f.y + boxMainH / 2;
                 const x2 = t.x, y2 = t.y + boxMainH / 2;
@@ -840,7 +828,6 @@
             });
         }
 
-        /* 🌳 蝴蝶對稱全系譜家族拓撲樹（已修正：目標本體同時顯示父系×母系雙血脈） */
         function drawButterflyTopologyTree(target) {
             const container = document.getElementById('macroBoxesContainer');
             const svgLayer = document.getElementById('macroSvg');
@@ -998,7 +985,6 @@
             }
         }
 
-        /* 🌱 全血統後代留種追蹤（已修正：母豬查詢時依「配種公豬 / 胎次」正確分組掛載 F1 女兒） */
         function renderDescendantSplitView(primary) {
             const container = document.getElementById('descendantContainer');
             const targetEar = primary.ear.toUpperCase();
@@ -1045,7 +1031,6 @@
                     }
                 });
             } else {
-                // 查詢目標為「母豬」：依配種公豬（Sire）分組
                 const myLitters = pedigreeList.filter(it => it.ear === targetEar && it.mate && it.mate !== '-');
                 myLitters.forEach(m => {
                     const sKey = m.mate.toUpperCase();
@@ -1169,7 +1154,6 @@
             container.innerHTML = html;
         }
 
-        /* 🧬 家族品系血統比例分析表（優先採用《育種_血統比例》精算結果） */
         function renderFamilyLineProportion(primary) {
             const container = document.getElementById('bloodContainer');
             const targetEar = primary.ear.toUpperCase();
@@ -1242,7 +1226,6 @@
             container.innerHTML = html;
         }
 
-        /* 🥩 直系後裔屠體銷售與遺傳缺陷檢定表 */
         function renderCarcassPerformanceAudit(primary) {
             const container = document.getElementById('carcassContainer');
             const targetEar = primary.ear.toUpperCase();
