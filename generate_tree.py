@@ -1,6 +1,7 @@
 import io
 import json
 import re
+from datetime import datetime
 import pandas as pd
 import requests
 
@@ -8,10 +9,14 @@ import requests
 SPREADSHEET_ID = "1CwvYVhvKpSKTbuyA0pEYHXHTnORSpNKQAVFmNEpkHyE"
 
 # 🌟 精確定位《💻🐷🪰整合2(育種端)》分頁 GID
-GID_HIERARCHY = "538252601"   # 📊 育種_家族階層清單(轉) [真實逐胎次生產履歷、G1-G8系譜、年齡、役期]
-GID_US_ORIGIN = "624453592"   # 美國原始種源數據(轉) [美系原原種 G1-G4 證書系譜]
-GID_CARCASS   = "1828266796"  # 肉豬與屠宰回溯 [出欄肉豬生長、屠體率與獨立拆列遺傳缺陷]
-GID_DEATH     = "1502904612"  # 種豬死亡與淘汰整併(自動)(轉) [全場公母豬死淘狀態補強]
+GID_HIERARCHY = "538252601"   # 📊 育種_家族階層清單(轉)
+GID_US_ORIGIN = "624453592"   # 美國原始種源數據(轉)
+GID_CARCASS   = "1828266796"  # 肉豬與屠宰回溯
+GID_DEATH     = "1502904612"  # 種豬死亡與淘汰整併(自動)(轉)
+GID_BLOOD     = "982285822"   # 📊 育種_血統比例(轉)
+GID_SOW_EVAL  = "1267383696"  # 母豬育種與系譜
+GID_BOAR_EVAL = "686220243"   # 公豬育種與採精
+
 
 def fetch_sheet_csv(gid):
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
@@ -25,46 +30,60 @@ def fetch_sheet_csv(gid):
         print(f"❌ 連線 GID {gid} 異常: {e}")
     return ""
 
+
 def clean_val(val):
     if pd.isna(val) or val is None:
         return "-"
     s = str(val).replace('\n', ' ').replace('\r', '').strip()
     return s if s.lower() not in ['nan', 'none', '', 'null', 'undefined'] else "-"
 
+
 def clean_num(val):
     s = clean_val(val)
     if s == "-":
         return "-"
-    # 去除可能的 .0 尾綴（如 1406.0 -> 1406）
-    if re.match(r'^\d+\.0$', s):
+    if re.match(r'^-?\d+\.0$', s):
         return s[:-2]
     m = re.search(r'^-?\d+(\.\d+)?$', s)
     return m.group(0) if m else "-"
 
-def normalize_ear(val):
+
+def normalize_ear(val, default_breed=""):
     s = clean_val(val).upper()
     if s == "-":
         return "-"
     if s.endswith(".0"):
         s = s[:-2]
+    if s.isdigit() and len(s) <= 4 and default_breed:
+        b = default_breed.upper()
+        prefix = 'D' if b.startswith('D') else ('L' if b.startswith('L') else ('Y' if b.startswith('Y') else ''))
+        if prefix:
+            return f"{prefix}{s}"
     return s
 
-def find_col(kws, df):
+
+def find_col(kws, df, exact_first=True):
+    if df is None or df.empty:
+        return None
+    if exact_first:
+        for kw in kws:
+            for c in df.columns:
+                if c.strip().lower() == kw.strip().lower():
+                    return c
     for kw in kws:
         for c in df.columns:
             if kw.lower() in c.lower():
                 return c
     return None
 
+
 def is_positive_flag(val):
     s = clean_val(val).upper()
     return s not in ['-', '0', '0.0', 'FALSE', 'NO', 'N', '正常']
 
+
 def main():
-    # ---------------------------------------------------------
-    # 1. 抓取死淘整併表，建立全場最準確的死淘字典
-    # ---------------------------------------------------------
-    print("🚀 [1/4] 抓取《種豬死亡與淘汰整併(自動)(轉)》...")
+    print("🚀 [1/6] 抓取《種豬死亡與淘汰整併(自動)(轉)》...")
     raw_death = fetch_sheet_csv(GID_DEATH)
     df_death = pd.read_csv(io.StringIO(raw_death), low_memory=False) if raw_death else pd.DataFrame()
     df_death.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_death.columns]
@@ -83,10 +102,34 @@ def main():
             death_map[ear] = dt if dt != "-" else (st if st != "-" else "DEAD/CULLED")
     print(f"   ✓ 載入 {len(death_map)} 筆死淘紀錄。")
 
-    # ---------------------------------------------------------
-    # 2. 抓取美國原始種源數據
-    # ---------------------------------------------------------
-    print("🚀 [2/4] 抓取《美國原始種源數據(轉)》...")
+    print("🚀 [2/6] 抓取《母豬育種與系譜》與《公豬育種與採精》補充近交F與等級...")
+    eval_meta = {}
+    for gid, ear_kws in [(GID_SOW_EVAL, ['Ear No.', '耳號']), (GID_BOAR_EVAL, ['Boar Ear', '耳號'])]:
+        raw_ev = fetch_sheet_csv(gid)
+        df_ev = pd.read_csv(io.StringIO(raw_ev), low_memory=False) if raw_ev else pd.DataFrame()
+        df_ev.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_ev.columns]
+        if not df_ev.empty:
+            c_e = find_col(ear_kws, df_ev)
+            c_b = find_col(['Breed', '品種'], df_ev)
+            c_f = find_col(['Inbreeding F', '近交F', '近交係數'], df_ev)
+            c_g = find_col(['Grade', '等級'], df_ev)
+            for _, r in df_ev.iterrows():
+                b_str = clean_val(r.get(c_b))
+                ear = normalize_ear(r.get(c_e), b_str)
+                if ear == "-":
+                    continue
+                f_val = clean_num(r.get(c_f))
+                g_val = clean_val(r.get(c_g))
+                if ear not in eval_meta:
+                    eval_meta[ear] = {"f": f_val, "grade": g_val}
+                else:
+                    if eval_meta[ear]["f"] == "-" and f_val != "-":
+                        eval_meta[ear]["f"] = f_val
+                    if eval_meta[ear]["grade"] == "-" and g_val != "-":
+                        eval_meta[ear]["grade"] = g_val
+    print(f"   ✓ 載入 {len(eval_meta)} 頭個體近交F與等級索引。")
+
+    print("🚀 [3/6] 抓取《美國原始種源數據(轉)》...")
     raw_us = fetch_sheet_csv(GID_US_ORIGIN)
     df_us = pd.read_csv(io.StringIO(raw_us), low_memory=False) if raw_us else pd.DataFrame()
     df_us.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_us.columns]
@@ -146,10 +189,7 @@ def main():
             }
     print(f"   ✓ 載入 {len(us_dict)} 頭美系原種檔案。")
 
-    # ---------------------------------------------------------
-    # 3. 抓取《📊 育種_家族階層清單(轉)》建立逐胎次生產與系譜庫
-    # ---------------------------------------------------------
-    print("🚀 [3/4] 抓取《📊 育種_家族階層清單(轉)》...")
+    print("🚀 [4/6] 抓取《📊 育種_家族階層清單(轉)》...")
     raw_hier = fetch_sheet_csv(GID_HIERARCHY)
     df_hier = pd.read_csv(io.StringIO(raw_hier), low_memory=False) if raw_hier else pd.DataFrame()
     df_hier.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_hier.columns]
@@ -172,7 +212,8 @@ def main():
     known_ears = set()
 
     for _, r in df_hier.iterrows():
-        ear_upper = normalize_ear(r.get(c_ear))
+        breed_raw = clean_val(r.get(c_breed)).upper()
+        ear_upper = normalize_ear(r.get(c_ear), breed_raw)
         if ear_upper == "-" or ear_upper == "耳號":
             continue
         known_ears.add(ear_upper)
@@ -183,7 +224,7 @@ def main():
         elif ear_upper in death_map:
             dod = death_map[ear_upper]
 
-        breed = clean_val(r.get(c_breed)).upper()
+        breed = breed_raw
         if breed == "-":
             breed = "LY" if ear_upper.startswith("LY") else (
                 "Y" if ear_upper.startswith("Y") else (
@@ -210,6 +251,7 @@ def main():
 
         sex_raw = clean_val(r.get(c_sex)).upper()
         is_female = (sex_raw in ["FEMALE", "F", "母", "SOW", "GILT"]) or ear_upper.startswith("LY")
+        ev = eval_meta.get(ear_upper, {"f": "-", "grade": "-"})
 
         entry = {
             "ear": ear_upper,
@@ -231,6 +273,8 @@ def main():
             "spi": clean_num(r.get(find_col(['計算 SPI', 'SPI'], df_hier))),
             "mli": clean_num(r.get(find_col(['母系指數', 'MLI'], df_hier))),
             "tsi": clean_num(r.get(find_col(['終端公豬指數', 'TSI', 'PSI'], df_hier))),
+            "inbreeding_f": ev["f"],
+            "grade": ev["grade"],
             "g3_sire_full": sire_full,
             "g3_sire_line": sire_line,
             "g3_sire_spi": clean_num(r.get(find_col(['G3_父SPI', 'G3_父代SPI'], df_hier))),
@@ -260,18 +304,19 @@ def main():
         }
         pedigree_list.append(entry)
 
-    # 補齊尚未配種分娩的美系原種公母豬
     for boar_ear, bdata in us_dict.items():
         if boar_ear not in known_ears:
+            ev = eval_meta.get(boar_ear, {"f": "-", "grade": "-"})
             pedigree_list.append({
                 "ear": boar_ear,
                 "breed": bdata["breed"][0] if bdata["breed"] in ['LANDRACE', 'YORKSHIRE', 'DUROC'] else bdata["breed"],
-                "sex": bdata["sex"], "parity": "0", "mate": "-", "mating_date": "-", "farrow_date": "-", "dob": "-",
+                "sex": bdata["sex"], "parity": "-", "mate": "-", "mating_date": "-", "farrow_date": "-", "dob": "-",
                 "dod": death_map.get(boar_ear, "-"),
                 "current_age": "-", "used_years": "-",
                 "g5_sire": "-", "g5_dam": "-",
                 "total_born": "-", "born_alive": "-", "weaning": "-",
                 "spi": bdata["spi"], "mli": bdata["mli"], "tsi": bdata["tsi"],
+                "inbreeding_f": ev["f"], "grade": ev["grade"],
                 "g3_sire_full": bdata["sire_full"], "g3_sire_line": bdata["sire_line"],
                 "g3_sire_spi": bdata["sire_spi"], "g3_sire_mli": bdata["sire_mli"],
                 "g3_dam_full": bdata["dam_full"], "g3_dam_line": bdata["dam_line"],
@@ -283,16 +328,39 @@ def main():
                 "g1_nodes": bdata["g1_nodes"]
             })
 
-    # 建立快速索引，供肉豬屠體表反查父母的祖代品系 (G3-m / G3-f)
+    print("🚀 [5/6] 抓取《📊 育種_血統比例(轉)》...")
+    raw_blood = fetch_sheet_csv(GID_BLOOD)
+    df_blood = pd.read_csv(io.StringIO(raw_blood), low_memory=False) if raw_blood else pd.DataFrame()
+    df_blood.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_blood.columns]
+
+    bloodline_map = {}
+    if not df_blood.empty:
+        c_b_ear = find_col(['查詢耳號', '耳號'], df_blood)
+        blood_cols = [c for c in df_blood.columns if ('♂' in c or '♀' in c)]
+        for _, r in df_blood.iterrows():
+            ear = normalize_ear(r.get(c_b_ear))
+            if ear == "-":
+                continue
+            ratios = {}
+            for bc in blood_cols:
+                val = clean_num(r.get(bc))
+                if val != "-":
+                    try:
+                        num = float(val)
+                        if num > 0:
+                            ratios[bc] = round(num, 4)
+                    except Exception:
+                        pass
+            if ratios:
+                bloodline_map[ear] = ratios
+    print(f"   ✓ 載入 {len(bloodline_map)} 頭個體始祖血統百分比。")
+
+    print("🚀 [6/6] 抓取《肉豬與屠宰回溯》屠體與遺傳缺陷庫...")
     ear_to_line = {}
     for p in pedigree_list:
         if p["ear"] not in ear_to_line and p["g3_sire_line"] != "-":
             ear_to_line[p["ear"]] = p["g3_sire_line"]
 
-    # ---------------------------------------------------------
-    # 4. 抓取《肉豬與屠宰回溯 (GID: 1828266796)》屠體與遺傳缺陷庫
-    # ---------------------------------------------------------
-    print("🚀 [4/4] 抓取《肉豬與屠宰回溯》屠體與遺傳缺陷庫...")
     raw_carcass = fetch_sheet_csv(GID_CARCASS)
     df_carcass = pd.read_csv(io.StringIO(raw_carcass), low_memory=False) if raw_carcass else pd.DataFrame()
     df_carcass.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_carcass.columns]
@@ -305,6 +373,7 @@ def main():
         c_wt     = find_col(['Market Wt', '銷售體重'], df_carcass)
         c_adg1   = find_col(['ADG1'], df_carcass)
         c_adg2   = find_col(['ADG2'], df_carcass)
+        c_tw     = find_col(['TW-ADG'], df_carcass)
         c_yield  = find_col(['Carcass Yield', '屠宰得肉率'], df_carcass)
         c_hernia = find_col(['Hernia', '疝氣'], df_carcass)
         c_crypt  = find_col(['Cryptorchid', '隱睪'], df_carcass)
@@ -345,6 +414,7 @@ def main():
                 'wt': wt_val,
                 'adg1': to_float(c_adg1),
                 'adg2': to_float(c_adg2),
+                'tw_adg': to_float(c_tw),
                 'b_wk': None,
                 's_wk': None,
                 'dr': dr_val,
@@ -354,9 +424,11 @@ def main():
     print(f"   ✓ 成功收錄 {len(carcass_list)} 筆出欄屠體與遺傳缺陷記錄。")
 
     final_payload = {
+        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "pedigree": pedigree_list,
         "death_map": death_map,
         "us_index": us_dict,
+        "bloodline_map": bloodline_map,
         "carcass_sales": carcass_list
     }
 
@@ -364,6 +436,7 @@ def main():
         json.dump(final_payload, f, ensure_ascii=False)
 
     print(f"🎉 產出成功！共收錄 {len(pedigree_list)} 筆種豬真實胎次，{len(carcass_list)} 筆出欄肉豬。")
+
 
 if __name__ == '__main__':
     main()
