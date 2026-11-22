@@ -4,19 +4,19 @@ import re
 import pandas as pd
 import requests
 
-SPREADSHEET_ID = "1uWXfIMrRidpoZTq_BYYTy9ho_0a194pMMSS_EQpJoeA"
+# 🌟 新資料來源：《💻🐷🪰整合2(育種端)》
+SPREADSHEET_ID = "1CwvYVhvKpSKTbuyA0pEYHXHTnORSpNKQAVFmNEpkHyE"
 
-# 🌟 精確定位分頁 GID
-# 關鍵修復：主生產履歷直接以《📊 育種_家族階層清單(轉)》為基準，杜絕 VLOOKUP 重複第 1 胎的錯誤！
-GID_HIERARCHY = "1807731938"  # 📊 育種_家族階層清單(轉) [真實逐胎次生產履歷、年齡、役期]
-GID_SALES     = "591794579"   # 全生命週期銷售與血統分析(PY)(轉) [出欄肉豬屠體與遺傳缺陷]
-GID_US_ORIGIN = "1866228473"  # 美國原始種源數據(轉) [美系原原種系譜]
-GID_BLOOD     = "60312190"    # 📊 育種_血統比例(轉)
+# 🌟 精確定位《💻🐷🪰整合2(育種端)》分頁 GID
+GID_HIERARCHY = "538252601"   # 📊 育種_家族階層清單(轉) [真實逐胎次生產履歷、G1-G8系譜、年齡、役期]
+GID_US_ORIGIN = "624453592"   # 美國原始種源數據(轉) [美系原原種 G1-G4 證書系譜]
+GID_CARCASS   = "1828266796"  # 肉豬與屠宰回溯 [出欄肉豬生長、屠體率與獨立拆列遺傳缺陷]
+GID_DEATH     = "1502904612"  # 種豬死亡與淘汰整併(自動)(轉) [全場公母豬死淘狀態補強]
 
 def fetch_sheet_csv(gid):
     url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv&gid={gid}"
     try:
-        res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=50)
+        res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=60)
         res.encoding = 'utf-8-sig'
         if res.status_code == 200:
             return res.text
@@ -29,114 +29,160 @@ def clean_val(val):
     if pd.isna(val) or val is None:
         return "-"
     s = str(val).replace('\n', ' ').replace('\r', '').strip()
-    return s if s.lower() not in ['nan', 'none', '', 'null'] else "-"
+    return s if s.lower() not in ['nan', 'none', '', 'null', 'undefined'] else "-"
 
 def clean_num(val):
     s = clean_val(val)
-    if s == "-": return "-"
-    m = re.search(r'^\d+(\.\d+)?$', s)
+    if s == "-":
+        return "-"
+    # 去除可能的 .0 尾綴（如 1406.0 -> 1406）
+    if re.match(r'^\d+\.0$', s):
+        return s[:-2]
+    m = re.search(r'^-?\d+(\.\d+)?$', s)
     return m.group(0) if m else "-"
 
+def normalize_ear(val):
+    s = clean_val(val).upper()
+    if s == "-":
+        return "-"
+    if s.endswith(".0"):
+        s = s[:-2]
+    return s
+
+def find_col(kws, df):
+    for kw in kws:
+        for c in df.columns:
+            if kw.lower() in c.lower():
+                return c
+    return None
+
+def is_positive_flag(val):
+    s = clean_val(val).upper()
+    return s not in ['-', '0', '0.0', 'FALSE', 'NO', 'N', '正常']
+
 def main():
-    print("🚀 [1/4] 抓取《美國原始種源數據 (GID: 1866228473)》...")
+    # ---------------------------------------------------------
+    # 1. 抓取死淘整併表，建立全場最準確的死淘字典
+    # ---------------------------------------------------------
+    print("🚀 [1/4] 抓取《種豬死亡與淘汰整併(自動)(轉)》...")
+    raw_death = fetch_sheet_csv(GID_DEATH)
+    df_death = pd.read_csv(io.StringIO(raw_death), low_memory=False) if raw_death else pd.DataFrame()
+    df_death.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_death.columns]
+
+    death_map = {}
+    if not df_death.empty:
+        c_d_ear = find_col(['EarTag', '耳號'], df_death)
+        c_d_date = find_col(['Date', '日期'], df_death)
+        c_d_stat = find_col(['Status', '狀態'], df_death)
+        for _, r in df_death.iterrows():
+            ear = normalize_ear(r.get(c_d_ear))
+            if ear == "-":
+                continue
+            dt = clean_val(r.get(c_d_date))
+            st = clean_val(r.get(c_d_stat))
+            death_map[ear] = dt if dt != "-" else (st if st != "-" else "DEAD/CULLED")
+    print(f"   ✓ 載入 {len(death_map)} 筆死淘紀錄。")
+
+    # ---------------------------------------------------------
+    # 2. 抓取美國原始種源數據
+    # ---------------------------------------------------------
+    print("🚀 [2/4] 抓取《美國原始種源數據(轉)》...")
     raw_us = fetch_sheet_csv(GID_US_ORIGIN)
     df_us = pd.read_csv(io.StringIO(raw_us), low_memory=False) if raw_us else pd.DataFrame()
     df_us.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_us.columns]
 
     us_dict = {}
-    for _, r in df_us.iterrows():
-        pen = r.get('手寫卡號 (Pen No)') or r.get('Pen No') or r.get('手寫卡號')
-        breed = clean_val(r.get('品種 (Breed)') or r.get('Breed') or r.get('品種'))
-        if pen is None or pd.isna(pen) or breed == "-":
-            continue
-        try:
-            pen_num = int(float(pen))
-        except:
-            continue
-        
-        prefix = 'D' if 'duroc' in breed.lower() else ('L' if 'land' in breed.lower() else ('Y' if 'york' in breed.lower() else ''))
-        ear_tag = f"{prefix}{pen_num}"
-        sex_raw = clean_val(r.get('性別 (Sex)') or r.get('Sex') or r.get('性別'))
-        sex = "MALE" if 'boar' in sex_raw.lower() or '公' in sex_raw else "FEMALE"
-        
-        us_dict[ear_tag] = {
-            "ear": ear_tag,
-            "breed": breed.upper(),
-            "sex": sex,
-            "full_name": clean_val(r.get('G4_本代全名') or r.get('全名')),
-            "family_line": clean_val(r.get('【G4_本代】品系家族名 (Family Line)') or r.get('品系家族名')),
-            "spi": clean_num(r.get('G4_SPI') or r.get('SPI')),
-            "mli": clean_num(r.get('G4_MLI') or r.get('MLI')),
-            "tsi": clean_num(r.get('G4_TSI') or r.get('TSI')),
-            "sire_full": clean_val(r.get('G3_父代Sire全名') or r.get('G3_美系父親Sire(全名)')),
-            "sire_line": clean_val(r.get('【G3_父代Sire】品系家族名 (Family Line)') or r.get('G3_父品系家族名')),
-            "sire_spi": clean_num(r.get('G3_父代SPI') or r.get('G3_父SPI')),
-            "sire_mli": clean_num(r.get('G3_父代MLI') or r.get('G3_父MLI')),
-            "dam_full": clean_val(r.get('G3_母代Dam全名') or r.get('G3_美系母親Dam(全名)')),
-            "dam_line": clean_val(r.get('【G3_母代Dam】品系家族名 (Family Line)') or r.get('G3_母品系家族名')),
-            "dam_spi": clean_num(r.get('G3_母代SPI') or r.get('G3_母SPI')),
-            "dam_mli": clean_num(r.get('G3_母代MLI') or r.get('G3_母MLI')),
-            "ss_full": clean_val(r.get('G2_祖父SS全名') or r.get('G2_祖父SS(全名)')),
-            "ss_line": clean_val(r.get('【G2_祖父SS】品系家族名 (Family Line)') or r.get('G2_祖父SS(品系名)')),
-            "sd_full": clean_val(r.get('G2_祖母SD全名') or r.get('G2_祖母SD(全名)')),
-            "sd_line": clean_val(r.get('【G2_祖母SD】品系家族名 (Family Line)') or r.get('G2_祖母SD(品系名)')),
-            "ds_full": clean_val(r.get('G2_外祖父DS全名') or r.get('G2_外祖父DS(全名)')),
-            "ds_line": clean_val(r.get('【G2_外祖父DS】品系家族名 (Family Line)') or r.get('G2_外祖父DS(品系名)')),
-            "dd_full": clean_val(r.get('G2_外祖母DD全名') or r.get('G2_外祖母DD(全名)')),
-            "dd_line": clean_val(r.get('【G2_外祖母DD】品系家族名 (Family Line)') or r.get('G2_外祖母DD(品系名)')),
-            "g1_nodes": {
-                "sss": clean_val(r.get('【G1_曾祖父SSS】品系家族名 (Family Line)') or r.get('G1_曾祖父SSS(品系名)')),
-                "ssd": clean_val(r.get('【G1_曾祖母SSD】品系家族名 (Family Line)') or r.get('G1_曾祖母SSD(品系名)')),
-                "sds": clean_val(r.get('【G1_曾祖父SDS】品系家族名 (Family Line)') or r.get('G1_曾祖父SDS(品系名)')),
-                "sdd": clean_val(r.get('【G1_曾祖母SDD】品系家族名 (Family Line)') or r.get('G1_曾祖母SDD(品系名)')),
-                "dss": clean_val(r.get('【G1_曾外祖父DSS】品系家族名 (Family Line)') or r.get('G1_曾外祖父DSS(品系名)')),
-                "dsd": clean_val(r.get('【G1_曾外祖母DSD】品系家族名 (Family Line)') or r.get('G1_曾外祖母DSD(品系名)')),
-                "dds": clean_val(r.get('【G1_曾外祖父DDS】品系家族名 (Family Line)') or r.get('G1_曾外祖父DDS(品系名)')),
-                "ddd": clean_val(r.get('【G1_曾外祖母DDD】品系家族名 (Family Line)') or r.get('G1_曾外祖母DDD(品系名)'))
-            }
-        }
+    if not df_us.empty:
+        for _, r in df_us.iterrows():
+            pen = r.get(find_col(['手寫卡號', 'Pen No'], df_us))
+            breed = clean_val(r.get(find_col(['品種', 'Breed'], df_us)))
+            if pen is None or pd.isna(pen) or breed == "-":
+                continue
+            try:
+                pen_num = int(float(pen))
+            except Exception:
+                continue
 
-    print("🚀 [2/4] 抓取《📊 育種_家族階層清單 (GID: 1807731938)》取得真實逐胎次生產履歷...")
+            prefix = 'D' if 'duroc' in breed.lower() else ('L' if 'land' in breed.lower() else ('Y' if 'york' in breed.lower() else ''))
+            ear_tag = f"{prefix}{pen_num}"
+            sex_raw = clean_val(r.get(find_col(['性別', 'Sex'], df_us)))
+            sex = "MALE" if ('boar' in sex_raw.lower() or '公' in sex_raw or 'male' in sex_raw.lower()) else "FEMALE"
+
+            us_dict[ear_tag] = {
+                "ear": ear_tag,
+                "breed": breed.upper(),
+                "sex": sex,
+                "full_name": clean_val(r.get(find_col(['G4_本代全名', '全名'], df_us))),
+                "family_line": clean_val(r.get(find_col(['【G4_本代】品系家族名', '品系家族名'], df_us))),
+                "spi": clean_num(r.get(find_col(['G4_SPI', 'SPI'], df_us))),
+                "mli": clean_num(r.get(find_col(['G4_MLI', 'MLI'], df_us))),
+                "tsi": clean_num(r.get(find_col(['G4_TSI', 'TSI'], df_us))),
+                "sire_full": clean_val(r.get(find_col(['G3_父代Sire全名', 'G3_美系父親Sire'], df_us))),
+                "sire_line": clean_val(r.get(find_col(['【G3_父代Sire】品系家族名', 'G3_父品系家族名'], df_us))),
+                "sire_spi": clean_num(r.get(find_col(['G3_父代SPI', 'G3_父SPI'], df_us))),
+                "sire_mli": clean_num(r.get(find_col(['G3_父代MLI', 'G3_父MLI'], df_us))),
+                "dam_full": clean_val(r.get(find_col(['G3_母代Dam全名', 'G3_美系母親Dam'], df_us))),
+                "dam_line": clean_val(r.get(find_col(['【G3_母代Dam】品系家族名', 'G3_母品系家族名'], df_us))),
+                "dam_spi": clean_num(r.get(find_col(['G3_母代SPI', 'G3_母SPI'], df_us))),
+                "dam_mli": clean_num(r.get(find_col(['G3_母代MLI', 'G3_母MLI'], df_us))),
+                "ss_full": clean_val(r.get(find_col(['G2_祖父SS全名', 'G2_祖父SS(全名)'], df_us))),
+                "ss_line": clean_val(r.get(find_col(['【G2_祖父SS】品系家族名', 'G2_祖父SS(品系名)'], df_us))),
+                "sd_full": clean_val(r.get(find_col(['G2_祖母SD全名', 'G2_祖母SD(全名)'], df_us))),
+                "sd_line": clean_val(r.get(find_col(['【G2_祖母SD】品系家族名', 'G2_祖母SD(品系名)'], df_us))),
+                "ds_full": clean_val(r.get(find_col(['G2_外祖父DS全名', 'G2_外祖父DS(全名)'], df_us))),
+                "ds_line": clean_val(r.get(find_col(['【G2_外祖父DS】品系家族名', 'G2_外祖父DS(品系名)'], df_us))),
+                "dd_full": clean_val(r.get(find_col(['G2_外祖母DD全名', 'G2_外祖母DD(全名)'], df_us))),
+                "dd_line": clean_val(r.get(find_col(['【G2_外祖母DD】品系家族名', 'G2_外祖母DD(品系名)'], df_us))),
+                "g1_nodes": {
+                    "sss": clean_val(r.get(find_col(['【G1_曾祖父SSS】品系家族名', 'G1_曾祖父SSS(品系名)'], df_us))),
+                    "ssd": clean_val(r.get(find_col(['【G1_曾祖母SSD】品系家族名', 'G1_曾祖母SSD(品系名)'], df_us))),
+                    "sds": clean_val(r.get(find_col(['【G1_曾祖父SDS】品系家族名', 'G1_曾祖父SDS(品系名)'], df_us))),
+                    "sdd": clean_val(r.get(find_col(['【G1_曾祖母SDD】品系家族名', 'G1_曾祖母SDD(品系名)'], df_us))),
+                    "dss": clean_val(r.get(find_col(['【G1_曾外祖父DSS】品系家族名', 'G1_曾外祖父DSS(品系名)'], df_us))),
+                    "dsd": clean_val(r.get(find_col(['【G1_曾外祖母DSD】品系家族名', 'G1_曾外祖母DSD(品系名)'], df_us))),
+                    "dds": clean_val(r.get(find_col(['【G1_曾外祖父DDS】品系家族名', 'G1_曾外祖父DDS(品系名)'], df_us))),
+                    "ddd": clean_val(r.get(find_col(['【G1_曾外祖母DDD】品系家族名', 'G1_曾外祖母DDD(品系名)'], df_us)))
+                }
+            }
+    print(f"   ✓ 載入 {len(us_dict)} 頭美系原種檔案。")
+
+    # ---------------------------------------------------------
+    # 3. 抓取《📊 育種_家族階層清單(轉)》建立逐胎次生產與系譜庫
+    # ---------------------------------------------------------
+    print("🚀 [3/4] 抓取《📊 育種_家族階層清單(轉)》...")
     raw_hier = fetch_sheet_csv(GID_HIERARCHY)
     df_hier = pd.read_csv(io.StringIO(raw_hier), low_memory=False) if raw_hier else pd.DataFrame()
     df_hier.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_hier.columns]
 
-    def find_c(kws, df):
-        for kw in kws:
-            for c in df.columns:
-                if kw.lower() in c.lower():
-                    return c
-        return None
-
-    c_ear   = find_c(['耳號'], df_hier) or '耳號'
-    c_sex   = find_c(['Sex', '性別'], df_hier) or 'Sex'
-    c_p     = find_c(['胎次(Parity)', '胎次', 'Parity'], df_hier) or '胎次'
-    c_mate  = find_c(['當胎配種公豬', '配種公', 'Mate'], df_hier) or '當胎配種公豬'
-    c_md    = find_c(['配種日期(Mating Date)', '配種日期'], df_hier) or '配種日期'
-    c_fd    = find_c(['當胎分娩日', '分娩日'], df_hier) or '當胎分娩日'
-    c_dob   = find_c(['DOB出生日期', 'DOB', '出生日期'], df_hier) or 'DOB'
-    c_dod   = find_c(['DOD/淘汰日期', '淘汰日期', 'DOD'], df_hier) or 'DOD/淘汰日期'
-    c_breed = find_c(['Breed', '品種'], df_hier) or 'Breed'
-    c_age   = find_c(['目前年齡(歲)', '目前年齡', '年齡(歲)', '年齡'], df_hier) or '目前年齡(歲)'
-    c_used  = find_c(['已使用年限(年)', '已使用年限', '使用年限'], df_hier) or '已使用年限(年)'
-    c_g5_s  = find_c(['G5_直屬父(Sire)', 'G5_直屬父', '第一代公'], df_hier) or 'G5_直屬父(Sire)'
-    c_g5_d  = find_c(['G5_直屬母(Dam)', 'G5_直屬母', '第一代母'], df_hier) or 'G5_直屬母(Dam)'
+    c_ear   = find_col(['耳號'], df_hier) or '耳號'
+    c_sex   = find_col(['Sex', '性別'], df_hier) or 'Sex'
+    c_p     = find_col(['胎次(Parity)', '胎次', 'Parity'], df_hier) or '胎次'
+    c_mate  = find_col(['當胎配種公豬', '配種公'], df_hier) or '當胎配種公豬'
+    c_md    = find_col(['配種日期'], df_hier) or '配種日期'
+    c_fd    = find_col(['當胎分娩日', '分娩日'], df_hier) or '當胎分娩日'
+    c_dob   = find_col(['DOB出生日期', 'DOB'], df_hier) or 'DOB'
+    c_dod   = find_col(['DOD/淘汰日期', '淘汰日期', 'DOD'], df_hier) or 'DOD/淘汰日期'
+    c_breed = find_col(['Breed', '品種'], df_hier) or 'Breed'
+    c_age   = find_col(['目前年齡(歲)', '目前年齡'], df_hier) or '目前年齡(歲)'
+    c_used  = find_col(['已使用年限(年)', '已使用年限'], df_hier) or '已使用年限(年)'
+    c_g5_s  = find_col(['G5_直屬父(Sire)', 'G5_直屬父'], df_hier) or 'G5_直屬父(Sire)'
+    c_g5_d  = find_col(['G5_直屬母(Dam)', 'G5_直屬母'], df_hier) or 'G5_直屬母(Dam)'
 
     pedigree_list = []
-    death_map = {}
     known_ears = set()
 
     for _, r in df_hier.iterrows():
-        ear = clean_val(r.get(c_ear))
-        if ear == "-" or ear == "耳號":
+        ear_upper = normalize_ear(r.get(c_ear))
+        if ear_upper == "-" or ear_upper == "耳號":
             continue
-        ear_upper = ear.upper()
         known_ears.add(ear_upper)
-        
+
         dod = clean_val(r.get(c_dod))
         if dod != "-":
             death_map[ear_upper] = dod
-            
+        elif ear_upper in death_map:
+            dod = death_map[ear_upper]
+
         breed = clean_val(r.get(c_breed)).upper()
         if breed == "-":
             breed = "LY" if ear_upper.startswith("LY") else (
@@ -147,13 +193,13 @@ def main():
             if "YORK" in breed: breed = "Y"
             elif "LAND" in breed: breed = "L"
             elif "DUROC" in breed: breed = "D"
-            elif "LY" in breed: breed = "LY"
+            elif "LY" in breed or "YL" in breed: breed = "LY"
 
-        sire_full = clean_val(r.get(find_c(['G3_美系父親Sire(全名)', 'G3_父代Sire全名'], df_hier)))
-        sire_line = clean_val(r.get(find_c(['G3_父品系家族名', '【G3_父代Sire】品系家族名'], df_hier)))
-        dam_full  = clean_val(r.get(find_c(['G3_美系母親Dam(全名)', 'G3_母代Dam全名'], df_hier)))
-        dam_line  = clean_val(r.get(find_c(['G3_母品系家族名', '【G3_母代Dam】品系家族名'], df_hier)))
-        
+        sire_full = clean_val(r.get(find_col(['G3_美系父親Sire(全名)', 'G3_父代Sire全名'], df_hier)))
+        sire_line = clean_val(r.get(find_col(['G3_父品系家族名', '【G3_父代Sire】品系家族名'], df_hier)))
+        dam_full  = clean_val(r.get(find_col(['G3_美系母親Dam(全名)', 'G3_母代Dam全名'], df_hier)))
+        dam_line  = clean_val(r.get(find_col(['G3_母品系家族名', '【G3_母代Dam】品系家族名'], df_hier)))
+
         us_meta = us_dict.get(ear_upper, {})
         if sire_full == "-" and us_meta:
             sire_full = us_meta.get("sire_full", "-")
@@ -162,62 +208,66 @@ def main():
             dam_full = us_meta.get("dam_full", "-")
             dam_line = us_meta.get("dam_line", "-")
 
+        sex_raw = clean_val(r.get(c_sex)).upper()
+        is_female = (sex_raw in ["FEMALE", "F", "母", "SOW", "GILT"]) or ear_upper.startswith("LY")
+
         entry = {
             "ear": ear_upper,
             "breed": breed,
-            "sex": "FEMALE" if clean_val(r.get(c_sex)).upper() == "FEMALE" or ear_upper.startswith("LY") else "MALE",
-            # 🌟 取出真實胎次與生產數值，不再重複
+            "sex": "FEMALE" if is_female else "MALE",
             "parity": clean_num(r.get(c_p)),
-            "mate": clean_val(r.get(c_mate)),
+            "mate": normalize_ear(r.get(c_mate)),
             "mating_date": clean_val(r.get(c_md)),
             "farrow_date": clean_val(r.get(c_fd)),
             "dob": clean_val(r.get(c_dob)),
             "dod": dod,
             "current_age": clean_num(r.get(c_age)),
             "used_years": clean_num(r.get(c_used)),
-            "g5_sire": clean_val(r.get(c_g5_s)),
-            "g5_dam": clean_val(r.get(c_g5_d)),
-            "total_born": clean_num(r.get(find_c(['Total born同胎總生產數', 'Total born', '總產'], df_hier))),
-            "born_alive": clean_num(r.get(find_c(['Born alive同胎次活胎數量', 'Born alive', '活胎'], df_hier))),
-            "weaning": clean_num(r.get(find_c(['Weaning同胎次離乳數量', 'Weaning', '離乳'], df_hier))),
-            "spi": clean_num(r.get(find_c(['計算 SPI', 'SPI'], df_hier))),
-            "mli": clean_num(r.get(find_c(['母系指數 (MLI)', 'MLI'], df_hier))),
-            "tsi": clean_num(r.get(find_c(['終端公豬指數 (TSI)', 'TSI', 'PSI'], df_hier))),
+            "g5_sire": normalize_ear(r.get(c_g5_s)),
+            "g5_dam": normalize_ear(r.get(c_g5_d)),
+            "total_born": clean_num(r.get(find_col(['同胎總產', 'Total born', '總產'], df_hier))),
+            "born_alive": clean_num(r.get(find_col(['活胎', 'Born alive'], df_hier))),
+            "weaning": clean_num(r.get(find_col(['離乳數', 'Weaning'], df_hier))),
+            "spi": clean_num(r.get(find_col(['計算 SPI', 'SPI'], df_hier))),
+            "mli": clean_num(r.get(find_col(['母系指數', 'MLI'], df_hier))),
+            "tsi": clean_num(r.get(find_col(['終端公豬指數', 'TSI', 'PSI'], df_hier))),
             "g3_sire_full": sire_full,
             "g3_sire_line": sire_line,
-            "g3_sire_spi": clean_num(r.get(find_c(['G3_父SPI', 'G3_父代SPI'], df_hier))),
-            "g3_sire_mli": clean_num(r.get(find_c(['G3_父MLI', 'G3_父代MLI'], df_hier))),
+            "g3_sire_spi": clean_num(r.get(find_col(['G3_父SPI', 'G3_父代SPI'], df_hier))),
+            "g3_sire_mli": clean_num(r.get(find_col(['G3_父MLI', 'G3_父代MLI'], df_hier))),
             "g3_dam_full": dam_full,
             "g3_dam_line": dam_line,
-            "g3_dam_spi": clean_num(r.get(find_c(['G3_母SPI', 'G3_母代SPI'], df_hier))),
-            "g3_dam_mli": clean_num(r.get(find_c(['G3_母MLI', 'G3_母代MLI'], df_hier))),
-            "ss_full": clean_val(r.get(find_c(['G2_祖父SS(全名)', 'G2_祖父SS全名'], df_hier))),
-            "ss_line": clean_val(r.get(find_c(['G2_祖父SS(品系名)', '【G2_祖父SS】品系家族名'], df_hier))),
-            "sd_full": clean_val(r.get(find_c(['G2_祖母SD(全名)', 'G2_祖母SD全名'], df_hier))),
-            "sd_line": clean_val(r.get(find_c(['G2_祖母SD(品系名)', '【G2_祖母SD】品系家族名'], df_hier))),
-            "ds_full": clean_val(r.get(find_c(['G2_外祖父DS(全名)', 'G2_外祖父DS全名'], df_hier))),
-            "ds_line": clean_val(r.get(find_c(['G2_外祖父DS(品系名)', '【G2_外祖父DS】品系家族名'], df_hier))),
-            "dd_full": clean_val(r.get(find_c(['G2_外祖母DD(全名)', 'G2_外祖母DD全名'], df_hier))),
-            "dd_line": clean_val(r.get(find_c(['G2_外祖母DD(品系名)', '【G2_外祖母DD】品系家族名'], df_hier))),
+            "g3_dam_spi": clean_num(r.get(find_col(['G3_母SPI', 'G3_母代SPI'], df_hier))),
+            "g3_dam_mli": clean_num(r.get(find_col(['G3_母MLI', 'G3_母代MLI'], df_hier))),
+            "ss_full": clean_val(r.get(find_col(['G2_祖父SS(全名)', 'G2_祖父SS全名'], df_hier))),
+            "ss_line": clean_val(r.get(find_col(['G2_祖父SS(品系名)', '【G2_祖父SS】品系家族名'], df_hier))),
+            "sd_full": clean_val(r.get(find_col(['G2_祖母SD(全名)', 'G2_祖母SD全名'], df_hier))),
+            "sd_line": clean_val(r.get(find_col(['G2_祖母SD(品系名)', '【G2_祖母SD】品系家族名'], df_hier))),
+            "ds_full": clean_val(r.get(find_col(['G2_外祖父DS(全名)', 'G2_外祖父DS全名'], df_hier))),
+            "ds_line": clean_val(r.get(find_col(['G2_外祖父DS(品系名)', '【G2_外祖父DS】品系家族名'], df_hier))),
+            "dd_full": clean_val(r.get(find_col(['G2_外祖母DD(全名)', 'G2_外祖母DD全名'], df_hier))),
+            "dd_line": clean_val(r.get(find_col(['G2_外祖母DD(品系名)', '【G2_外祖母DD】品系家族名'], df_hier))),
             "g1_nodes": {
-                "sss": clean_val(r.get(find_c(['G1_曾祖父SSS(品系名)', '【G1_曾祖父SSS】品系家族名'], df_hier))),
-                "ssd": clean_val(r.get(find_c(['G1_曾祖母SSD(品系名)', '【G1_曾祖母SSD】品系家族名'], df_hier))),
-                "sds": clean_val(r.get(find_c(['G1_曾祖父SDS(品系名)', '【G1_曾祖父SDS】品系家族名'], df_hier))),
-                "sdd": clean_val(r.get(find_c(['G1_曾祖母SDD(品系名)', '【G1_曾祖母SDD】品系家族名'], df_hier))),
-                "dss": clean_val(r.get(find_c(['G1_曾外祖父DSS(品系名)', '【G1_曾外祖父DSS】品系家族名'], df_hier))),
-                "dsd": clean_val(r.get(find_c(['G1_曾外祖母DSD(品系名)', '【G1_曾外祖母DSD】品系家族名'], df_hier))),
-                "dds": clean_val(r.get(find_c(['G1_曾外祖父DDS(品系名)', '【G1_曾外祖父DDS】品系家族名'], df_hier))),
-                "ddd": clean_val(r.get(find_c(['G1_曾外祖母DDD(品系名)', '【G1_曾外祖母DDD】品系家族名'], df_hier)))
+                "sss": clean_val(r.get(find_col(['G1_曾祖父SSS(品系名)', '【G1_曾祖父SSS】品系家族名'], df_hier))),
+                "ssd": clean_val(r.get(find_col(['G1_曾祖母SSD(品系名)', '【G1_曾祖母SSD】品系家族名'], df_hier))),
+                "sds": clean_val(r.get(find_col(['G1_曾祖父SDS(品系名)', '【G1_曾祖父SDS】品系家族名'], df_hier))),
+                "sdd": clean_val(r.get(find_col(['G1_曾祖母SDD(品系名)', '【G1_曾祖母SDD】品系家族名'], df_hier))),
+                "dss": clean_val(r.get(find_col(['G1_曾外祖父DSS(品系名)', '【G1_曾外祖父DSS】品系家族名'], df_hier))),
+                "dsd": clean_val(r.get(find_col(['G1_曾外祖母DSD(品系名)', '【G1_曾外祖母DSD】品系家族名'], df_hier))),
+                "dds": clean_val(r.get(find_col(['G1_曾外祖父DDS(品系名)', '【G1_曾外祖父DDS】品系家族名'], df_hier))),
+                "ddd": clean_val(r.get(find_col(['G1_曾外祖母DDD(品系名)', '【G1_曾外祖母DDD】品系家族名'], df_hier)))
             }
         }
         pedigree_list.append(entry)
 
+    # 補齊尚未配種分娩的美系原種公母豬
     for boar_ear, bdata in us_dict.items():
         if boar_ear not in known_ears:
             pedigree_list.append({
                 "ear": boar_ear,
                 "breed": bdata["breed"][0] if bdata["breed"] in ['LANDRACE', 'YORKSHIRE', 'DUROC'] else bdata["breed"],
-                "sex": bdata["sex"], "parity": "0", "mate": "-", "mating_date": "-", "farrow_date": "-", "dob": "-", "dod": "-",
+                "sex": bdata["sex"], "parity": "0", "mate": "-", "mating_date": "-", "farrow_date": "-", "dob": "-",
+                "dod": death_map.get(boar_ear, "-"),
                 "current_age": "-", "used_years": "-",
                 "g5_sire": "-", "g5_dam": "-",
                 "total_born": "-", "born_alive": "-", "weaning": "-",
@@ -233,41 +283,72 @@ def main():
                 "g1_nodes": bdata["g1_nodes"]
             })
 
-    print("🚀 [3/4] 抓取《全生命週期銷售與血統分析 (GID: 591794579)》屠體與遺傳缺陷庫...")
-    raw_sales = fetch_sheet_csv(GID_SALES)
-    df_sales = pd.read_csv(io.StringIO(raw_sales), low_memory=False) if raw_sales else pd.DataFrame()
+    # 建立快速索引，供肉豬屠體表反查父母的祖代品系 (G3-m / G3-f)
+    ear_to_line = {}
+    for p in pedigree_list:
+        if p["ear"] not in ear_to_line and p["g3_sire_line"] != "-":
+            ear_to_line[p["ear"]] = p["g3_sire_line"]
+
+    # ---------------------------------------------------------
+    # 4. 抓取《肉豬與屠宰回溯 (GID: 1828266796)》屠體與遺傳缺陷庫
+    # ---------------------------------------------------------
+    print("🚀 [4/4] 抓取《肉豬與屠宰回溯》屠體與遺傳缺陷庫...")
+    raw_carcass = fetch_sheet_csv(GID_CARCASS)
+    df_carcass = pd.read_csv(io.StringIO(raw_carcass), low_memory=False) if raw_carcass else pd.DataFrame()
+    df_carcass.columns = [str(c).replace('\n', ' ').replace('\r', '').strip() for c in df_carcass.columns]
 
     carcass_list = []
-    if not df_sales.empty:
-        for _, r in df_sales.iterrows():
-            sire = str(r.get('G4-m', '')).strip() if pd.notna(r.get('G4-m')) else '-'
-            dam  = str(r.get('G4-f', '')).strip() if pd.notna(r.get('G4-f')) else '-'
-            ear  = str(r.get('Ear Notch', '')).strip() if pd.notna(r.get('Ear Notch')) else '-'
-            if ear == '-' or (sire == '-' and dam == '-'):
+    if not df_carcass.empty:
+        c_p_ear  = find_col(['Porker Ear', '肉豬耳號'], df_carcass)
+        c_sire   = find_col(['Sire', '父本公豬'], df_carcass)
+        c_dam    = find_col(['Dam', '母本母豬'], df_carcass)
+        c_wt     = find_col(['Market Wt', '銷售體重'], df_carcass)
+        c_adg1   = find_col(['ADG1'], df_carcass)
+        c_adg2   = find_col(['ADG2'], df_carcass)
+        c_yield  = find_col(['Carcass Yield', '屠宰得肉率'], df_carcass)
+        c_hernia = find_col(['Hernia', '疝氣'], df_carcass)
+        c_crypt  = find_col(['Cryptorchid', '隱睪'], df_carcass)
+        c_prolap = find_col(['Prolapse', '脫肛'], df_carcass)
+        c_leg    = find_col(['Leg Defect', '肢蹄缺陷'], df_carcass)
+        c_red    = find_col(['Red Spot', '肌肉紅點'], df_carcass)
+        c_stunt  = find_col(['Stunted', '發育遲緩'], df_carcass)
+
+        for _, r in df_carcass.iterrows():
+            ear  = normalize_ear(r.get(c_p_ear))
+            sire = normalize_ear(r.get(c_sire))
+            dam  = normalize_ear(r.get(c_dam))
+            if ear == "-" or (sire == "-" and dam == "-"):
                 continue
-            
+
             defects = []
-            if pd.notna(r.get('Hernia')) and str(r.get('Hernia')).strip() not in ['0', '0.0', '-']: defects.append('疝氣(Hernia)')
-            if pd.notna(r.get('Cryptorchidism')) and str(r.get('Cryptorchidism')).strip() not in ['0', '0.0', '-']: defects.append('隱睪(Crypt)')
-            if pd.notna(r.get('Rectal prolapse')) and str(r.get('Rectal prolapse')).strip() not in ['0', '0.0', '-']: defects.append('脫肛(Prolapse)')
-            if pd.notna(r.get('Leg Problem')) and str(r.get('Leg Problem')).strip() not in ['0', '0.0', '-']: defects.append('肢蹄問題(Leg)')
-            if pd.notna(r.get('Stunted')) and str(r.get('Stunted')).strip() not in ['0', '0.0', '-']: defects.append('僵豬(Stunted)')
-            if pd.notna(r.get('Abnormal')) and str(r.get('Abnormal')).strip() not in ['0', '0.0', '-']: defects.append('畸形(Abnormal)')
-            if pd.notna(r.get('reject')) and str(r.get('reject')).strip() not in ['0', '0.0', '-']: defects.append('淘汰(Reject)')
+            if is_positive_flag(r.get(c_hernia)): defects.append('疝氣(Hernia)')
+            if is_positive_flag(r.get(c_crypt)):  defects.append('隱睪(Crypt)')
+            if is_positive_flag(r.get(c_prolap)): defects.append('脫肛(Prolapse)')
+            if is_positive_flag(r.get(c_leg)):    defects.append('肢蹄問題(Leg)')
+            if is_positive_flag(r.get(c_red)):    defects.append('肌肉紅點(RedSpot)')
+            if is_positive_flag(r.get(c_stunt)):  defects.append('發育遲緩(Stunted)')
+
+            def to_float(col):
+                v = clean_num(r.get(col))
+                return round(float(v), 1) if v != "-" else None
+
+            wt_val = to_float(c_wt)
+            dr_val = to_float(c_yield)
+            ckg_val = round(wt_val * dr_val / 100.0, 1) if (wt_val and dr_val) else None
 
             carcass_list.append({
                 'ear': ear,
                 'sire': sire,
                 'dam': dam,
-                'g3_m': str(r.get('G3-m', '-')).strip(),
-                'g3_f': str(r.get('G3-f', '-')).strip(),
-                'wt': round(float(r['Weight(kg)的AVERAGE']), 1) if pd.notna(r.get('Weight(kg)的AVERAGE')) else None,
-                'adg1': round(float(r['ADG1的AVERAGE']), 1) if pd.notna(r.get('ADG1的AVERAGE')) else None,
-                'adg2': round(float(r['ADG2的AVERAGE']), 1) if pd.notna(r.get('ADG2的AVERAGE')) else None,
-                'b_wk': int(float(r['Birth Week num'])) if pd.notna(r.get('Birth Week num')) else None,
-                's_wk': int(float(r['Sold week num'])) if pd.notna(r.get('Sold week num')) else None,
-                'dr': round(float(r['出肉率/屠體率 (Dressing Rate %)']), 1) if pd.notna(r.get('出肉率/屠體率 (Dressing Rate %)')) else None,
-                'ckg': round(float(r['Carcass kg的AVERAGE']), 1) if pd.notna(r.get('Carcass kg的AVERAGE')) else None,
+                'g3_m': ear_to_line.get(sire, '-'),
+                'g3_f': ear_to_line.get(dam, '-'),
+                'wt': wt_val,
+                'adg1': to_float(c_adg1),
+                'adg2': to_float(c_adg2),
+                'b_wk': None,
+                's_wk': None,
+                'dr': dr_val,
+                'ckg': ckg_val,
                 'defects': defects
             })
     print(f"   ✓ 成功收錄 {len(carcass_list)} 筆出欄屠體與遺傳缺陷記錄。")
@@ -282,7 +363,7 @@ def main():
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(final_payload, f, ensure_ascii=False)
 
-    print(f"🎉 產出成功！共收錄 {len(pedigree_list)} 頭種豬真實胎次，{len(carcass_list)} 筆出欄肉豬。")
+    print(f"🎉 產出成功！共收錄 {len(pedigree_list)} 筆種豬真實胎次，{len(carcass_list)} 筆出欄肉豬。")
 
 if __name__ == '__main__':
     main()
